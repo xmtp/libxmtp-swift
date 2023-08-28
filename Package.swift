@@ -19,8 +19,8 @@ let package = Package(
                 dependencies: ["LibXMTPRust"],
                 path: "Sources/LibXMTP"
             ),
-            .package(
+            .binaryTarget(
                 name: "LibXMTPRust",
-                path: "LibXMTPRust.xcframework")
+                path: "./LibXMTPRust.xcframework")
         ]
 )
