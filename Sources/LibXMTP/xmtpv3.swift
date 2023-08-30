@@ -614,61 +614,6 @@ public func FfiConverterTypeFfiConversations_lower(_ value: FfiConversations) ->
     return FfiConverterTypeFfiConversations.lower(value)
 }
 
-public protocol FfiListMessagesOptionsProtocol {}
-
-public class FfiListMessagesOptions: FfiListMessagesOptionsProtocol {
-    fileprivate let pointer: UnsafeMutableRawPointer
-
-    // TODO: We'd like this to be `private` but for Swifty reasons,
-    // we can't implement `FfiConverter` without making this `required` and we can't
-    // make it `required` without making it `public`.
-    required init(unsafeFromRawPointer pointer: UnsafeMutableRawPointer) {
-        self.pointer = pointer
-    }
-
-    deinit {
-        try! rustCall { uniffi_bindings_ffi_fn_free_ffilistmessagesoptions(pointer, $0) }
-    }
-}
-
-public struct FfiConverterTypeFfiListMessagesOptions: FfiConverter {
-    typealias FfiType = UnsafeMutableRawPointer
-    typealias SwiftType = FfiListMessagesOptions
-
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiListMessagesOptions {
-        let v: UInt64 = try readInt(&buf)
-        // The Rust code won't compile if a pointer won't fit in a UInt64.
-        // We have to go via `UInt` because that's the thing that's the size of a pointer.
-        let ptr = UnsafeMutableRawPointer(bitPattern: UInt(truncatingIfNeeded: v))
-        if ptr == nil {
-            throw UniffiInternalError.unexpectedNullPointer
-        }
-        return try lift(ptr!)
-    }
-
-    public static func write(_ value: FfiListMessagesOptions, into buf: inout [UInt8]) {
-        // This fiddling is because `Int` is the thing that's the same size as a pointer.
-        // The Rust code won't compile if a pointer won't fit in a `UInt64`.
-        writeInt(&buf, UInt64(bitPattern: Int64(Int(bitPattern: lower(value)))))
-    }
-
-    public static func lift(_ pointer: UnsafeMutableRawPointer) throws -> FfiListMessagesOptions {
-        return FfiListMessagesOptions(unsafeFromRawPointer: pointer)
-    }
-
-    public static func lower(_ value: FfiListMessagesOptions) -> UnsafeMutableRawPointer {
-        return value.pointer
-    }
-}
-
-public func FfiConverterTypeFfiListMessagesOptions_lift(_ pointer: UnsafeMutableRawPointer) throws -> FfiListMessagesOptions {
-    return try FfiConverterTypeFfiListMessagesOptions.lift(pointer)
-}
-
-public func FfiConverterTypeFfiListMessagesOptions_lower(_ value: FfiListMessagesOptions) -> UnsafeMutableRawPointer {
-    return FfiConverterTypeFfiListMessagesOptions.lower(value)
-}
-
 public protocol FfiXmtpClientProtocol {
     func conversations() -> FfiConversations
     func walletAddress() -> String
@@ -800,6 +745,65 @@ private func uniffiForeignExecutorCallback(executorHandle: Int, delayMs: UInt32,
 
 private func uniffiInitForeignExecutor() {
     uniffi_foreign_executor_callback_set(uniffiForeignExecutorCallback)
+}
+
+public struct FfiListMessagesOptions {
+    public var startTimeNs: Int64?
+    public var endTimeNs: Int64?
+    public var limit: Int64?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(startTimeNs: Int64?, endTimeNs: Int64?, limit: Int64?) {
+        self.startTimeNs = startTimeNs
+        self.endTimeNs = endTimeNs
+        self.limit = limit
+    }
+}
+
+extension FfiListMessagesOptions: Equatable, Hashable {
+    public static func == (lhs: FfiListMessagesOptions, rhs: FfiListMessagesOptions) -> Bool {
+        if lhs.startTimeNs != rhs.startTimeNs {
+            return false
+        }
+        if lhs.endTimeNs != rhs.endTimeNs {
+            return false
+        }
+        if lhs.limit != rhs.limit {
+            return false
+        }
+        return true
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(startTimeNs)
+        hasher.combine(endTimeNs)
+        hasher.combine(limit)
+    }
+}
+
+public struct FfiConverterTypeFfiListMessagesOptions: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiListMessagesOptions {
+        return try FfiListMessagesOptions(
+            startTimeNs: FfiConverterOptionInt64.read(from: &buf),
+            endTimeNs: FfiConverterOptionInt64.read(from: &buf),
+            limit: FfiConverterOptionInt64.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: FfiListMessagesOptions, into buf: inout [UInt8]) {
+        FfiConverterOptionInt64.write(value.startTimeNs, into: &buf)
+        FfiConverterOptionInt64.write(value.endTimeNs, into: &buf)
+        FfiConverterOptionInt64.write(value.limit, into: &buf)
+    }
+}
+
+public func FfiConverterTypeFfiListMessagesOptions_lift(_ buf: RustBuffer) throws -> FfiListMessagesOptions {
+    return try FfiConverterTypeFfiListMessagesOptions.lift(buf)
+}
+
+public func FfiConverterTypeFfiListMessagesOptions_lower(_ value: FfiListMessagesOptions) -> RustBuffer {
+    return FfiConverterTypeFfiListMessagesOptions.lower(value)
 }
 
 public struct FfiMessage {
@@ -1245,6 +1249,27 @@ extension FfiConverterCallbackInterfaceFfiLogger: FfiConverter {
     }
 }
 
+private struct FfiConverterOptionInt64: FfiConverterRustBuffer {
+    typealias SwiftType = Int64?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterInt64.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterInt64.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
 private struct FfiConverterSequenceUInt8: FfiConverterRustBuffer {
     typealias SwiftType = [UInt8]
 
@@ -1482,7 +1507,7 @@ private var initializationResult: InitializationResult {
     if uniffi_bindings_ffi_checksum_func_create_client() != 2193 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_bindings_ffi_checksum_method_fficonversation_list_messages() != 31879 {
+    if uniffi_bindings_ffi_checksum_method_fficonversation_list_messages() != 32589 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_bindings_ffi_checksum_method_fficonversation_send() != 7299 {
