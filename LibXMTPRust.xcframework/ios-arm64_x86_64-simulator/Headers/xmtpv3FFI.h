@@ -69,7 +69,7 @@ typedef void (*UniFfiFutureCallbackRustBuffer)(const void * _Nonnull, RustBuffer
 // Scaffolding functions
 void uniffi_bindings_ffi_fn_free_fficonversation(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
 );
-void uniffi_bindings_ffi_fn_method_fficonversation_list_messages(void*_Nonnull ptr, void*_Nonnull opts, size_t uniffi_executor, UniFfiFutureCallbackRustBuffer _Nonnull uniffi_callback, void* _Nonnull uniffi_callback_data, RustCallStatus *_Nonnull out_status
+void uniffi_bindings_ffi_fn_method_fficonversation_list_messages(void*_Nonnull ptr, RustBuffer opts, size_t uniffi_executor, UniFfiFutureCallbackRustBuffer _Nonnull uniffi_callback, void* _Nonnull uniffi_callback_data, RustCallStatus *_Nonnull out_status
 );
 void uniffi_bindings_ffi_fn_method_fficonversation_send(void*_Nonnull ptr, RustBuffer content_bytes, size_t uniffi_executor, UniFfiFutureCallbackUInt8 _Nonnull uniffi_callback, void* _Nonnull uniffi_callback_data, RustCallStatus *_Nonnull out_status
 );
@@ -78,10 +78,6 @@ void uniffi_bindings_ffi_fn_free_fficonversations(void*_Nonnull ptr, RustCallSta
 void uniffi_bindings_ffi_fn_method_fficonversations_list(void*_Nonnull ptr, size_t uniffi_executor, UniFfiFutureCallbackRustBuffer _Nonnull uniffi_callback, void* _Nonnull uniffi_callback_data, RustCallStatus *_Nonnull out_status
 );
 void uniffi_bindings_ffi_fn_method_fficonversations_new_conversation(void*_Nonnull ptr, RustBuffer wallet_address, size_t uniffi_executor, UniFfiFutureCallbackUnsafeMutableRawPointer _Nonnull uniffi_callback, void* _Nonnull uniffi_callback_data, RustCallStatus *_Nonnull out_status
-);
-void uniffi_bindings_ffi_fn_free_ffilistmessagesoptions(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
-);
-void uniffi_bindings_ffi_fn_free_ffimessage(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
 );
 void uniffi_bindings_ffi_fn_free_ffixmtpclient(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
 );
