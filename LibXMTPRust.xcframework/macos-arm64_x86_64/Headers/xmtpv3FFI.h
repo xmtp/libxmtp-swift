@@ -69,6 +69,8 @@ typedef void (*UniFfiFutureCallbackRustBuffer)(const void * _Nonnull, RustBuffer
 // Scaffolding functions
 void uniffi_bindings_ffi_fn_free_fficonversation(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
 );
+RustBuffer uniffi_bindings_ffi_fn_method_fficonversation_id(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
+);
 void uniffi_bindings_ffi_fn_method_fficonversation_list_messages(void*_Nonnull ptr, RustBuffer opts, size_t uniffi_executor, UniFfiFutureCallbackRustBuffer _Nonnull uniffi_callback, void* _Nonnull uniffi_callback_data, RustCallStatus *_Nonnull out_status
 );
 void uniffi_bindings_ffi_fn_method_fficonversation_send(void*_Nonnull ptr, RustBuffer content_bytes, size_t uniffi_executor, UniFfiFutureCallbackUInt8 _Nonnull uniffi_callback, void* _Nonnull uniffi_callback_data, RustCallStatus *_Nonnull out_status
@@ -100,6 +102,9 @@ void ffi_xmtpv3_rustbuffer_free(RustBuffer buf, RustCallStatus *_Nonnull out_sta
 RustBuffer ffi_xmtpv3_rustbuffer_reserve(RustBuffer buf, int32_t additional, RustCallStatus *_Nonnull out_status
 );
 uint16_t uniffi_bindings_ffi_checksum_func_create_client(void
+    
+);
+uint16_t uniffi_bindings_ffi_checksum_method_fficonversation_id(void
     
 );
 uint16_t uniffi_bindings_ffi_checksum_method_fficonversation_list_messages(void

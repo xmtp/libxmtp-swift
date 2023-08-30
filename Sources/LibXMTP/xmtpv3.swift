@@ -408,7 +408,7 @@ private struct FfiConverterData: FfiConverterRustBuffer {
 }
 
 public protocol FfiConversationProtocol {
-    func id() throws -> String
+    func id() -> String
     func listMessages(opts: FfiListMessagesOptions) async throws -> [FfiMessage]
     func send(contentBytes: [UInt8]) async throws
 }
@@ -427,11 +427,12 @@ public class FfiConversation: FfiConversationProtocol {
         try! rustCall { uniffi_bindings_ffi_fn_free_fficonversation(pointer, $0) }
     }
 
-    public func id() throws -> String {
-        return try FfiConverterString.lift(
-            rustCallWithError(FfiConverterTypeGenericError.lift) {
-                uniffi_bindings_ffi_fn_method_fficonversation_id(self.pointer, $0)
-            }
+    public func id() -> String {
+        return try! FfiConverterString.lift(
+            try!
+                rustCall {
+                    uniffi_bindings_ffi_fn_method_fficonversation_id(self.pointer, $0)
+                }
         )
     }
 
@@ -1383,24 +1384,6 @@ private func uniffiFutureCallbackHandlerString(
     }
 }
 
-private func uniffiFutureCallbackHandlerStringTypeGenericError(
-    rawContinutation: UnsafeRawPointer,
-    returnValue: RustBuffer,
-    callStatus: RustCallStatus
-) {
-    let continuation = rawContinutation.bindMemory(
-        to: CheckedContinuation<String, Error>.self,
-        capacity: 1
-    )
-
-    do {
-        try uniffiCheckCallStatus(callStatus: callStatus, errorHandler: FfiConverterTypeGenericError.lift)
-        try continuation.pointee.resume(returning: FfiConverterString.lift(returnValue))
-    } catch {
-        continuation.pointee.resume(throwing: error)
-    }
-}
-
 private func uniffiFutureCallbackHandlerTypeFfiConversationTypeGenericError(
     rawContinutation: UnsafeRawPointer,
     returnValue: UnsafeMutableRawPointer,
@@ -1534,7 +1517,7 @@ private var initializationResult: InitializationResult {
     if uniffi_bindings_ffi_checksum_func_create_client() != 2193 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_bindings_ffi_checksum_method_fficonversation_id() != 31354 {
+    if uniffi_bindings_ffi_checksum_method_fficonversation_id() != 41750 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_bindings_ffi_checksum_method_fficonversation_list_messages() != 32589 {
