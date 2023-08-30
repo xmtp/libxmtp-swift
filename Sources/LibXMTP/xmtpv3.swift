@@ -320,6 +320,19 @@ private struct FfiConverterUInt32: FfiConverterPrimitive {
     }
 }
 
+private struct FfiConverterInt64: FfiConverterPrimitive {
+    typealias FfiType = Int64
+    typealias SwiftType = Int64
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Int64 {
+        return try lift(readInt(&buf))
+    }
+
+    public static func write(_ value: Int64, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
 private struct FfiConverterBool: FfiConverter {
     typealias FfiType = Int8
     typealias SwiftType = Bool
@@ -656,61 +669,6 @@ public func FfiConverterTypeFfiListMessagesOptions_lower(_ value: FfiListMessage
     return FfiConverterTypeFfiListMessagesOptions.lower(value)
 }
 
-public protocol FfiMessageProtocol {}
-
-public class FfiMessage: FfiMessageProtocol {
-    fileprivate let pointer: UnsafeMutableRawPointer
-
-    // TODO: We'd like this to be `private` but for Swifty reasons,
-    // we can't implement `FfiConverter` without making this `required` and we can't
-    // make it `required` without making it `public`.
-    required init(unsafeFromRawPointer pointer: UnsafeMutableRawPointer) {
-        self.pointer = pointer
-    }
-
-    deinit {
-        try! rustCall { uniffi_bindings_ffi_fn_free_ffimessage(pointer, $0) }
-    }
-}
-
-public struct FfiConverterTypeFfiMessage: FfiConverter {
-    typealias FfiType = UnsafeMutableRawPointer
-    typealias SwiftType = FfiMessage
-
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiMessage {
-        let v: UInt64 = try readInt(&buf)
-        // The Rust code won't compile if a pointer won't fit in a UInt64.
-        // We have to go via `UInt` because that's the thing that's the size of a pointer.
-        let ptr = UnsafeMutableRawPointer(bitPattern: UInt(truncatingIfNeeded: v))
-        if ptr == nil {
-            throw UniffiInternalError.unexpectedNullPointer
-        }
-        return try lift(ptr!)
-    }
-
-    public static func write(_ value: FfiMessage, into buf: inout [UInt8]) {
-        // This fiddling is because `Int` is the thing that's the same size as a pointer.
-        // The Rust code won't compile if a pointer won't fit in a `UInt64`.
-        writeInt(&buf, UInt64(bitPattern: Int64(Int(bitPattern: lower(value)))))
-    }
-
-    public static func lift(_ pointer: UnsafeMutableRawPointer) throws -> FfiMessage {
-        return FfiMessage(unsafeFromRawPointer: pointer)
-    }
-
-    public static func lower(_ value: FfiMessage) -> UnsafeMutableRawPointer {
-        return value.pointer
-    }
-}
-
-public func FfiConverterTypeFfiMessage_lift(_ pointer: UnsafeMutableRawPointer) throws -> FfiMessage {
-    return try FfiConverterTypeFfiMessage.lift(pointer)
-}
-
-public func FfiConverterTypeFfiMessage_lower(_ value: FfiMessage) -> UnsafeMutableRawPointer {
-    return FfiConverterTypeFfiMessage.lower(value)
-}
-
 public protocol FfiXmtpClientProtocol {
     func conversations() -> FfiConversations
     func walletAddress() -> String
@@ -842,6 +800,73 @@ private func uniffiForeignExecutorCallback(executorHandle: Int, delayMs: UInt32,
 
 private func uniffiInitForeignExecutor() {
     uniffi_foreign_executor_callback_set(uniffiForeignExecutorCallback)
+}
+
+public struct FfiMessage {
+    public var sentAtNs: Int64
+    public var convoId: String
+    public var addrFrom: String
+    public var content: [UInt8]
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(sentAtNs: Int64, convoId: String, addrFrom: String, content: [UInt8]) {
+        self.sentAtNs = sentAtNs
+        self.convoId = convoId
+        self.addrFrom = addrFrom
+        self.content = content
+    }
+}
+
+extension FfiMessage: Equatable, Hashable {
+    public static func == (lhs: FfiMessage, rhs: FfiMessage) -> Bool {
+        if lhs.sentAtNs != rhs.sentAtNs {
+            return false
+        }
+        if lhs.convoId != rhs.convoId {
+            return false
+        }
+        if lhs.addrFrom != rhs.addrFrom {
+            return false
+        }
+        if lhs.content != rhs.content {
+            return false
+        }
+        return true
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(sentAtNs)
+        hasher.combine(convoId)
+        hasher.combine(addrFrom)
+        hasher.combine(content)
+    }
+}
+
+public struct FfiConverterTypeFfiMessage: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiMessage {
+        return try FfiMessage(
+            sentAtNs: FfiConverterInt64.read(from: &buf),
+            convoId: FfiConverterString.read(from: &buf),
+            addrFrom: FfiConverterString.read(from: &buf),
+            content: FfiConverterSequenceUInt8.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: FfiMessage, into buf: inout [UInt8]) {
+        FfiConverterInt64.write(value.sentAtNs, into: &buf)
+        FfiConverterString.write(value.convoId, into: &buf)
+        FfiConverterString.write(value.addrFrom, into: &buf)
+        FfiConverterSequenceUInt8.write(value.content, into: &buf)
+    }
+}
+
+public func FfiConverterTypeFfiMessage_lift(_ buf: RustBuffer) throws -> FfiMessage {
+    return try FfiConverterTypeFfiMessage.lift(buf)
+}
+
+public func FfiConverterTypeFfiMessage_lower(_ value: FfiMessage) -> RustBuffer {
+    return FfiConverterTypeFfiMessage.lower(value)
 }
 
 public enum GenericError {
@@ -1457,7 +1482,7 @@ private var initializationResult: InitializationResult {
     if uniffi_bindings_ffi_checksum_func_create_client() != 2193 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_bindings_ffi_checksum_method_fficonversation_list_messages() != 51185 {
+    if uniffi_bindings_ffi_checksum_method_fficonversation_list_messages() != 31879 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_bindings_ffi_checksum_method_fficonversation_send() != 7299 {
