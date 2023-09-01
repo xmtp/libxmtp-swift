@@ -397,7 +397,7 @@ private struct FfiConverterData: FfiConverterRustBuffer {
 
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Data {
         let len: Int32 = try readInt(&buf)
-        return try Data(bytes: readBytes(&buf, count: Int(len)))
+        return try Data(readBytes(&buf, count: Int(len)))
     }
 
     public static func write(_ value: Data, into buf: inout [UInt8]) {
@@ -424,14 +424,14 @@ public class FfiConversation: FfiConversationProtocol {
     }
 
     deinit {
-        try! rustCall { uniffi_bindings_ffi_fn_free_fficonversation(pointer, $0) }
+        try! rustCall { uniffi_xmtpv3_fn_free_fficonversation(pointer, $0) }
     }
 
     public func id() -> String {
         return try! FfiConverterString.lift(
             try!
                 rustCall {
-                    uniffi_bindings_ffi_fn_method_fficonversation_id(self.pointer, $0)
+                    uniffi_xmtpv3_fn_method_fficonversation_id(self.pointer, $0)
                 }
         )
     }
@@ -446,7 +446,7 @@ public class FfiConversation: FfiConversationProtocol {
         return try await withCheckedThrowingContinuation {
             continuation = $0
             try! rustCall {
-                uniffi_bindings_ffi_fn_method_fficonversation_list_messages(
+                uniffi_xmtpv3_fn_method_fficonversation_list_messages(
                     self.pointer,
 
                     FfiConverterTypeFfiListMessagesOptions.lower(opts),
@@ -469,7 +469,7 @@ public class FfiConversation: FfiConversationProtocol {
         return try await withCheckedThrowingContinuation {
             continuation = $0
             try! rustCall {
-                uniffi_bindings_ffi_fn_method_fficonversation_send(
+                uniffi_xmtpv3_fn_method_fficonversation_send(
                     self.pointer,
 
                     FfiConverterSequenceUInt8.lower(contentBytes),
@@ -537,7 +537,7 @@ public class FfiConversations: FfiConversationsProtocol {
     }
 
     deinit {
-        try! rustCall { uniffi_bindings_ffi_fn_free_fficonversations(pointer, $0) }
+        try! rustCall { uniffi_xmtpv3_fn_free_fficonversations(pointer, $0) }
     }
 
     public func list() async throws -> [FfiConversation] {
@@ -550,7 +550,7 @@ public class FfiConversations: FfiConversationsProtocol {
         return try await withCheckedThrowingContinuation {
             continuation = $0
             try! rustCall {
-                uniffi_bindings_ffi_fn_method_fficonversations_list(
+                uniffi_xmtpv3_fn_method_fficonversations_list(
                     self.pointer,
 
                     FfiConverterForeignExecutor.lower(UniFfiForeignExecutor()),
@@ -572,7 +572,7 @@ public class FfiConversations: FfiConversationsProtocol {
         return try await withCheckedThrowingContinuation {
             continuation = $0
             try! rustCall {
-                uniffi_bindings_ffi_fn_method_fficonversations_new_conversation(
+                uniffi_xmtpv3_fn_method_fficonversations_new_conversation(
                     self.pointer,
 
                     FfiConverterString.lower(walletAddress),
@@ -640,14 +640,14 @@ public class FfiXmtpClient: FfiXmtpClientProtocol {
     }
 
     deinit {
-        try! rustCall { uniffi_bindings_ffi_fn_free_ffixmtpclient(pointer, $0) }
+        try! rustCall { uniffi_xmtpv3_fn_free_ffixmtpclient(pointer, $0) }
     }
 
     public func conversations() -> FfiConversations {
         return try! FfiConverterTypeFfiConversations.lift(
             try!
                 rustCall {
-                    uniffi_bindings_ffi_fn_method_ffixmtpclient_conversations(self.pointer, $0)
+                    uniffi_xmtpv3_fn_method_ffixmtpclient_conversations(self.pointer, $0)
                 }
         )
     }
@@ -656,7 +656,7 @@ public class FfiXmtpClient: FfiXmtpClientProtocol {
         return try! FfiConverterString.lift(
             try!
                 rustCall {
-                    uniffi_bindings_ffi_fn_method_ffixmtpclient_wallet_address(self.pointer, $0)
+                    uniffi_xmtpv3_fn_method_ffixmtpclient_wallet_address(self.pointer, $0)
                 }
         )
     }
@@ -700,6 +700,12 @@ public func FfiConverterTypeFfiXmtpClient_lower(_ value: FfiXmtpClient) -> Unsaf
     return FfiConverterTypeFfiXmtpClient.lower(value)
 }
 
+private let UNIFFI_RUST_TASK_CALLBACK_SUCCESS: Int8 = 0
+private let UNIFFI_RUST_TASK_CALLBACK_CANCELLED: Int8 = 1
+private let UNIFFI_FOREIGN_EXECUTOR_CALLBACK_SUCCESS: Int8 = 0
+private let UNIFFI_FOREIGN_EXECUTOR_CALLBACK_CANCELED: Int8 = 1
+private let UNIFFI_FOREIGN_EXECUTOR_CALLBACK_ERROR: Int8 = 2
+
 // Encapsulates an executor that can run Rust tasks
 //
 // On Swift, `Task.detached` can handle this we just need to know what priority to send it.
@@ -721,24 +727,24 @@ private struct FfiConverterForeignExecutor: FfiConverter {
     // let's use `Int`, which is equivalent to `size_t`
     typealias FfiType = Int
 
-    static func lift(_ value: FfiType) throws -> SwiftType {
+    public static func lift(_ value: FfiType) throws -> SwiftType {
         UniFfiForeignExecutor(priority: TaskPriority(rawValue: numericCast(value)))
     }
 
-    static func lower(_ value: SwiftType) -> FfiType {
+    public static func lower(_ value: SwiftType) -> FfiType {
         numericCast(value.priority.rawValue)
     }
 
-    static func read(from _: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+    public static func read(from _: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
         fatalError("FfiConverterForeignExecutor.read not implemented yet")
     }
 
-    static func write(_: SwiftType, into _: inout [UInt8]) {
+    public static func write(_: SwiftType, into _: inout [UInt8]) {
         fatalError("FfiConverterForeignExecutor.read not implemented yet")
     }
 }
 
-private func uniffiForeignExecutorCallback(executorHandle: Int, delayMs: UInt32, rustTask: UniFfiRustTaskCallback?, taskData: UnsafeRawPointer?) {
+private func uniffiForeignExecutorCallback(executorHandle: Int, delayMs: UInt32, rustTask: UniFfiRustTaskCallback?, taskData: UnsafeRawPointer?) -> Int8 {
     if let rustTask = rustTask {
         let executor = try! FfiConverterForeignExecutor.lift(executorHandle)
         Task.detached(priority: executor.priority) {
@@ -746,11 +752,14 @@ private func uniffiForeignExecutorCallback(executorHandle: Int, delayMs: UInt32,
                 let nanoseconds: UInt64 = numericCast(delayMs * 1_000_000)
                 try! await Task.sleep(nanoseconds: nanoseconds)
             }
-            rustTask(taskData)
+            rustTask(taskData, UNIFFI_RUST_TASK_CALLBACK_SUCCESS)
         }
+        return UNIFFI_FOREIGN_EXECUTOR_CALLBACK_SUCCESS
+    } else {
+        // When rustTask is null, we should drop the foreign executor.
+        // However, since its just a value type, we don't need to do anything here.
+        return UNIFFI_FOREIGN_EXECUTOR_CALLBACK_SUCCESS
     }
-    // No else branch: when rustTask is null, we should drop the foreign executor. However, since
-    // its just a value type, we don't need to do anything here.
 }
 
 private func uniffiInitForeignExecutor() {
@@ -951,7 +960,7 @@ public struct FfiConverterTypeSigningError: FfiConverterRustBuffer {
 
     public static func write(_ value: SigningError, into buf: inout [UInt8]) {
         switch value {
-        case let .Generic(message):
+        case .Generic(_ /* message is ignored*/ ):
             writeInt(&buf, Int32(1))
         }
     }
@@ -1039,7 +1048,7 @@ private let foreignCallbackCallbackInterfaceFfiInboxOwner: ForeignCallback =
 
         func invokeGetAddress(_ swiftCallbackInterface: FfiInboxOwner, _: UnsafePointer<UInt8>, _: Int32, _ out_buf: UnsafeMutablePointer<RustBuffer>) throws -> Int32 {
             func makeCall() throws -> Int32 {
-                let result = try swiftCallbackInterface.getAddress(
+                let result = swiftCallbackInterface.getAddress(
                 )
                 var writer = [UInt8]()
                 FfiConverterString.write(result, into: &writer)
@@ -1288,6 +1297,27 @@ private struct FfiConverterOptionInt64: FfiConverterRustBuffer {
     }
 }
 
+private struct FfiConverterOptionString: FfiConverterRustBuffer {
+    typealias SwiftType = String?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterString.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterString.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
 private struct FfiConverterSequenceUInt8: FfiConverterRustBuffer {
     typealias SwiftType = [UInt8]
 
@@ -1482,7 +1512,7 @@ private func uniffiFutureCallbackHandlerSequenceTypeFfiMessageTypeGenericError(
     }
 }
 
-public func createClient(logger: FfiLogger, ffiInboxOwner: FfiInboxOwner, host: String, isSecure: Bool) async throws -> FfiXmtpClient {
+public func createClient(logger: FfiLogger, ffiInboxOwner: FfiInboxOwner, host: String, isSecure: Bool, db: String?) async throws -> FfiXmtpClient {
     var continuation: CheckedContinuation<FfiXmtpClient, Error>? = nil
     // Suspend the function and call the scaffolding function, passing it a callback handler from
     // `AsyncTypes.swift`
@@ -1492,11 +1522,12 @@ public func createClient(logger: FfiLogger, ffiInboxOwner: FfiInboxOwner, host: 
     return try await withCheckedThrowingContinuation {
         continuation = $0
         try! rustCall {
-            uniffi_bindings_ffi_fn_func_create_client(
+            uniffi_xmtpv3_fn_func_create_client(
                 FfiConverterCallbackInterfaceFfiLogger.lower(logger),
                 FfiConverterCallbackInterfaceFfiInboxOwner.lower(ffiInboxOwner),
                 FfiConverterString.lower(host),
                 FfiConverterBool.lower(isSecure),
+                FfiConverterOptionString.lower(db),
                 FfiConverterForeignExecutor.lower(UniFfiForeignExecutor()),
                 uniffiFutureCallbackHandlerTypeFfiXmtpClientTypeGenericError,
                 &continuation,
@@ -1516,34 +1547,43 @@ private enum InitializationResult {
 // the code inside is only computed once.
 private var initializationResult: InitializationResult {
     // Get the bindings contract version from our ComponentInterface
-    let bindings_contract_version = 22
+    let bindings_contract_version = 23
     // Get the scaffolding contract version by calling the into the dylib
     let scaffolding_contract_version = ffi_xmtpv3_uniffi_contract_version()
     if bindings_contract_version != scaffolding_contract_version {
         return InitializationResult.contractVersionMismatch
     }
-    if uniffi_bindings_ffi_checksum_func_create_client() != 2193 {
+    if uniffi_xmtpv3_checksum_func_create_client() != 27741 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_bindings_ffi_checksum_method_fficonversation_id() != 41750 {
+    if uniffi_xmtpv3_checksum_method_fficonversation_id() != 30962 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_bindings_ffi_checksum_method_fficonversation_list_messages() != 32589 {
+    if uniffi_xmtpv3_checksum_method_fficonversation_list_messages() != 43747 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_bindings_ffi_checksum_method_fficonversation_send() != 7299 {
+    if uniffi_xmtpv3_checksum_method_fficonversation_send() != 60096 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_bindings_ffi_checksum_method_fficonversations_list() != 21824 {
+    if uniffi_xmtpv3_checksum_method_fficonversations_list() != 29036 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_bindings_ffi_checksum_method_fficonversations_new_conversation() != 29240 {
+    if uniffi_xmtpv3_checksum_method_fficonversations_new_conversation() != 32304 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_bindings_ffi_checksum_method_ffixmtpclient_conversations() != 43701 {
+    if uniffi_xmtpv3_checksum_method_ffixmtpclient_conversations() != 31628 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_bindings_ffi_checksum_method_ffixmtpclient_wallet_address() != 34877 {
+    if uniffi_xmtpv3_checksum_method_ffixmtpclient_wallet_address() != 52835 {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if uniffi_xmtpv3_checksum_method_ffiinboxowner_get_address() != 2205 {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if uniffi_xmtpv3_checksum_method_ffiinboxowner_sign() != 47939 {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if uniffi_xmtpv3_checksum_method_ffilogger_log() != 56011 {
         return InitializationResult.apiChecksumMismatch
     }
 
