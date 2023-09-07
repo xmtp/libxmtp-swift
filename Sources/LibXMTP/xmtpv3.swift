@@ -1318,6 +1318,27 @@ private struct FfiConverterOptionString: FfiConverterRustBuffer {
     }
 }
 
+private struct FfiConverterOptionSequenceUInt8: FfiConverterRustBuffer {
+    typealias SwiftType = [UInt8]?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterSequenceUInt8.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterSequenceUInt8.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
 private struct FfiConverterSequenceUInt8: FfiConverterRustBuffer {
     typealias SwiftType = [UInt8]
 
@@ -1512,7 +1533,7 @@ private func uniffiFutureCallbackHandlerSequenceTypeFfiMessageTypeGenericError(
     }
 }
 
-public func createClient(logger: FfiLogger, ffiInboxOwner: FfiInboxOwner, host: String, isSecure: Bool, db: String?) async throws -> FfiXmtpClient {
+public func createClient(logger: FfiLogger, ffiInboxOwner: FfiInboxOwner, host: String, isSecure: Bool, db: String?, encryptionKey: [UInt8]?) async throws -> FfiXmtpClient {
     var continuation: CheckedContinuation<FfiXmtpClient, Error>? = nil
     // Suspend the function and call the scaffolding function, passing it a callback handler from
     // `AsyncTypes.swift`
@@ -1528,6 +1549,7 @@ public func createClient(logger: FfiLogger, ffiInboxOwner: FfiInboxOwner, host: 
                 FfiConverterString.lower(host),
                 FfiConverterBool.lower(isSecure),
                 FfiConverterOptionString.lower(db),
+                FfiConverterOptionSequenceUInt8.lower(encryptionKey),
                 FfiConverterForeignExecutor.lower(UniFfiForeignExecutor()),
                 uniffiFutureCallbackHandlerTypeFfiXmtpClientTypeGenericError,
                 &continuation,
@@ -1553,7 +1575,7 @@ private var initializationResult: InitializationResult {
     if bindings_contract_version != scaffolding_contract_version {
         return InitializationResult.contractVersionMismatch
     }
-    if uniffi_xmtpv3_checksum_func_create_client() != 27741 {
+    if uniffi_xmtpv3_checksum_func_create_client() != 23882 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_fficonversation_id() != 30962 {
