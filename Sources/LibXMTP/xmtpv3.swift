@@ -1425,6 +1425,24 @@ private func uniffiFutureCallbackHandlerVoidTypeGenericError(
     }
 }
 
+private func uniffiFutureCallbackHandlerBoolTypeGenericError(
+    rawContinutation: UnsafeRawPointer,
+    returnValue: Int8,
+    callStatus: RustCallStatus
+) {
+    let continuation = rawContinutation.bindMemory(
+        to: CheckedContinuation<Bool, Error>.self,
+        capacity: 1
+    )
+
+    do {
+        try uniffiCheckCallStatus(callStatus: callStatus, errorHandler: FfiConverterTypeGenericError.lift)
+        try continuation.pointee.resume(returning: FfiConverterBool.lift(returnValue))
+    } catch {
+        continuation.pointee.resume(throwing: error)
+    }
+}
+
 private func uniffiFutureCallbackHandlerString(
     rawContinutation: UnsafeRawPointer,
     returnValue: RustBuffer,
@@ -1437,6 +1455,24 @@ private func uniffiFutureCallbackHandlerString(
 
     do {
         try uniffiCheckCallStatus(callStatus: callStatus, errorHandler: nil)
+        try continuation.pointee.resume(returning: FfiConverterString.lift(returnValue))
+    } catch {
+        continuation.pointee.resume(throwing: error)
+    }
+}
+
+private func uniffiFutureCallbackHandlerStringTypeGenericError(
+    rawContinutation: UnsafeRawPointer,
+    returnValue: RustBuffer,
+    callStatus: RustCallStatus
+) {
+    let continuation = rawContinutation.bindMemory(
+        to: CheckedContinuation<String, Error>.self,
+        capacity: 1
+    )
+
+    do {
+        try uniffiCheckCallStatus(callStatus: callStatus, errorHandler: FfiConverterTypeGenericError.lift)
         try continuation.pointee.resume(returning: FfiConverterString.lift(returnValue))
     } catch {
         continuation.pointee.resume(throwing: error)
@@ -1492,6 +1528,24 @@ private func uniffiFutureCallbackHandlerTypeFfiXmtpClientTypeGenericError(
     do {
         try uniffiCheckCallStatus(callStatus: callStatus, errorHandler: FfiConverterTypeGenericError.lift)
         try continuation.pointee.resume(returning: FfiConverterTypeFfiXmtpClient.lift(returnValue))
+    } catch {
+        continuation.pointee.resume(throwing: error)
+    }
+}
+
+private func uniffiFutureCallbackHandlerSequenceUInt8TypeGenericError(
+    rawContinutation: UnsafeRawPointer,
+    returnValue: RustBuffer,
+    callStatus: RustCallStatus
+) {
+    let continuation = rawContinutation.bindMemory(
+        to: CheckedContinuation<[UInt8], Error>.self,
+        capacity: 1
+    )
+
+    do {
+        try uniffiCheckCallStatus(callStatus: callStatus, errorHandler: FfiConverterTypeGenericError.lift)
+        try continuation.pointee.resume(returning: FfiConverterSequenceUInt8.lift(returnValue))
     } catch {
         continuation.pointee.resume(throwing: error)
     }
@@ -1559,6 +1613,41 @@ public func createClient(logger: FfiLogger, ffiInboxOwner: FfiInboxOwner, host: 
     }
 }
 
+public func diffieHellmanK256(privateKeyBytes: [UInt8], publicKeyBytes: [UInt8]) throws -> [UInt8] {
+    return try FfiConverterSequenceUInt8.lift(
+        rustCallWithError(FfiConverterTypeGenericError.lift) {
+            uniffi_xmtpv3_fn_func_diffie_hellman_k256(
+                FfiConverterSequenceUInt8.lower(privateKeyBytes),
+                FfiConverterSequenceUInt8.lower(publicKeyBytes), $0
+            )
+        }
+    )
+}
+
+public func recoverAddress(signatureBytes: [UInt8], predigestMessage: String) throws -> String {
+    return try FfiConverterString.lift(
+        rustCallWithError(FfiConverterTypeGenericError.lift) {
+            uniffi_xmtpv3_fn_func_recover_address(
+                FfiConverterSequenceUInt8.lower(signatureBytes),
+                FfiConverterString.lower(predigestMessage), $0
+            )
+        }
+    )
+}
+
+public func verifyK256Sha256(signedBy: [UInt8], message: [UInt8], signature: [UInt8], recoveryId: UInt8) throws -> Bool {
+    return try FfiConverterBool.lift(
+        rustCallWithError(FfiConverterTypeGenericError.lift) {
+            uniffi_xmtpv3_fn_func_verify_k256_sha256(
+                FfiConverterSequenceUInt8.lower(signedBy),
+                FfiConverterSequenceUInt8.lower(message),
+                FfiConverterSequenceUInt8.lower(signature),
+                FfiConverterUInt8.lower(recoveryId), $0
+            )
+        }
+    )
+}
+
 private enum InitializationResult {
     case ok
     case contractVersionMismatch
@@ -1576,6 +1665,15 @@ private var initializationResult: InitializationResult {
         return InitializationResult.contractVersionMismatch
     }
     if uniffi_xmtpv3_checksum_func_create_client() != 23882 {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if uniffi_xmtpv3_checksum_func_diffie_hellman_k256() != 23225 {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if uniffi_xmtpv3_checksum_func_recover_address() != 45923 {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if uniffi_xmtpv3_checksum_func_verify_k256_sha256() != 31332 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_fficonversation_id() != 30962 {
