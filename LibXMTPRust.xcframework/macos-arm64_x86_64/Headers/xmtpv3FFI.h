@@ -61,37 +61,48 @@ typedef struct RustCallStatus {
 
 // Callbacks for UniFFI Futures
 typedef void (*UniFfiFutureCallbackUInt8)(const void * _Nonnull, uint8_t, RustCallStatus);
+typedef void (*UniFfiFutureCallbackInt8)(const void * _Nonnull, int8_t, RustCallStatus);
 typedef void (*UniFfiFutureCallbackUnsafeMutableRawPointer)(const void * _Nonnull, void*_Nonnull, RustCallStatus);
 typedef void (*UniFfiFutureCallbackUnsafeMutableRawPointer)(const void * _Nonnull, void*_Nonnull, RustCallStatus);
 typedef void (*UniFfiFutureCallbackUnsafeMutableRawPointer)(const void * _Nonnull, void*_Nonnull, RustCallStatus);
 typedef void (*UniFfiFutureCallbackRustBuffer)(const void * _Nonnull, RustBuffer, RustCallStatus);
 
 // Scaffolding functions
-void uniffi_xmtpv3_fn_free_fficonversation(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
-);
-RustBuffer uniffi_xmtpv3_fn_method_fficonversation_id(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
-);
-void uniffi_xmtpv3_fn_method_fficonversation_list_messages(void*_Nonnull ptr, RustBuffer opts, size_t uniffi_executor, UniFfiFutureCallbackRustBuffer _Nonnull uniffi_callback, void* _Nonnull uniffi_callback_data, RustCallStatus *_Nonnull out_status
-);
-void uniffi_xmtpv3_fn_method_fficonversation_send(void*_Nonnull ptr, RustBuffer content_bytes, size_t uniffi_executor, UniFfiFutureCallbackUInt8 _Nonnull uniffi_callback, void* _Nonnull uniffi_callback_data, RustCallStatus *_Nonnull out_status
-);
 void uniffi_xmtpv3_fn_free_fficonversations(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
+);
+void uniffi_xmtpv3_fn_method_fficonversations_create_group(void*_Nonnull ptr, RustBuffer _account_address, size_t uniffi_executor, UniFfiFutureCallbackUnsafeMutableRawPointer _Nonnull uniffi_callback, void* _Nonnull uniffi_callback_data, RustCallStatus *_Nonnull out_status
 );
 void uniffi_xmtpv3_fn_method_fficonversations_list(void*_Nonnull ptr, size_t uniffi_executor, UniFfiFutureCallbackRustBuffer _Nonnull uniffi_callback, void* _Nonnull uniffi_callback_data, RustCallStatus *_Nonnull out_status
 );
-void uniffi_xmtpv3_fn_method_fficonversations_new_conversation(void*_Nonnull ptr, RustBuffer wallet_address, size_t uniffi_executor, UniFfiFutureCallbackUnsafeMutableRawPointer _Nonnull uniffi_callback, void* _Nonnull uniffi_callback_data, RustCallStatus *_Nonnull out_status
+void uniffi_xmtpv3_fn_free_ffigroup(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
+);
+void uniffi_xmtpv3_fn_method_ffigroup_add_members(void*_Nonnull ptr, RustBuffer account_addresses, size_t uniffi_executor, UniFfiFutureCallbackUInt8 _Nonnull uniffi_callback, void* _Nonnull uniffi_callback_data, RustCallStatus *_Nonnull out_status
+);
+void uniffi_xmtpv3_fn_method_ffigroup_find_messages(void*_Nonnull ptr, RustBuffer opts, size_t uniffi_executor, UniFfiFutureCallbackRustBuffer _Nonnull uniffi_callback, void* _Nonnull uniffi_callback_data, RustCallStatus *_Nonnull out_status
+);
+RustBuffer uniffi_xmtpv3_fn_method_ffigroup_id(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
+);
+void uniffi_xmtpv3_fn_method_ffigroup_remove_members(void*_Nonnull ptr, RustBuffer account_addresses, size_t uniffi_executor, UniFfiFutureCallbackUInt8 _Nonnull uniffi_callback, void* _Nonnull uniffi_callback_data, RustCallStatus *_Nonnull out_status
+);
+void uniffi_xmtpv3_fn_method_ffigroup_send(void*_Nonnull ptr, RustBuffer content_bytes, size_t uniffi_executor, UniFfiFutureCallbackUInt8 _Nonnull uniffi_callback, void* _Nonnull uniffi_callback_data, RustCallStatus *_Nonnull out_status
 );
 void uniffi_xmtpv3_fn_free_ffixmtpclient(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
 );
-void*_Nonnull uniffi_xmtpv3_fn_method_ffixmtpclient_conversations(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
+RustBuffer uniffi_xmtpv3_fn_method_ffixmtpclient_account_address(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
 );
-RustBuffer uniffi_xmtpv3_fn_method_ffixmtpclient_wallet_address(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
+void*_Nonnull uniffi_xmtpv3_fn_method_ffixmtpclient_conversations(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
 );
 void uniffi_xmtpv3_fn_init_callback_ffiinboxowner(ForeignCallback _Nonnull callback_stub, RustCallStatus *_Nonnull out_status
 );
 void uniffi_xmtpv3_fn_init_callback_ffilogger(ForeignCallback _Nonnull callback_stub, RustCallStatus *_Nonnull out_status
 );
-void uniffi_xmtpv3_fn_func_create_client(uint64_t logger, uint64_t ffi_inbox_owner, RustBuffer host, int8_t is_secure, RustBuffer db, size_t uniffi_executor, UniFfiFutureCallbackUnsafeMutableRawPointer _Nonnull uniffi_callback, void* _Nonnull uniffi_callback_data, RustCallStatus *_Nonnull out_status
+void uniffi_xmtpv3_fn_func_create_client(uint64_t logger, uint64_t ffi_inbox_owner, RustBuffer host, int8_t is_secure, RustBuffer db, RustBuffer encryption_key, size_t uniffi_executor, UniFfiFutureCallbackUnsafeMutableRawPointer _Nonnull uniffi_callback, void* _Nonnull uniffi_callback_data, RustCallStatus *_Nonnull out_status
+);
+RustBuffer uniffi_xmtpv3_fn_func_diffie_hellman_k256(RustBuffer private_key_bytes, RustBuffer public_key_bytes, RustCallStatus *_Nonnull out_status
+);
+RustBuffer uniffi_xmtpv3_fn_func_recover_address(RustBuffer signature_bytes, RustBuffer predigest_message, RustCallStatus *_Nonnull out_status
+);
+int8_t uniffi_xmtpv3_fn_func_verify_k256_sha256(RustBuffer signed_by, RustBuffer message, RustBuffer signature, uint8_t recovery_id, RustCallStatus *_Nonnull out_status
 );
 RustBuffer ffi_xmtpv3_rustbuffer_alloc(int32_t size, RustCallStatus *_Nonnull out_status
 );
@@ -104,25 +115,40 @@ RustBuffer ffi_xmtpv3_rustbuffer_reserve(RustBuffer buf, int32_t additional, Rus
 uint16_t uniffi_xmtpv3_checksum_func_create_client(void
     
 );
-uint16_t uniffi_xmtpv3_checksum_method_fficonversation_id(void
+uint16_t uniffi_xmtpv3_checksum_func_diffie_hellman_k256(void
     
 );
-uint16_t uniffi_xmtpv3_checksum_method_fficonversation_list_messages(void
+uint16_t uniffi_xmtpv3_checksum_func_recover_address(void
     
 );
-uint16_t uniffi_xmtpv3_checksum_method_fficonversation_send(void
+uint16_t uniffi_xmtpv3_checksum_func_verify_k256_sha256(void
+    
+);
+uint16_t uniffi_xmtpv3_checksum_method_fficonversations_create_group(void
     
 );
 uint16_t uniffi_xmtpv3_checksum_method_fficonversations_list(void
     
 );
-uint16_t uniffi_xmtpv3_checksum_method_fficonversations_new_conversation(void
+uint16_t uniffi_xmtpv3_checksum_method_ffigroup_add_members(void
+    
+);
+uint16_t uniffi_xmtpv3_checksum_method_ffigroup_find_messages(void
+    
+);
+uint16_t uniffi_xmtpv3_checksum_method_ffigroup_id(void
+    
+);
+uint16_t uniffi_xmtpv3_checksum_method_ffigroup_remove_members(void
+    
+);
+uint16_t uniffi_xmtpv3_checksum_method_ffigroup_send(void
+    
+);
+uint16_t uniffi_xmtpv3_checksum_method_ffixmtpclient_account_address(void
     
 );
 uint16_t uniffi_xmtpv3_checksum_method_ffixmtpclient_conversations(void
-    
-);
-uint16_t uniffi_xmtpv3_checksum_method_ffixmtpclient_wallet_address(void
     
 );
 uint16_t uniffi_xmtpv3_checksum_method_ffiinboxowner_get_address(void
