@@ -407,123 +407,9 @@ private struct FfiConverterData: FfiConverterRustBuffer {
     }
 }
 
-public protocol FfiConversationProtocol {
-    func id() -> String
-    func listMessages(opts: FfiListMessagesOptions) async throws -> [FfiMessage]
-    func send(contentBytes: [UInt8]) async throws
-}
-
-public class FfiConversation: FfiConversationProtocol {
-    fileprivate let pointer: UnsafeMutableRawPointer
-
-    // TODO: We'd like this to be `private` but for Swifty reasons,
-    // we can't implement `FfiConverter` without making this `required` and we can't
-    // make it `required` without making it `public`.
-    required init(unsafeFromRawPointer pointer: UnsafeMutableRawPointer) {
-        self.pointer = pointer
-    }
-
-    deinit {
-        try! rustCall { uniffi_xmtpv3_fn_free_fficonversation(pointer, $0) }
-    }
-
-    public func id() -> String {
-        return try! FfiConverterString.lift(
-            try!
-                rustCall {
-                    uniffi_xmtpv3_fn_method_fficonversation_id(self.pointer, $0)
-                }
-        )
-    }
-
-    public func listMessages(opts: FfiListMessagesOptions) async throws -> [FfiMessage] {
-        // Suspend the function and call the scaffolding function, passing it a callback handler from
-        // `AsyncTypes.swift`
-        //
-        // Make sure to hold on to a reference to the continuation in the top-level scope so that
-        // it's not freed before the callback is invoked.
-        var continuation: CheckedContinuation<[FfiMessage], Error>? = nil
-        return try await withCheckedThrowingContinuation {
-            continuation = $0
-            try! rustCall {
-                uniffi_xmtpv3_fn_method_fficonversation_list_messages(
-                    self.pointer,
-
-                    FfiConverterTypeFfiListMessagesOptions.lower(opts),
-                    FfiConverterForeignExecutor.lower(UniFfiForeignExecutor()),
-                    uniffiFutureCallbackHandlerSequenceTypeFfiMessageTypeGenericError,
-                    &continuation,
-                    $0
-                )
-            }
-        }
-    }
-
-    public func send(contentBytes: [UInt8]) async throws {
-        // Suspend the function and call the scaffolding function, passing it a callback handler from
-        // `AsyncTypes.swift`
-        //
-        // Make sure to hold on to a reference to the continuation in the top-level scope so that
-        // it's not freed before the callback is invoked.
-        var continuation: CheckedContinuation<Void, Error>? = nil
-        return try await withCheckedThrowingContinuation {
-            continuation = $0
-            try! rustCall {
-                uniffi_xmtpv3_fn_method_fficonversation_send(
-                    self.pointer,
-
-                    FfiConverterSequenceUInt8.lower(contentBytes),
-                    FfiConverterForeignExecutor.lower(UniFfiForeignExecutor()),
-                    uniffiFutureCallbackHandlerVoidTypeGenericError,
-                    &continuation,
-                    $0
-                )
-            }
-        }
-    }
-}
-
-public struct FfiConverterTypeFfiConversation: FfiConverter {
-    typealias FfiType = UnsafeMutableRawPointer
-    typealias SwiftType = FfiConversation
-
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiConversation {
-        let v: UInt64 = try readInt(&buf)
-        // The Rust code won't compile if a pointer won't fit in a UInt64.
-        // We have to go via `UInt` because that's the thing that's the size of a pointer.
-        let ptr = UnsafeMutableRawPointer(bitPattern: UInt(truncatingIfNeeded: v))
-        if ptr == nil {
-            throw UniffiInternalError.unexpectedNullPointer
-        }
-        return try lift(ptr!)
-    }
-
-    public static func write(_ value: FfiConversation, into buf: inout [UInt8]) {
-        // This fiddling is because `Int` is the thing that's the same size as a pointer.
-        // The Rust code won't compile if a pointer won't fit in a `UInt64`.
-        writeInt(&buf, UInt64(bitPattern: Int64(Int(bitPattern: lower(value)))))
-    }
-
-    public static func lift(_ pointer: UnsafeMutableRawPointer) throws -> FfiConversation {
-        return FfiConversation(unsafeFromRawPointer: pointer)
-    }
-
-    public static func lower(_ value: FfiConversation) -> UnsafeMutableRawPointer {
-        return value.pointer
-    }
-}
-
-public func FfiConverterTypeFfiConversation_lift(_ pointer: UnsafeMutableRawPointer) throws -> FfiConversation {
-    return try FfiConverterTypeFfiConversation.lift(pointer)
-}
-
-public func FfiConverterTypeFfiConversation_lower(_ value: FfiConversation) -> UnsafeMutableRawPointer {
-    return FfiConverterTypeFfiConversation.lower(value)
-}
-
 public protocol FfiConversationsProtocol {
-    func list() async throws -> [FfiConversation]
-    func newConversation(walletAddress: String) async throws -> FfiConversation
+    func createGroup(accountAddress: String) async throws -> FfiGroup
+    func list() async throws -> [FfiGroup]
 }
 
 public class FfiConversations: FfiConversationsProtocol {
@@ -540,21 +426,22 @@ public class FfiConversations: FfiConversationsProtocol {
         try! rustCall { uniffi_xmtpv3_fn_free_fficonversations(pointer, $0) }
     }
 
-    public func list() async throws -> [FfiConversation] {
+    public func createGroup(accountAddress: String) async throws -> FfiGroup {
         // Suspend the function and call the scaffolding function, passing it a callback handler from
         // `AsyncTypes.swift`
         //
         // Make sure to hold on to a reference to the continuation in the top-level scope so that
         // it's not freed before the callback is invoked.
-        var continuation: CheckedContinuation<[FfiConversation], Error>? = nil
+        var continuation: CheckedContinuation<FfiGroup, Error>? = nil
         return try await withCheckedThrowingContinuation {
             continuation = $0
             try! rustCall {
-                uniffi_xmtpv3_fn_method_fficonversations_list(
+                uniffi_xmtpv3_fn_method_fficonversations_create_group(
                     self.pointer,
 
+                    FfiConverterString.lower(accountAddress),
                     FfiConverterForeignExecutor.lower(UniFfiForeignExecutor()),
-                    uniffiFutureCallbackHandlerSequenceTypeFfiConversationTypeGenericError,
+                    uniffiFutureCallbackHandlerTypeFfiGroupTypeGenericError,
                     &continuation,
                     $0
                 )
@@ -562,22 +449,21 @@ public class FfiConversations: FfiConversationsProtocol {
         }
     }
 
-    public func newConversation(walletAddress: String) async throws -> FfiConversation {
+    public func list() async throws -> [FfiGroup] {
         // Suspend the function and call the scaffolding function, passing it a callback handler from
         // `AsyncTypes.swift`
         //
         // Make sure to hold on to a reference to the continuation in the top-level scope so that
         // it's not freed before the callback is invoked.
-        var continuation: CheckedContinuation<FfiConversation, Error>? = nil
+        var continuation: CheckedContinuation<[FfiGroup], Error>? = nil
         return try await withCheckedThrowingContinuation {
             continuation = $0
             try! rustCall {
-                uniffi_xmtpv3_fn_method_fficonversations_new_conversation(
+                uniffi_xmtpv3_fn_method_fficonversations_list(
                     self.pointer,
 
-                    FfiConverterString.lower(walletAddress),
                     FfiConverterForeignExecutor.lower(UniFfiForeignExecutor()),
-                    uniffiFutureCallbackHandlerTypeFfiConversationTypeGenericError,
+                    uniffiFutureCallbackHandlerSequenceTypeFfiGroupTypeGenericError,
                     &continuation,
                     $0
                 )
@@ -624,9 +510,171 @@ public func FfiConverterTypeFfiConversations_lower(_ value: FfiConversations) ->
     return FfiConverterTypeFfiConversations.lower(value)
 }
 
+public protocol FfiGroupProtocol {
+    func addMembers(accountAddresses: [String]) async throws
+    func findMessages(opts: FfiListMessagesOptions) async throws -> [FfiMessage]
+    func id() -> [UInt8]
+    func removeMembers(accountAddresses: [String]) async throws
+    func send(contentBytes: [UInt8]) async throws
+}
+
+public class FfiGroup: FfiGroupProtocol {
+    fileprivate let pointer: UnsafeMutableRawPointer
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+    required init(unsafeFromRawPointer pointer: UnsafeMutableRawPointer) {
+        self.pointer = pointer
+    }
+
+    deinit {
+        try! rustCall { uniffi_xmtpv3_fn_free_ffigroup(pointer, $0) }
+    }
+
+    public func addMembers(accountAddresses: [String]) async throws {
+        // Suspend the function and call the scaffolding function, passing it a callback handler from
+        // `AsyncTypes.swift`
+        //
+        // Make sure to hold on to a reference to the continuation in the top-level scope so that
+        // it's not freed before the callback is invoked.
+        var continuation: CheckedContinuation<Void, Error>? = nil
+        return try await withCheckedThrowingContinuation {
+            continuation = $0
+            try! rustCall {
+                uniffi_xmtpv3_fn_method_ffigroup_add_members(
+                    self.pointer,
+
+                    FfiConverterSequenceString.lower(accountAddresses),
+                    FfiConverterForeignExecutor.lower(UniFfiForeignExecutor()),
+                    uniffiFutureCallbackHandlerVoidTypeGenericError,
+                    &continuation,
+                    $0
+                )
+            }
+        }
+    }
+
+    public func findMessages(opts: FfiListMessagesOptions) async throws -> [FfiMessage] {
+        // Suspend the function and call the scaffolding function, passing it a callback handler from
+        // `AsyncTypes.swift`
+        //
+        // Make sure to hold on to a reference to the continuation in the top-level scope so that
+        // it's not freed before the callback is invoked.
+        var continuation: CheckedContinuation<[FfiMessage], Error>? = nil
+        return try await withCheckedThrowingContinuation {
+            continuation = $0
+            try! rustCall {
+                uniffi_xmtpv3_fn_method_ffigroup_find_messages(
+                    self.pointer,
+
+                    FfiConverterTypeFfiListMessagesOptions.lower(opts),
+                    FfiConverterForeignExecutor.lower(UniFfiForeignExecutor()),
+                    uniffiFutureCallbackHandlerSequenceTypeFfiMessageTypeGenericError,
+                    &continuation,
+                    $0
+                )
+            }
+        }
+    }
+
+    public func id() -> [UInt8] {
+        return try! FfiConverterSequenceUInt8.lift(
+            try!
+                rustCall {
+                    uniffi_xmtpv3_fn_method_ffigroup_id(self.pointer, $0)
+                }
+        )
+    }
+
+    public func removeMembers(accountAddresses: [String]) async throws {
+        // Suspend the function and call the scaffolding function, passing it a callback handler from
+        // `AsyncTypes.swift`
+        //
+        // Make sure to hold on to a reference to the continuation in the top-level scope so that
+        // it's not freed before the callback is invoked.
+        var continuation: CheckedContinuation<Void, Error>? = nil
+        return try await withCheckedThrowingContinuation {
+            continuation = $0
+            try! rustCall {
+                uniffi_xmtpv3_fn_method_ffigroup_remove_members(
+                    self.pointer,
+
+                    FfiConverterSequenceString.lower(accountAddresses),
+                    FfiConverterForeignExecutor.lower(UniFfiForeignExecutor()),
+                    uniffiFutureCallbackHandlerVoidTypeGenericError,
+                    &continuation,
+                    $0
+                )
+            }
+        }
+    }
+
+    public func send(contentBytes: [UInt8]) async throws {
+        // Suspend the function and call the scaffolding function, passing it a callback handler from
+        // `AsyncTypes.swift`
+        //
+        // Make sure to hold on to a reference to the continuation in the top-level scope so that
+        // it's not freed before the callback is invoked.
+        var continuation: CheckedContinuation<Void, Error>? = nil
+        return try await withCheckedThrowingContinuation {
+            continuation = $0
+            try! rustCall {
+                uniffi_xmtpv3_fn_method_ffigroup_send(
+                    self.pointer,
+
+                    FfiConverterSequenceUInt8.lower(contentBytes),
+                    FfiConverterForeignExecutor.lower(UniFfiForeignExecutor()),
+                    uniffiFutureCallbackHandlerVoidTypeGenericError,
+                    &continuation,
+                    $0
+                )
+            }
+        }
+    }
+}
+
+public struct FfiConverterTypeFfiGroup: FfiConverter {
+    typealias FfiType = UnsafeMutableRawPointer
+    typealias SwiftType = FfiGroup
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiGroup {
+        let v: UInt64 = try readInt(&buf)
+        // The Rust code won't compile if a pointer won't fit in a UInt64.
+        // We have to go via `UInt` because that's the thing that's the size of a pointer.
+        let ptr = UnsafeMutableRawPointer(bitPattern: UInt(truncatingIfNeeded: v))
+        if ptr == nil {
+            throw UniffiInternalError.unexpectedNullPointer
+        }
+        return try lift(ptr!)
+    }
+
+    public static func write(_ value: FfiGroup, into buf: inout [UInt8]) {
+        // This fiddling is because `Int` is the thing that's the same size as a pointer.
+        // The Rust code won't compile if a pointer won't fit in a `UInt64`.
+        writeInt(&buf, UInt64(bitPattern: Int64(Int(bitPattern: lower(value)))))
+    }
+
+    public static func lift(_ pointer: UnsafeMutableRawPointer) throws -> FfiGroup {
+        return FfiGroup(unsafeFromRawPointer: pointer)
+    }
+
+    public static func lower(_ value: FfiGroup) -> UnsafeMutableRawPointer {
+        return value.pointer
+    }
+}
+
+public func FfiConverterTypeFfiGroup_lift(_ pointer: UnsafeMutableRawPointer) throws -> FfiGroup {
+    return try FfiConverterTypeFfiGroup.lift(pointer)
+}
+
+public func FfiConverterTypeFfiGroup_lower(_ value: FfiGroup) -> UnsafeMutableRawPointer {
+    return FfiConverterTypeFfiGroup.lower(value)
+}
+
 public protocol FfiXmtpClientProtocol {
+    func accountAddress() -> String
     func conversations() -> FfiConversations
-    func walletAddress() -> String
 }
 
 public class FfiXmtpClient: FfiXmtpClientProtocol {
@@ -643,20 +691,20 @@ public class FfiXmtpClient: FfiXmtpClientProtocol {
         try! rustCall { uniffi_xmtpv3_fn_free_ffixmtpclient(pointer, $0) }
     }
 
+    public func accountAddress() -> String {
+        return try! FfiConverterString.lift(
+            try!
+                rustCall {
+                    uniffi_xmtpv3_fn_method_ffixmtpclient_account_address(self.pointer, $0)
+                }
+        )
+    }
+
     public func conversations() -> FfiConversations {
         return try! FfiConverterTypeFfiConversations.lift(
             try!
                 rustCall {
                     uniffi_xmtpv3_fn_method_ffixmtpclient_conversations(self.pointer, $0)
-                }
-        )
-    }
-
-    public func walletAddress() -> String {
-        return try! FfiConverterString.lift(
-            try!
-                rustCall {
-                    uniffi_xmtpv3_fn_method_ffixmtpclient_wallet_address(self.pointer, $0)
                 }
         )
     }
@@ -767,25 +815,25 @@ private func uniffiInitForeignExecutor() {
 }
 
 public struct FfiListMessagesOptions {
-    public var startTimeNs: Int64?
-    public var endTimeNs: Int64?
+    public var sentBeforeNs: Int64?
+    public var sentAfterNs: Int64?
     public var limit: Int64?
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
-    public init(startTimeNs: Int64?, endTimeNs: Int64?, limit: Int64?) {
-        self.startTimeNs = startTimeNs
-        self.endTimeNs = endTimeNs
+    public init(sentBeforeNs: Int64?, sentAfterNs: Int64?, limit: Int64?) {
+        self.sentBeforeNs = sentBeforeNs
+        self.sentAfterNs = sentAfterNs
         self.limit = limit
     }
 }
 
 extension FfiListMessagesOptions: Equatable, Hashable {
     public static func == (lhs: FfiListMessagesOptions, rhs: FfiListMessagesOptions) -> Bool {
-        if lhs.startTimeNs != rhs.startTimeNs {
+        if lhs.sentBeforeNs != rhs.sentBeforeNs {
             return false
         }
-        if lhs.endTimeNs != rhs.endTimeNs {
+        if lhs.sentAfterNs != rhs.sentAfterNs {
             return false
         }
         if lhs.limit != rhs.limit {
@@ -795,8 +843,8 @@ extension FfiListMessagesOptions: Equatable, Hashable {
     }
 
     public func hash(into hasher: inout Hasher) {
-        hasher.combine(startTimeNs)
-        hasher.combine(endTimeNs)
+        hasher.combine(sentBeforeNs)
+        hasher.combine(sentAfterNs)
         hasher.combine(limit)
     }
 }
@@ -804,15 +852,15 @@ extension FfiListMessagesOptions: Equatable, Hashable {
 public struct FfiConverterTypeFfiListMessagesOptions: FfiConverterRustBuffer {
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiListMessagesOptions {
         return try FfiListMessagesOptions(
-            startTimeNs: FfiConverterOptionInt64.read(from: &buf),
-            endTimeNs: FfiConverterOptionInt64.read(from: &buf),
+            sentBeforeNs: FfiConverterOptionInt64.read(from: &buf),
+            sentAfterNs: FfiConverterOptionInt64.read(from: &buf),
             limit: FfiConverterOptionInt64.read(from: &buf)
         )
     }
 
     public static func write(_ value: FfiListMessagesOptions, into buf: inout [UInt8]) {
-        FfiConverterOptionInt64.write(value.startTimeNs, into: &buf)
-        FfiConverterOptionInt64.write(value.endTimeNs, into: &buf)
+        FfiConverterOptionInt64.write(value.sentBeforeNs, into: &buf)
+        FfiConverterOptionInt64.write(value.sentAfterNs, into: &buf)
         FfiConverterOptionInt64.write(value.limit, into: &buf)
     }
 }
@@ -826,15 +874,15 @@ public func FfiConverterTypeFfiListMessagesOptions_lower(_ value: FfiListMessage
 }
 
 public struct FfiMessage {
-    public var id: String
+    public var id: [UInt8]
     public var sentAtNs: Int64
-    public var convoId: String
+    public var convoId: [UInt8]
     public var addrFrom: String
     public var content: [UInt8]
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
-    public init(id: String, sentAtNs: Int64, convoId: String, addrFrom: String, content: [UInt8]) {
+    public init(id: [UInt8], sentAtNs: Int64, convoId: [UInt8], addrFrom: String, content: [UInt8]) {
         self.id = id
         self.sentAtNs = sentAtNs
         self.convoId = convoId
@@ -875,18 +923,18 @@ extension FfiMessage: Equatable, Hashable {
 public struct FfiConverterTypeFfiMessage: FfiConverterRustBuffer {
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiMessage {
         return try FfiMessage(
-            id: FfiConverterString.read(from: &buf),
+            id: FfiConverterSequenceUInt8.read(from: &buf),
             sentAtNs: FfiConverterInt64.read(from: &buf),
-            convoId: FfiConverterString.read(from: &buf),
+            convoId: FfiConverterSequenceUInt8.read(from: &buf),
             addrFrom: FfiConverterString.read(from: &buf),
             content: FfiConverterSequenceUInt8.read(from: &buf)
         )
     }
 
     public static func write(_ value: FfiMessage, into buf: inout [UInt8]) {
-        FfiConverterString.write(value.id, into: &buf)
+        FfiConverterSequenceUInt8.write(value.id, into: &buf)
         FfiConverterInt64.write(value.sentAtNs, into: &buf)
-        FfiConverterString.write(value.convoId, into: &buf)
+        FfiConverterSequenceUInt8.write(value.convoId, into: &buf)
         FfiConverterString.write(value.addrFrom, into: &buf)
         FfiConverterSequenceUInt8.write(value.content, into: &buf)
     }
@@ -1361,23 +1409,45 @@ private struct FfiConverterSequenceUInt8: FfiConverterRustBuffer {
     }
 }
 
-private struct FfiConverterSequenceTypeFfiConversation: FfiConverterRustBuffer {
-    typealias SwiftType = [FfiConversation]
+private struct FfiConverterSequenceString: FfiConverterRustBuffer {
+    typealias SwiftType = [String]
 
-    public static func write(_ value: [FfiConversation], into buf: inout [UInt8]) {
+    public static func write(_ value: [String], into buf: inout [UInt8]) {
         let len = Int32(value.count)
         writeInt(&buf, len)
         for item in value {
-            FfiConverterTypeFfiConversation.write(item, into: &buf)
+            FfiConverterString.write(item, into: &buf)
         }
     }
 
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [FfiConversation] {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [String] {
         let len: Int32 = try readInt(&buf)
-        var seq = [FfiConversation]()
+        var seq = [String]()
         seq.reserveCapacity(Int(len))
         for _ in 0 ..< len {
-            try seq.append(FfiConverterTypeFfiConversation.read(from: &buf))
+            try seq.append(FfiConverterString.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+private struct FfiConverterSequenceTypeFfiGroup: FfiConverterRustBuffer {
+    typealias SwiftType = [FfiGroup]
+
+    public static func write(_ value: [FfiGroup], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeFfiGroup.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [FfiGroup] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [FfiGroup]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            try seq.append(FfiConverterTypeFfiGroup.read(from: &buf))
         }
         return seq
     }
@@ -1479,24 +1549,6 @@ private func uniffiFutureCallbackHandlerStringTypeGenericError(
     }
 }
 
-private func uniffiFutureCallbackHandlerTypeFfiConversationTypeGenericError(
-    rawContinutation: UnsafeRawPointer,
-    returnValue: UnsafeMutableRawPointer,
-    callStatus: RustCallStatus
-) {
-    let continuation = rawContinutation.bindMemory(
-        to: CheckedContinuation<FfiConversation, Error>.self,
-        capacity: 1
-    )
-
-    do {
-        try uniffiCheckCallStatus(callStatus: callStatus, errorHandler: FfiConverterTypeGenericError.lift)
-        try continuation.pointee.resume(returning: FfiConverterTypeFfiConversation.lift(returnValue))
-    } catch {
-        continuation.pointee.resume(throwing: error)
-    }
-}
-
 private func uniffiFutureCallbackHandlerTypeFfiConversations(
     rawContinutation: UnsafeRawPointer,
     returnValue: UnsafeMutableRawPointer,
@@ -1510,6 +1562,24 @@ private func uniffiFutureCallbackHandlerTypeFfiConversations(
     do {
         try uniffiCheckCallStatus(callStatus: callStatus, errorHandler: nil)
         try continuation.pointee.resume(returning: FfiConverterTypeFfiConversations.lift(returnValue))
+    } catch {
+        continuation.pointee.resume(throwing: error)
+    }
+}
+
+private func uniffiFutureCallbackHandlerTypeFfiGroupTypeGenericError(
+    rawContinutation: UnsafeRawPointer,
+    returnValue: UnsafeMutableRawPointer,
+    callStatus: RustCallStatus
+) {
+    let continuation = rawContinutation.bindMemory(
+        to: CheckedContinuation<FfiGroup, Error>.self,
+        capacity: 1
+    )
+
+    do {
+        try uniffiCheckCallStatus(callStatus: callStatus, errorHandler: FfiConverterTypeGenericError.lift)
+        try continuation.pointee.resume(returning: FfiConverterTypeFfiGroup.lift(returnValue))
     } catch {
         continuation.pointee.resume(throwing: error)
     }
@@ -1533,6 +1603,24 @@ private func uniffiFutureCallbackHandlerTypeFfiXmtpClientTypeGenericError(
     }
 }
 
+private func uniffiFutureCallbackHandlerSequenceUInt8(
+    rawContinutation: UnsafeRawPointer,
+    returnValue: RustBuffer,
+    callStatus: RustCallStatus
+) {
+    let continuation = rawContinutation.bindMemory(
+        to: CheckedContinuation<[UInt8], Error>.self,
+        capacity: 1
+    )
+
+    do {
+        try uniffiCheckCallStatus(callStatus: callStatus, errorHandler: nil)
+        try continuation.pointee.resume(returning: FfiConverterSequenceUInt8.lift(returnValue))
+    } catch {
+        continuation.pointee.resume(throwing: error)
+    }
+}
+
 private func uniffiFutureCallbackHandlerSequenceUInt8TypeGenericError(
     rawContinutation: UnsafeRawPointer,
     returnValue: RustBuffer,
@@ -1551,19 +1639,19 @@ private func uniffiFutureCallbackHandlerSequenceUInt8TypeGenericError(
     }
 }
 
-private func uniffiFutureCallbackHandlerSequenceTypeFfiConversationTypeGenericError(
+private func uniffiFutureCallbackHandlerSequenceTypeFfiGroupTypeGenericError(
     rawContinutation: UnsafeRawPointer,
     returnValue: RustBuffer,
     callStatus: RustCallStatus
 ) {
     let continuation = rawContinutation.bindMemory(
-        to: CheckedContinuation<[FfiConversation], Error>.self,
+        to: CheckedContinuation<[FfiGroup], Error>.self,
         capacity: 1
     )
 
     do {
         try uniffiCheckCallStatus(callStatus: callStatus, errorHandler: FfiConverterTypeGenericError.lift)
-        try continuation.pointee.resume(returning: FfiConverterSequenceTypeFfiConversation.lift(returnValue))
+        try continuation.pointee.resume(returning: FfiConverterSequenceTypeFfiGroup.lift(returnValue))
     } catch {
         continuation.pointee.resume(throwing: error)
     }
@@ -1676,25 +1764,31 @@ private var initializationResult: InitializationResult {
     if uniffi_xmtpv3_checksum_func_verify_k256_sha256() != 31332 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_xmtpv3_checksum_method_fficonversation_id() != 30962 {
+    if uniffi_xmtpv3_checksum_method_fficonversations_create_group() != 30537 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_xmtpv3_checksum_method_fficonversation_list_messages() != 43747 {
+    if uniffi_xmtpv3_checksum_method_fficonversations_list() != 49805 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_xmtpv3_checksum_method_fficonversation_send() != 60096 {
+    if uniffi_xmtpv3_checksum_method_ffigroup_add_members() != 24978 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_xmtpv3_checksum_method_fficonversations_list() != 29036 {
+    if uniffi_xmtpv3_checksum_method_ffigroup_find_messages() != 30460 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_xmtpv3_checksum_method_fficonversations_new_conversation() != 32304 {
+    if uniffi_xmtpv3_checksum_method_ffigroup_id() != 35243 {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if uniffi_xmtpv3_checksum_method_ffigroup_remove_members() != 1645 {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if uniffi_xmtpv3_checksum_method_ffigroup_send() != 55957 {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if uniffi_xmtpv3_checksum_method_ffixmtpclient_account_address() != 65151 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_ffixmtpclient_conversations() != 31628 {
-        return InitializationResult.apiChecksumMismatch
-    }
-    if uniffi_xmtpv3_checksum_method_ffixmtpclient_wallet_address() != 52835 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_ffiinboxowner_get_address() != 2205 {
