@@ -92,6 +92,8 @@ RustBuffer uniffi_xmtpv3_fn_method_ffixmtpclient_account_address(void*_Nonnull p
 );
 void*_Nonnull uniffi_xmtpv3_fn_method_ffixmtpclient_conversations(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
 );
+void uniffi_xmtpv3_fn_method_ffixmtpclient_register_identity(void*_Nonnull ptr, size_t uniffi_executor, UniFfiFutureCallbackUInt8 _Nonnull uniffi_callback, void* _Nonnull uniffi_callback_data, RustCallStatus *_Nonnull out_status
+);
 void uniffi_xmtpv3_fn_init_callback_ffiinboxowner(ForeignCallback _Nonnull callback_stub, RustCallStatus *_Nonnull out_status
 );
 void uniffi_xmtpv3_fn_init_callback_ffilogger(ForeignCallback _Nonnull callback_stub, RustCallStatus *_Nonnull out_status
@@ -149,6 +151,9 @@ uint16_t uniffi_xmtpv3_checksum_method_ffixmtpclient_account_address(void
     
 );
 uint16_t uniffi_xmtpv3_checksum_method_ffixmtpclient_conversations(void
+    
+);
+uint16_t uniffi_xmtpv3_checksum_method_ffixmtpclient_register_identity(void
     
 );
 uint16_t uniffi_xmtpv3_checksum_method_ffiinboxowner_get_address(void
