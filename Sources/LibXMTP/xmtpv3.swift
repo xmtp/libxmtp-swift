@@ -675,7 +675,7 @@ public func FfiConverterTypeFfiGroup_lower(_ value: FfiGroup) -> UnsafeMutableRa
 public protocol FfiXmtpClientProtocol {
     func accountAddress() -> String
     func conversations() -> FfiConversations
-    func registerIdentity() async
+    func registerIdentity() async throws
 }
 
 public class FfiXmtpClient: FfiXmtpClientProtocol {
@@ -710,21 +710,21 @@ public class FfiXmtpClient: FfiXmtpClientProtocol {
         )
     }
 
-    public func registerIdentity() async {
+    public func registerIdentity() async throws {
         // Suspend the function and call the scaffolding function, passing it a callback handler from
         // `AsyncTypes.swift`
         //
         // Make sure to hold on to a reference to the continuation in the top-level scope so that
         // it's not freed before the callback is invoked.
         var continuation: CheckedContinuation<Void, Error>? = nil
-        return try! await withCheckedThrowingContinuation {
+        return try await withCheckedThrowingContinuation {
             continuation = $0
             try! rustCall {
                 uniffi_xmtpv3_fn_method_ffixmtpclient_register_identity(
                     self.pointer,
 
                     FfiConverterForeignExecutor.lower(UniFfiForeignExecutor()),
-                    uniffiFutureCallbackHandlerVoid,
+                    uniffiFutureCallbackHandlerVoidTypeGenericError,
                     &continuation,
                     $0
                 )
@@ -1500,24 +1500,6 @@ private struct FfiConverterSequenceTypeFfiMessage: FfiConverterRustBuffer {
 
 // Callback handlers for an async calls.  These are invoked by Rust when the future is ready.  They
 // lift the return value or error and resume the suspended function.
-private func uniffiFutureCallbackHandlerVoid(
-    rawContinutation: UnsafeRawPointer,
-    returnValue _: UInt8,
-    callStatus: RustCallStatus
-) {
-    let continuation = rawContinutation.bindMemory(
-        to: CheckedContinuation<Void, Error>.self,
-        capacity: 1
-    )
-
-    do {
-        try uniffiCheckCallStatus(callStatus: callStatus, errorHandler: nil)
-        continuation.pointee.resume(returning: ())
-    } catch {
-        continuation.pointee.resume(throwing: error)
-    }
-}
-
 private func uniffiFutureCallbackHandlerVoidTypeGenericError(
     rawContinutation: UnsafeRawPointer,
     returnValue _: UInt8,
@@ -1832,7 +1814,7 @@ private var initializationResult: InitializationResult {
     if uniffi_xmtpv3_checksum_method_ffixmtpclient_conversations() != 31628 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_xmtpv3_checksum_method_ffixmtpclient_register_identity() != 19353 {
+    if uniffi_xmtpv3_checksum_method_ffixmtpclient_register_identity() != 18577 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_ffiinboxowner_get_address() != 2205 {
