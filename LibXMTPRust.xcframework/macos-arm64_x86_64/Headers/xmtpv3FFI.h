@@ -98,15 +98,15 @@ void uniffi_xmtpv3_fn_free_ffimessagestreamcloser(void*_Nonnull ptr, RustCallSta
 );
 void uniffi_xmtpv3_fn_method_ffimessagestreamcloser_close(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
 );
-void uniffi_xmtpv3_fn_free_ffiv2client(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
+void uniffi_xmtpv3_fn_free_ffiv2apiclient(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
 );
-void uniffi_xmtpv3_fn_method_ffiv2client_batch_query(void*_Nonnull ptr, RustBuffer req, size_t uniffi_executor, UniFfiFutureCallbackRustBuffer _Nonnull uniffi_callback, void* _Nonnull uniffi_callback_data, RustCallStatus *_Nonnull out_status
+void uniffi_xmtpv3_fn_method_ffiv2apiclient_batch_query(void*_Nonnull ptr, RustBuffer req, size_t uniffi_executor, UniFfiFutureCallbackRustBuffer _Nonnull uniffi_callback, void* _Nonnull uniffi_callback_data, RustCallStatus *_Nonnull out_status
 );
-void uniffi_xmtpv3_fn_method_ffiv2client_publish(void*_Nonnull ptr, RustBuffer request, RustBuffer auth_token, size_t uniffi_executor, UniFfiFutureCallbackRustBuffer _Nonnull uniffi_callback, void* _Nonnull uniffi_callback_data, RustCallStatus *_Nonnull out_status
+void uniffi_xmtpv3_fn_method_ffiv2apiclient_publish(void*_Nonnull ptr, RustBuffer request, RustBuffer auth_token, size_t uniffi_executor, UniFfiFutureCallbackRustBuffer _Nonnull uniffi_callback, void* _Nonnull uniffi_callback_data, RustCallStatus *_Nonnull out_status
 );
-void uniffi_xmtpv3_fn_method_ffiv2client_query(void*_Nonnull ptr, RustBuffer request, size_t uniffi_executor, UniFfiFutureCallbackRustBuffer _Nonnull uniffi_callback, void* _Nonnull uniffi_callback_data, RustCallStatus *_Nonnull out_status
+void uniffi_xmtpv3_fn_method_ffiv2apiclient_query(void*_Nonnull ptr, RustBuffer request, size_t uniffi_executor, UniFfiFutureCallbackRustBuffer _Nonnull uniffi_callback, void* _Nonnull uniffi_callback_data, RustCallStatus *_Nonnull out_status
 );
-void uniffi_xmtpv3_fn_method_ffiv2client_set_app_version(void*_Nonnull ptr, RustBuffer _version, RustCallStatus *_Nonnull out_status
+void uniffi_xmtpv3_fn_method_ffiv2apiclient_set_app_version(void*_Nonnull ptr, RustBuffer _version, RustCallStatus *_Nonnull out_status
 );
 void uniffi_xmtpv3_fn_free_ffixmtpclient(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
 );
@@ -228,16 +228,16 @@ uint16_t uniffi_xmtpv3_checksum_method_ffigroup_sync(void
 uint16_t uniffi_xmtpv3_checksum_method_ffimessagestreamcloser_close(void
     
 );
-uint16_t uniffi_xmtpv3_checksum_method_ffiv2client_batch_query(void
+uint16_t uniffi_xmtpv3_checksum_method_ffiv2apiclient_batch_query(void
     
 );
-uint16_t uniffi_xmtpv3_checksum_method_ffiv2client_publish(void
+uint16_t uniffi_xmtpv3_checksum_method_ffiv2apiclient_publish(void
     
 );
-uint16_t uniffi_xmtpv3_checksum_method_ffiv2client_query(void
+uint16_t uniffi_xmtpv3_checksum_method_ffiv2apiclient_query(void
     
 );
-uint16_t uniffi_xmtpv3_checksum_method_ffiv2client_set_app_version(void
+uint16_t uniffi_xmtpv3_checksum_method_ffiv2apiclient_set_app_version(void
     
 );
 uint16_t uniffi_xmtpv3_checksum_method_ffixmtpclient_account_address(void
