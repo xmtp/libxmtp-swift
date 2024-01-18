@@ -791,14 +791,14 @@ public func FfiConverterTypeFfiMessageStreamCloser_lower(_ value: FfiMessageStre
     return FfiConverterTypeFfiMessageStreamCloser.lower(value)
 }
 
-public protocol FfiV2ClientProtocol {
+public protocol FfiV2ApiClientProtocol {
     func batchQuery(req: FfiV2BatchQueryRequest) async throws -> FfiV2BatchQueryResponse
     func publish(request: FfiPublishRequest, authToken: String) async throws -> FfiV2PublishResponse
     func query(request: FfiV2QueryRequest) async throws -> FfiV2QueryResponse
     func setAppVersion(version: String)
 }
 
-public class FfiV2Client: FfiV2ClientProtocol {
+public class FfiV2ApiClient: FfiV2ApiClientProtocol {
     fileprivate let pointer: UnsafeMutableRawPointer
 
     // TODO: We'd like this to be `private` but for Swifty reasons,
@@ -809,7 +809,7 @@ public class FfiV2Client: FfiV2ClientProtocol {
     }
 
     deinit {
-        try! rustCall { uniffi_xmtpv3_fn_free_ffiv2client(pointer, $0) }
+        try! rustCall { uniffi_xmtpv3_fn_free_ffiv2apiclient(pointer, $0) }
     }
 
     public func batchQuery(req: FfiV2BatchQueryRequest) async throws -> FfiV2BatchQueryResponse {
@@ -822,7 +822,7 @@ public class FfiV2Client: FfiV2ClientProtocol {
         return try await withCheckedThrowingContinuation {
             continuation = $0
             try! rustCall {
-                uniffi_xmtpv3_fn_method_ffiv2client_batch_query(
+                uniffi_xmtpv3_fn_method_ffiv2apiclient_batch_query(
                     self.pointer,
 
                     FfiConverterTypeFfiV2BatchQueryRequest.lower(req),
@@ -845,7 +845,7 @@ public class FfiV2Client: FfiV2ClientProtocol {
         return try await withCheckedThrowingContinuation {
             continuation = $0
             try! rustCall {
-                uniffi_xmtpv3_fn_method_ffiv2client_publish(
+                uniffi_xmtpv3_fn_method_ffiv2apiclient_publish(
                     self.pointer,
 
                     FfiConverterTypeFfiPublishRequest.lower(request),
@@ -869,7 +869,7 @@ public class FfiV2Client: FfiV2ClientProtocol {
         return try await withCheckedThrowingContinuation {
             continuation = $0
             try! rustCall {
-                uniffi_xmtpv3_fn_method_ffiv2client_query(
+                uniffi_xmtpv3_fn_method_ffiv2apiclient_query(
                     self.pointer,
 
                     FfiConverterTypeFfiV2QueryRequest.lower(request),
@@ -885,17 +885,17 @@ public class FfiV2Client: FfiV2ClientProtocol {
     public func setAppVersion(version: String) {
         try!
             rustCall {
-                uniffi_xmtpv3_fn_method_ffiv2client_set_app_version(self.pointer,
-                                                                    FfiConverterString.lower(version), $0)
+                uniffi_xmtpv3_fn_method_ffiv2apiclient_set_app_version(self.pointer,
+                                                                       FfiConverterString.lower(version), $0)
             }
     }
 }
 
-public struct FfiConverterTypeFfiV2Client: FfiConverter {
+public struct FfiConverterTypeFfiV2ApiClient: FfiConverter {
     typealias FfiType = UnsafeMutableRawPointer
-    typealias SwiftType = FfiV2Client
+    typealias SwiftType = FfiV2ApiClient
 
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiV2Client {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiV2ApiClient {
         let v: UInt64 = try readInt(&buf)
         // The Rust code won't compile if a pointer won't fit in a UInt64.
         // We have to go via `UInt` because that's the thing that's the size of a pointer.
@@ -906,27 +906,27 @@ public struct FfiConverterTypeFfiV2Client: FfiConverter {
         return try lift(ptr!)
     }
 
-    public static func write(_ value: FfiV2Client, into buf: inout [UInt8]) {
+    public static func write(_ value: FfiV2ApiClient, into buf: inout [UInt8]) {
         // This fiddling is because `Int` is the thing that's the same size as a pointer.
         // The Rust code won't compile if a pointer won't fit in a `UInt64`.
         writeInt(&buf, UInt64(bitPattern: Int64(Int(bitPattern: lower(value)))))
     }
 
-    public static func lift(_ pointer: UnsafeMutableRawPointer) throws -> FfiV2Client {
-        return FfiV2Client(unsafeFromRawPointer: pointer)
+    public static func lift(_ pointer: UnsafeMutableRawPointer) throws -> FfiV2ApiClient {
+        return FfiV2ApiClient(unsafeFromRawPointer: pointer)
     }
 
-    public static func lower(_ value: FfiV2Client) -> UnsafeMutableRawPointer {
+    public static func lower(_ value: FfiV2ApiClient) -> UnsafeMutableRawPointer {
         return value.pointer
     }
 }
 
-public func FfiConverterTypeFfiV2Client_lift(_ pointer: UnsafeMutableRawPointer) throws -> FfiV2Client {
-    return try FfiConverterTypeFfiV2Client.lift(pointer)
+public func FfiConverterTypeFfiV2ApiClient_lift(_ pointer: UnsafeMutableRawPointer) throws -> FfiV2ApiClient {
+    return try FfiConverterTypeFfiV2ApiClient.lift(pointer)
 }
 
-public func FfiConverterTypeFfiV2Client_lower(_ value: FfiV2Client) -> UnsafeMutableRawPointer {
-    return FfiConverterTypeFfiV2Client.lower(value)
+public func FfiConverterTypeFfiV2ApiClient_lower(_ value: FfiV2ApiClient) -> UnsafeMutableRawPointer {
+    return FfiConverterTypeFfiV2ApiClient.lower(value)
 }
 
 public protocol FfiXmtpClientProtocol {
@@ -2701,19 +2701,19 @@ private func uniffiFutureCallbackHandlerTypeFfiMessageStreamCloserTypeGenericErr
     }
 }
 
-private func uniffiFutureCallbackHandlerTypeFfiV2ClientTypeGenericError(
+private func uniffiFutureCallbackHandlerTypeFfiV2ApiClientTypeGenericError(
     rawContinutation: UnsafeRawPointer,
     returnValue: UnsafeMutableRawPointer,
     callStatus: RustCallStatus
 ) {
     let continuation = rawContinutation.bindMemory(
-        to: CheckedContinuation<FfiV2Client, Error>.self,
+        to: CheckedContinuation<FfiV2ApiClient, Error>.self,
         capacity: 1
     )
 
     do {
         try uniffiCheckCallStatus(callStatus: callStatus, errorHandler: FfiConverterTypeGenericError.lift)
-        try continuation.pointee.resume(returning: FfiConverterTypeFfiV2Client.lift(returnValue))
+        try continuation.pointee.resume(returning: FfiConverterTypeFfiV2ApiClient.lift(returnValue))
     } catch {
         continuation.pointee.resume(throwing: error)
     }
@@ -2907,8 +2907,8 @@ public func createClient(logger: FfiLogger, ffiInboxOwner: FfiInboxOwner, host: 
     }
 }
 
-public func createV2Client(host: String, isSecure: Bool) async throws -> FfiV2Client {
-    var continuation: CheckedContinuation<FfiV2Client, Error>? = nil
+public func createV2Client(host: String, isSecure: Bool) async throws -> FfiV2ApiClient {
+    var continuation: CheckedContinuation<FfiV2ApiClient, Error>? = nil
     // Suspend the function and call the scaffolding function, passing it a callback handler from
     // `AsyncTypes.swift`
     //
@@ -2921,7 +2921,7 @@ public func createV2Client(host: String, isSecure: Bool) async throws -> FfiV2Cl
                 FfiConverterString.lower(host),
                 FfiConverterBool.lower(isSecure),
                 FfiConverterForeignExecutor.lower(UniFfiForeignExecutor()),
-                uniffiFutureCallbackHandlerTypeFfiV2ClientTypeGenericError,
+                uniffiFutureCallbackHandlerTypeFfiV2ApiClientTypeGenericError,
                 &continuation,
                 $0
             )
@@ -3069,7 +3069,7 @@ private var initializationResult: InitializationResult {
     if uniffi_xmtpv3_checksum_func_create_client() != 23882 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_xmtpv3_checksum_func_create_v2_client() != 10589 {
+    if uniffi_xmtpv3_checksum_func_create_v2_client() != 49516 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_func_diffie_hellman_k256() != 23225 {
@@ -3138,16 +3138,16 @@ private var initializationResult: InitializationResult {
     if uniffi_xmtpv3_checksum_method_ffimessagestreamcloser_close() != 46827 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_xmtpv3_checksum_method_ffiv2client_batch_query() != 29982 {
+    if uniffi_xmtpv3_checksum_method_ffiv2apiclient_batch_query() != 10812 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_xmtpv3_checksum_method_ffiv2client_publish() != 41996 {
+    if uniffi_xmtpv3_checksum_method_ffiv2apiclient_publish() != 21916 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_xmtpv3_checksum_method_ffiv2client_query() != 3116 {
+    if uniffi_xmtpv3_checksum_method_ffiv2apiclient_query() != 7220 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_xmtpv3_checksum_method_ffiv2client_set_app_version() != 28709 {
+    if uniffi_xmtpv3_checksum_method_ffiv2apiclient_set_app_version() != 23872 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_ffixmtpclient_account_address() != 65151 {
