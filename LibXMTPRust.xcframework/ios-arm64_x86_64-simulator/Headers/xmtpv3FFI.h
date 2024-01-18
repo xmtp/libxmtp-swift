@@ -102,7 +102,7 @@ void uniffi_xmtpv3_fn_free_ffiv2apiclient(void*_Nonnull ptr, RustCallStatus *_No
 );
 void uniffi_xmtpv3_fn_method_ffiv2apiclient_batch_query(void*_Nonnull ptr, RustBuffer req, size_t uniffi_executor, UniFfiFutureCallbackRustBuffer _Nonnull uniffi_callback, void* _Nonnull uniffi_callback_data, RustCallStatus *_Nonnull out_status
 );
-void uniffi_xmtpv3_fn_method_ffiv2apiclient_publish(void*_Nonnull ptr, RustBuffer request, RustBuffer auth_token, size_t uniffi_executor, UniFfiFutureCallbackRustBuffer _Nonnull uniffi_callback, void* _Nonnull uniffi_callback_data, RustCallStatus *_Nonnull out_status
+void uniffi_xmtpv3_fn_method_ffiv2apiclient_publish(void*_Nonnull ptr, RustBuffer request, RustBuffer auth_token, size_t uniffi_executor, UniFfiFutureCallbackUInt8 _Nonnull uniffi_callback, void* _Nonnull uniffi_callback_data, RustCallStatus *_Nonnull out_status
 );
 void uniffi_xmtpv3_fn_method_ffiv2apiclient_query(void*_Nonnull ptr, RustBuffer request, size_t uniffi_executor, UniFfiFutureCallbackRustBuffer _Nonnull uniffi_callback, void* _Nonnull uniffi_callback_data, RustCallStatus *_Nonnull out_status
 );
