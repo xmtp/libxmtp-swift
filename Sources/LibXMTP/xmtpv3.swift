@@ -793,7 +793,7 @@ public func FfiConverterTypeFfiMessageStreamCloser_lower(_ value: FfiMessageStre
 
 public protocol FfiV2ApiClientProtocol {
     func batchQuery(req: FfiV2BatchQueryRequest) async throws -> FfiV2BatchQueryResponse
-    func publish(request: FfiPublishRequest, authToken: String) async throws -> FfiV2PublishResponse
+    func publish(request: FfiPublishRequest, authToken: String) async throws
     func query(request: FfiV2QueryRequest) async throws -> FfiV2QueryResponse
     func setAppVersion(version: String)
 }
@@ -835,13 +835,13 @@ public class FfiV2ApiClient: FfiV2ApiClientProtocol {
         }
     }
 
-    public func publish(request: FfiPublishRequest, authToken: String) async throws -> FfiV2PublishResponse {
+    public func publish(request: FfiPublishRequest, authToken: String) async throws {
         // Suspend the function and call the scaffolding function, passing it a callback handler from
         // `AsyncTypes.swift`
         //
         // Make sure to hold on to a reference to the continuation in the top-level scope so that
         // it's not freed before the callback is invoked.
-        var continuation: CheckedContinuation<FfiV2PublishResponse, Error>? = nil
+        var continuation: CheckedContinuation<Void, Error>? = nil
         return try await withCheckedThrowingContinuation {
             continuation = $0
             try! rustCall {
@@ -851,7 +851,7 @@ public class FfiV2ApiClient: FfiV2ApiClientProtocol {
                     FfiConverterTypeFfiPublishRequest.lower(request),
                     FfiConverterString.lower(authToken),
                     FfiConverterForeignExecutor.lower(UniFfiForeignExecutor()),
-                    uniffiFutureCallbackHandlerTypeFfiV2PublishResponseTypeGenericError,
+                    uniffiFutureCallbackHandlerVoidTypeGenericError,
                     &continuation,
                     $0
                 )
@@ -1575,37 +1575,6 @@ public func FfiConverterTypeFfiV2BatchQueryResponse_lift(_ buf: RustBuffer) thro
 
 public func FfiConverterTypeFfiV2BatchQueryResponse_lower(_ value: FfiV2BatchQueryResponse) -> RustBuffer {
     return FfiConverterTypeFfiV2BatchQueryResponse.lower(value)
-}
-
-public struct FfiV2PublishResponse {
-    // Default memberwise initializers are never public by default, so we
-    // declare one manually.
-    public init() {}
-}
-
-extension FfiV2PublishResponse: Equatable, Hashable {
-    public static func == (_: FfiV2PublishResponse, _: FfiV2PublishResponse) -> Bool {
-        return true
-    }
-
-    public func hash(into _: inout Hasher) {}
-}
-
-public struct FfiConverterTypeFfiV2PublishResponse: FfiConverterRustBuffer {
-    public static func read(from _: inout (data: Data, offset: Data.Index)) throws -> FfiV2PublishResponse {
-        return try FfiV2PublishResponse(
-        )
-    }
-
-    public static func write(_: FfiV2PublishResponse, into _: inout [UInt8]) {}
-}
-
-public func FfiConverterTypeFfiV2PublishResponse_lift(_ buf: RustBuffer) throws -> FfiV2PublishResponse {
-    return try FfiConverterTypeFfiV2PublishResponse.lift(buf)
-}
-
-public func FfiConverterTypeFfiV2PublishResponse_lower(_ value: FfiV2PublishResponse) -> RustBuffer {
-    return FfiConverterTypeFfiV2PublishResponse.lower(value)
 }
 
 public struct FfiV2QueryRequest {
@@ -2755,24 +2724,6 @@ private func uniffiFutureCallbackHandlerTypeFfiV2BatchQueryResponseTypeGenericEr
     }
 }
 
-private func uniffiFutureCallbackHandlerTypeFfiV2PublishResponseTypeGenericError(
-    rawContinutation: UnsafeRawPointer,
-    returnValue: RustBuffer,
-    callStatus: RustCallStatus
-) {
-    let continuation = rawContinutation.bindMemory(
-        to: CheckedContinuation<FfiV2PublishResponse, Error>.self,
-        capacity: 1
-    )
-
-    do {
-        try uniffiCheckCallStatus(callStatus: callStatus, errorHandler: FfiConverterTypeGenericError.lift)
-        try continuation.pointee.resume(returning: FfiConverterTypeFfiV2PublishResponse.lift(returnValue))
-    } catch {
-        continuation.pointee.resume(throwing: error)
-    }
-}
-
 private func uniffiFutureCallbackHandlerTypeFfiV2QueryResponseTypeGenericError(
     rawContinutation: UnsafeRawPointer,
     returnValue: RustBuffer,
@@ -3141,7 +3092,7 @@ private var initializationResult: InitializationResult {
     if uniffi_xmtpv3_checksum_method_ffiv2apiclient_batch_query() != 10812 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_xmtpv3_checksum_method_ffiv2apiclient_publish() != 21916 {
+    if uniffi_xmtpv3_checksum_method_ffiv2apiclient_publish() != 13419 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_ffiv2apiclient_query() != 7220 {
