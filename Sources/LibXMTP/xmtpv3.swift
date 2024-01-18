@@ -1886,84 +1886,83 @@ public protocol FfiInboxOwner: AnyObject {
 }
 
 // The ForeignCallback that is passed to Rust.
-private let foreignCallbackCallbackInterfaceFfiInboxOwner: ForeignCallback =
-    { (handle: UniFFICallbackHandle, method: Int32, argsData: UnsafePointer<UInt8>, argsLen: Int32, out_buf: UnsafeMutablePointer<RustBuffer>) -> Int32 in
+private let foreignCallbackCallbackInterfaceFfiInboxOwner: ForeignCallback = { (handle: UniFFICallbackHandle, method: Int32, argsData: UnsafePointer<UInt8>, argsLen: Int32, out_buf: UnsafeMutablePointer<RustBuffer>) -> Int32 in
 
-        func invokeGetAddress(_ swiftCallbackInterface: FfiInboxOwner, _: UnsafePointer<UInt8>, _: Int32, _ out_buf: UnsafeMutablePointer<RustBuffer>) throws -> Int32 {
-            func makeCall() throws -> Int32 {
-                let result = swiftCallbackInterface.getAddress(
-                )
-                var writer = [UInt8]()
-                FfiConverterString.write(result, into: &writer)
-                out_buf.pointee = RustBuffer(bytes: writer)
-                return UNIFFI_CALLBACK_SUCCESS
-            }
-            return try makeCall()
-        }
-
-        func invokeSign(_ swiftCallbackInterface: FfiInboxOwner, _ argsData: UnsafePointer<UInt8>, _ argsLen: Int32, _ out_buf: UnsafeMutablePointer<RustBuffer>) throws -> Int32 {
-            var reader = createReader(data: Data(bytes: argsData, count: Int(argsLen)))
-            func makeCall() throws -> Int32 {
-                let result = try swiftCallbackInterface.sign(
-                    text: FfiConverterString.read(from: &reader)
-                )
-                var writer = [UInt8]()
-                FfiConverterData.write(result, into: &writer)
-                out_buf.pointee = RustBuffer(bytes: writer)
-                return UNIFFI_CALLBACK_SUCCESS
-            }
-            do {
-                return try makeCall()
-            } catch let error as SigningError {
-                out_buf.pointee = FfiConverterTypeSigningError.lower(error)
-                return UNIFFI_CALLBACK_ERROR
-            }
-        }
-
-        switch method {
-        case IDX_CALLBACK_FREE:
-            FfiConverterCallbackInterfaceFfiInboxOwner.drop(handle: handle)
-            // Sucessful return
-            // See docs of ForeignCallback in `uniffi_core/src/ffi/foreigncallbacks.rs`
+    func invokeGetAddress(_ swiftCallbackInterface: FfiInboxOwner, _: UnsafePointer<UInt8>, _: Int32, _ out_buf: UnsafeMutablePointer<RustBuffer>) throws -> Int32 {
+        func makeCall() throws -> Int32 {
+            let result = swiftCallbackInterface.getAddress(
+            )
+            var writer = [UInt8]()
+            FfiConverterString.write(result, into: &writer)
+            out_buf.pointee = RustBuffer(bytes: writer)
             return UNIFFI_CALLBACK_SUCCESS
-        case 1:
-            let cb: FfiInboxOwner
-            do {
-                cb = try FfiConverterCallbackInterfaceFfiInboxOwner.lift(handle)
-            } catch {
-                out_buf.pointee = FfiConverterString.lower("FfiInboxOwner: Invalid handle")
-                return UNIFFI_CALLBACK_UNEXPECTED_ERROR
-            }
-            do {
-                return try invokeGetAddress(cb, argsData, argsLen, out_buf)
-            } catch {
-                out_buf.pointee = FfiConverterString.lower(String(describing: error))
-                return UNIFFI_CALLBACK_UNEXPECTED_ERROR
-            }
-        case 2:
-            let cb: FfiInboxOwner
-            do {
-                cb = try FfiConverterCallbackInterfaceFfiInboxOwner.lift(handle)
-            } catch {
-                out_buf.pointee = FfiConverterString.lower("FfiInboxOwner: Invalid handle")
-                return UNIFFI_CALLBACK_UNEXPECTED_ERROR
-            }
-            do {
-                return try invokeSign(cb, argsData, argsLen, out_buf)
-            } catch {
-                out_buf.pointee = FfiConverterString.lower(String(describing: error))
-                return UNIFFI_CALLBACK_UNEXPECTED_ERROR
-            }
+        }
+        return try makeCall()
+    }
 
-        // This should never happen, because an out of bounds method index won't
-        // ever be used. Once we can catch errors, we should return an InternalError.
-        // https://github.com/mozilla/uniffi-rs/issues/351
-        default:
-            // An unexpected error happened.
-            // See docs of ForeignCallback in `uniffi_core/src/ffi/foreigncallbacks.rs`
-            return UNIFFI_CALLBACK_UNEXPECTED_ERROR
+    func invokeSign(_ swiftCallbackInterface: FfiInboxOwner, _ argsData: UnsafePointer<UInt8>, _ argsLen: Int32, _ out_buf: UnsafeMutablePointer<RustBuffer>) throws -> Int32 {
+        var reader = createReader(data: Data(bytes: argsData, count: Int(argsLen)))
+        func makeCall() throws -> Int32 {
+            let result = try swiftCallbackInterface.sign(
+                text: FfiConverterString.read(from: &reader)
+            )
+            var writer = [UInt8]()
+            FfiConverterData.write(result, into: &writer)
+            out_buf.pointee = RustBuffer(bytes: writer)
+            return UNIFFI_CALLBACK_SUCCESS
+        }
+        do {
+            return try makeCall()
+        } catch let error as SigningError {
+            out_buf.pointee = FfiConverterTypeSigningError.lower(error)
+            return UNIFFI_CALLBACK_ERROR
         }
     }
+
+    switch method {
+    case IDX_CALLBACK_FREE:
+        FfiConverterCallbackInterfaceFfiInboxOwner.drop(handle: handle)
+        // Sucessful return
+        // See docs of ForeignCallback in `uniffi_core/src/ffi/foreigncallbacks.rs`
+        return UNIFFI_CALLBACK_SUCCESS
+    case 1:
+        let cb: FfiInboxOwner
+        do {
+            cb = try FfiConverterCallbackInterfaceFfiInboxOwner.lift(handle)
+        } catch {
+            out_buf.pointee = FfiConverterString.lower("FfiInboxOwner: Invalid handle")
+            return UNIFFI_CALLBACK_UNEXPECTED_ERROR
+        }
+        do {
+            return try invokeGetAddress(cb, argsData, argsLen, out_buf)
+        } catch {
+            out_buf.pointee = FfiConverterString.lower(String(describing: error))
+            return UNIFFI_CALLBACK_UNEXPECTED_ERROR
+        }
+    case 2:
+        let cb: FfiInboxOwner
+        do {
+            cb = try FfiConverterCallbackInterfaceFfiInboxOwner.lift(handle)
+        } catch {
+            out_buf.pointee = FfiConverterString.lower("FfiInboxOwner: Invalid handle")
+            return UNIFFI_CALLBACK_UNEXPECTED_ERROR
+        }
+        do {
+            return try invokeSign(cb, argsData, argsLen, out_buf)
+        } catch {
+            out_buf.pointee = FfiConverterString.lower(String(describing: error))
+            return UNIFFI_CALLBACK_UNEXPECTED_ERROR
+        }
+
+    // This should never happen, because an out of bounds method index won't
+    // ever be used. Once we can catch errors, we should return an InternalError.
+    // https://github.com/mozilla/uniffi-rs/issues/351
+    default:
+        // An unexpected error happened.
+        // See docs of ForeignCallback in `uniffi_core/src/ffi/foreigncallbacks.rs`
+        return UNIFFI_CALLBACK_UNEXPECTED_ERROR
+    }
+}
 
 // FfiConverter protocol for callback interfaces
 private enum FfiConverterCallbackInterfaceFfiInboxOwner {
@@ -2022,52 +2021,51 @@ public protocol FfiLogger: AnyObject {
 }
 
 // The ForeignCallback that is passed to Rust.
-private let foreignCallbackCallbackInterfaceFfiLogger: ForeignCallback =
-    { (handle: UniFFICallbackHandle, method: Int32, argsData: UnsafePointer<UInt8>, argsLen: Int32, out_buf: UnsafeMutablePointer<RustBuffer>) -> Int32 in
+private let foreignCallbackCallbackInterfaceFfiLogger: ForeignCallback = { (handle: UniFFICallbackHandle, method: Int32, argsData: UnsafePointer<UInt8>, argsLen: Int32, out_buf: UnsafeMutablePointer<RustBuffer>) -> Int32 in
 
-        func invokeLog(_ swiftCallbackInterface: FfiLogger, _ argsData: UnsafePointer<UInt8>, _ argsLen: Int32, _: UnsafeMutablePointer<RustBuffer>) throws -> Int32 {
-            var reader = createReader(data: Data(bytes: argsData, count: Int(argsLen)))
-            func makeCall() throws -> Int32 {
-                try swiftCallbackInterface.log(
-                    level: FfiConverterUInt32.read(from: &reader),
-                    levelLabel: FfiConverterString.read(from: &reader),
-                    message: FfiConverterString.read(from: &reader)
-                )
-                return UNIFFI_CALLBACK_SUCCESS
-            }
-            return try makeCall()
-        }
-
-        switch method {
-        case IDX_CALLBACK_FREE:
-            FfiConverterCallbackInterfaceFfiLogger.drop(handle: handle)
-            // Sucessful return
-            // See docs of ForeignCallback in `uniffi_core/src/ffi/foreigncallbacks.rs`
+    func invokeLog(_ swiftCallbackInterface: FfiLogger, _ argsData: UnsafePointer<UInt8>, _ argsLen: Int32, _: UnsafeMutablePointer<RustBuffer>) throws -> Int32 {
+        var reader = createReader(data: Data(bytes: argsData, count: Int(argsLen)))
+        func makeCall() throws -> Int32 {
+            try swiftCallbackInterface.log(
+                level: FfiConverterUInt32.read(from: &reader),
+                levelLabel: FfiConverterString.read(from: &reader),
+                message: FfiConverterString.read(from: &reader)
+            )
             return UNIFFI_CALLBACK_SUCCESS
-        case 1:
-            let cb: FfiLogger
-            do {
-                cb = try FfiConverterCallbackInterfaceFfiLogger.lift(handle)
-            } catch {
-                out_buf.pointee = FfiConverterString.lower("FfiLogger: Invalid handle")
-                return UNIFFI_CALLBACK_UNEXPECTED_ERROR
-            }
-            do {
-                return try invokeLog(cb, argsData, argsLen, out_buf)
-            } catch {
-                out_buf.pointee = FfiConverterString.lower(String(describing: error))
-                return UNIFFI_CALLBACK_UNEXPECTED_ERROR
-            }
+        }
+        return try makeCall()
+    }
 
-        // This should never happen, because an out of bounds method index won't
-        // ever be used. Once we can catch errors, we should return an InternalError.
-        // https://github.com/mozilla/uniffi-rs/issues/351
-        default:
-            // An unexpected error happened.
-            // See docs of ForeignCallback in `uniffi_core/src/ffi/foreigncallbacks.rs`
+    switch method {
+    case IDX_CALLBACK_FREE:
+        FfiConverterCallbackInterfaceFfiLogger.drop(handle: handle)
+        // Sucessful return
+        // See docs of ForeignCallback in `uniffi_core/src/ffi/foreigncallbacks.rs`
+        return UNIFFI_CALLBACK_SUCCESS
+    case 1:
+        let cb: FfiLogger
+        do {
+            cb = try FfiConverterCallbackInterfaceFfiLogger.lift(handle)
+        } catch {
+            out_buf.pointee = FfiConverterString.lower("FfiLogger: Invalid handle")
             return UNIFFI_CALLBACK_UNEXPECTED_ERROR
         }
+        do {
+            return try invokeLog(cb, argsData, argsLen, out_buf)
+        } catch {
+            out_buf.pointee = FfiConverterString.lower(String(describing: error))
+            return UNIFFI_CALLBACK_UNEXPECTED_ERROR
+        }
+
+    // This should never happen, because an out of bounds method index won't
+    // ever be used. Once we can catch errors, we should return an InternalError.
+    // https://github.com/mozilla/uniffi-rs/issues/351
+    default:
+        // An unexpected error happened.
+        // See docs of ForeignCallback in `uniffi_core/src/ffi/foreigncallbacks.rs`
+        return UNIFFI_CALLBACK_UNEXPECTED_ERROR
     }
+}
 
 // FfiConverter protocol for callback interfaces
 private enum FfiConverterCallbackInterfaceFfiLogger {
@@ -2126,50 +2124,49 @@ public protocol FfiMessageCallback: AnyObject {
 }
 
 // The ForeignCallback that is passed to Rust.
-private let foreignCallbackCallbackInterfaceFfiMessageCallback: ForeignCallback =
-    { (handle: UniFFICallbackHandle, method: Int32, argsData: UnsafePointer<UInt8>, argsLen: Int32, out_buf: UnsafeMutablePointer<RustBuffer>) -> Int32 in
+private let foreignCallbackCallbackInterfaceFfiMessageCallback: ForeignCallback = { (handle: UniFFICallbackHandle, method: Int32, argsData: UnsafePointer<UInt8>, argsLen: Int32, out_buf: UnsafeMutablePointer<RustBuffer>) -> Int32 in
 
-        func invokeOnMessage(_ swiftCallbackInterface: FfiMessageCallback, _ argsData: UnsafePointer<UInt8>, _ argsLen: Int32, _: UnsafeMutablePointer<RustBuffer>) throws -> Int32 {
-            var reader = createReader(data: Data(bytes: argsData, count: Int(argsLen)))
-            func makeCall() throws -> Int32 {
-                try swiftCallbackInterface.onMessage(
-                    message: FfiConverterTypeFfiMessage.read(from: &reader)
-                )
-                return UNIFFI_CALLBACK_SUCCESS
-            }
-            return try makeCall()
-        }
-
-        switch method {
-        case IDX_CALLBACK_FREE:
-            FfiConverterCallbackInterfaceFfiMessageCallback.drop(handle: handle)
-            // Sucessful return
-            // See docs of ForeignCallback in `uniffi_core/src/ffi/foreigncallbacks.rs`
+    func invokeOnMessage(_ swiftCallbackInterface: FfiMessageCallback, _ argsData: UnsafePointer<UInt8>, _ argsLen: Int32, _: UnsafeMutablePointer<RustBuffer>) throws -> Int32 {
+        var reader = createReader(data: Data(bytes: argsData, count: Int(argsLen)))
+        func makeCall() throws -> Int32 {
+            try swiftCallbackInterface.onMessage(
+                message: FfiConverterTypeFfiMessage.read(from: &reader)
+            )
             return UNIFFI_CALLBACK_SUCCESS
-        case 1:
-            let cb: FfiMessageCallback
-            do {
-                cb = try FfiConverterCallbackInterfaceFfiMessageCallback.lift(handle)
-            } catch {
-                out_buf.pointee = FfiConverterString.lower("FfiMessageCallback: Invalid handle")
-                return UNIFFI_CALLBACK_UNEXPECTED_ERROR
-            }
-            do {
-                return try invokeOnMessage(cb, argsData, argsLen, out_buf)
-            } catch {
-                out_buf.pointee = FfiConverterString.lower(String(describing: error))
-                return UNIFFI_CALLBACK_UNEXPECTED_ERROR
-            }
+        }
+        return try makeCall()
+    }
 
-        // This should never happen, because an out of bounds method index won't
-        // ever be used. Once we can catch errors, we should return an InternalError.
-        // https://github.com/mozilla/uniffi-rs/issues/351
-        default:
-            // An unexpected error happened.
-            // See docs of ForeignCallback in `uniffi_core/src/ffi/foreigncallbacks.rs`
+    switch method {
+    case IDX_CALLBACK_FREE:
+        FfiConverterCallbackInterfaceFfiMessageCallback.drop(handle: handle)
+        // Sucessful return
+        // See docs of ForeignCallback in `uniffi_core/src/ffi/foreigncallbacks.rs`
+        return UNIFFI_CALLBACK_SUCCESS
+    case 1:
+        let cb: FfiMessageCallback
+        do {
+            cb = try FfiConverterCallbackInterfaceFfiMessageCallback.lift(handle)
+        } catch {
+            out_buf.pointee = FfiConverterString.lower("FfiMessageCallback: Invalid handle")
             return UNIFFI_CALLBACK_UNEXPECTED_ERROR
         }
+        do {
+            return try invokeOnMessage(cb, argsData, argsLen, out_buf)
+        } catch {
+            out_buf.pointee = FfiConverterString.lower(String(describing: error))
+            return UNIFFI_CALLBACK_UNEXPECTED_ERROR
+        }
+
+    // This should never happen, because an out of bounds method index won't
+    // ever be used. Once we can catch errors, we should return an InternalError.
+    // https://github.com/mozilla/uniffi-rs/issues/351
+    default:
+        // An unexpected error happened.
+        // See docs of ForeignCallback in `uniffi_core/src/ffi/foreigncallbacks.rs`
+        return UNIFFI_CALLBACK_UNEXPECTED_ERROR
     }
+}
 
 // FfiConverter protocol for callback interfaces
 private enum FfiConverterCallbackInterfaceFfiMessageCallback {
