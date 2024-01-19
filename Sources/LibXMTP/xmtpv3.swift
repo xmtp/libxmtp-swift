@@ -320,6 +320,19 @@ private struct FfiConverterUInt32: FfiConverterPrimitive {
     }
 }
 
+private struct FfiConverterUInt64: FfiConverterPrimitive {
+    typealias FfiType = UInt64
+    typealias SwiftType = UInt64
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> UInt64 {
+        return try lift(readInt(&buf))
+    }
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
 private struct FfiConverterInt64: FfiConverterPrimitive {
     typealias FfiType = Int64
     typealias SwiftType = Int64
@@ -407,123 +420,9 @@ private struct FfiConverterData: FfiConverterRustBuffer {
     }
 }
 
-public protocol FfiConversationProtocol {
-    func id() -> String
-    func listMessages(opts: FfiListMessagesOptions) async throws -> [FfiMessage]
-    func send(contentBytes: [UInt8]) async throws
-}
-
-public class FfiConversation: FfiConversationProtocol {
-    fileprivate let pointer: UnsafeMutableRawPointer
-
-    // TODO: We'd like this to be `private` but for Swifty reasons,
-    // we can't implement `FfiConverter` without making this `required` and we can't
-    // make it `required` without making it `public`.
-    required init(unsafeFromRawPointer pointer: UnsafeMutableRawPointer) {
-        self.pointer = pointer
-    }
-
-    deinit {
-        try! rustCall { uniffi_xmtpv3_fn_free_fficonversation(pointer, $0) }
-    }
-
-    public func id() -> String {
-        return try! FfiConverterString.lift(
-            try!
-                rustCall {
-                    uniffi_xmtpv3_fn_method_fficonversation_id(self.pointer, $0)
-                }
-        )
-    }
-
-    public func listMessages(opts: FfiListMessagesOptions) async throws -> [FfiMessage] {
-        // Suspend the function and call the scaffolding function, passing it a callback handler from
-        // `AsyncTypes.swift`
-        //
-        // Make sure to hold on to a reference to the continuation in the top-level scope so that
-        // it's not freed before the callback is invoked.
-        var continuation: CheckedContinuation<[FfiMessage], Error>? = nil
-        return try await withCheckedThrowingContinuation {
-            continuation = $0
-            try! rustCall {
-                uniffi_xmtpv3_fn_method_fficonversation_list_messages(
-                    self.pointer,
-
-                    FfiConverterTypeFfiListMessagesOptions.lower(opts),
-                    FfiConverterForeignExecutor.lower(UniFfiForeignExecutor()),
-                    uniffiFutureCallbackHandlerSequenceTypeFfiMessageTypeGenericError,
-                    &continuation,
-                    $0
-                )
-            }
-        }
-    }
-
-    public func send(contentBytes: [UInt8]) async throws {
-        // Suspend the function and call the scaffolding function, passing it a callback handler from
-        // `AsyncTypes.swift`
-        //
-        // Make sure to hold on to a reference to the continuation in the top-level scope so that
-        // it's not freed before the callback is invoked.
-        var continuation: CheckedContinuation<Void, Error>? = nil
-        return try await withCheckedThrowingContinuation {
-            continuation = $0
-            try! rustCall {
-                uniffi_xmtpv3_fn_method_fficonversation_send(
-                    self.pointer,
-
-                    FfiConverterSequenceUInt8.lower(contentBytes),
-                    FfiConverterForeignExecutor.lower(UniFfiForeignExecutor()),
-                    uniffiFutureCallbackHandlerVoidTypeGenericError,
-                    &continuation,
-                    $0
-                )
-            }
-        }
-    }
-}
-
-public struct FfiConverterTypeFfiConversation: FfiConverter {
-    typealias FfiType = UnsafeMutableRawPointer
-    typealias SwiftType = FfiConversation
-
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiConversation {
-        let v: UInt64 = try readInt(&buf)
-        // The Rust code won't compile if a pointer won't fit in a UInt64.
-        // We have to go via `UInt` because that's the thing that's the size of a pointer.
-        let ptr = UnsafeMutableRawPointer(bitPattern: UInt(truncatingIfNeeded: v))
-        if ptr == nil {
-            throw UniffiInternalError.unexpectedNullPointer
-        }
-        return try lift(ptr!)
-    }
-
-    public static func write(_ value: FfiConversation, into buf: inout [UInt8]) {
-        // This fiddling is because `Int` is the thing that's the same size as a pointer.
-        // The Rust code won't compile if a pointer won't fit in a `UInt64`.
-        writeInt(&buf, UInt64(bitPattern: Int64(Int(bitPattern: lower(value)))))
-    }
-
-    public static func lift(_ pointer: UnsafeMutableRawPointer) throws -> FfiConversation {
-        return FfiConversation(unsafeFromRawPointer: pointer)
-    }
-
-    public static func lower(_ value: FfiConversation) -> UnsafeMutableRawPointer {
-        return value.pointer
-    }
-}
-
-public func FfiConverterTypeFfiConversation_lift(_ pointer: UnsafeMutableRawPointer) throws -> FfiConversation {
-    return try FfiConverterTypeFfiConversation.lift(pointer)
-}
-
-public func FfiConverterTypeFfiConversation_lower(_ value: FfiConversation) -> UnsafeMutableRawPointer {
-    return FfiConverterTypeFfiConversation.lower(value)
-}
-
 public protocol FfiConversationsProtocol {
-    func list() async throws -> [FfiConversation]
-    func newConversation(walletAddress: String) async throws -> FfiConversation
+    func createGroup(accountAddress: String) async throws -> FfiGroup
+    func list() async throws -> [FfiGroup]
 }
 
 public class FfiConversations: FfiConversationsProtocol {
@@ -540,21 +439,22 @@ public class FfiConversations: FfiConversationsProtocol {
         try! rustCall { uniffi_xmtpv3_fn_free_fficonversations(pointer, $0) }
     }
 
-    public func list() async throws -> [FfiConversation] {
+    public func createGroup(accountAddress: String) async throws -> FfiGroup {
         // Suspend the function and call the scaffolding function, passing it a callback handler from
         // `AsyncTypes.swift`
         //
         // Make sure to hold on to a reference to the continuation in the top-level scope so that
         // it's not freed before the callback is invoked.
-        var continuation: CheckedContinuation<[FfiConversation], Error>? = nil
+        var continuation: CheckedContinuation<FfiGroup, Error>? = nil
         return try await withCheckedThrowingContinuation {
             continuation = $0
             try! rustCall {
-                uniffi_xmtpv3_fn_method_fficonversations_list(
+                uniffi_xmtpv3_fn_method_fficonversations_create_group(
                     self.pointer,
 
+                    FfiConverterString.lower(accountAddress),
                     FfiConverterForeignExecutor.lower(UniFfiForeignExecutor()),
-                    uniffiFutureCallbackHandlerSequenceTypeFfiConversationTypeGenericError,
+                    uniffiFutureCallbackHandlerTypeFfiGroupTypeGenericError,
                     &continuation,
                     $0
                 )
@@ -562,22 +462,21 @@ public class FfiConversations: FfiConversationsProtocol {
         }
     }
 
-    public func newConversation(walletAddress: String) async throws -> FfiConversation {
+    public func list() async throws -> [FfiGroup] {
         // Suspend the function and call the scaffolding function, passing it a callback handler from
         // `AsyncTypes.swift`
         //
         // Make sure to hold on to a reference to the continuation in the top-level scope so that
         // it's not freed before the callback is invoked.
-        var continuation: CheckedContinuation<FfiConversation, Error>? = nil
+        var continuation: CheckedContinuation<[FfiGroup], Error>? = nil
         return try await withCheckedThrowingContinuation {
             continuation = $0
             try! rustCall {
-                uniffi_xmtpv3_fn_method_fficonversations_new_conversation(
+                uniffi_xmtpv3_fn_method_fficonversations_list(
                     self.pointer,
 
-                    FfiConverterString.lower(walletAddress),
                     FfiConverterForeignExecutor.lower(UniFfiForeignExecutor()),
-                    uniffiFutureCallbackHandlerTypeFfiConversationTypeGenericError,
+                    uniffiFutureCallbackHandlerSequenceTypeFfiGroupTypeGenericError,
                     &continuation,
                     $0
                 )
@@ -624,9 +523,416 @@ public func FfiConverterTypeFfiConversations_lower(_ value: FfiConversations) ->
     return FfiConverterTypeFfiConversations.lower(value)
 }
 
+public protocol FfiGroupProtocol {
+    func addMembers(accountAddresses: [String]) async throws
+    func findMessages(opts: FfiListMessagesOptions) throws -> [FfiMessage]
+    func id() -> [UInt8]
+    func listMembers() throws -> [FfiGroupMember]
+    func removeMembers(accountAddresses: [String]) async throws
+    func send(contentBytes: [UInt8]) async throws
+    func stream(messageCallback: FfiMessageCallback) async throws -> FfiMessageStreamCloser
+    func sync() async throws
+}
+
+public class FfiGroup: FfiGroupProtocol {
+    fileprivate let pointer: UnsafeMutableRawPointer
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+    required init(unsafeFromRawPointer pointer: UnsafeMutableRawPointer) {
+        self.pointer = pointer
+    }
+
+    deinit {
+        try! rustCall { uniffi_xmtpv3_fn_free_ffigroup(pointer, $0) }
+    }
+
+    public func addMembers(accountAddresses: [String]) async throws {
+        // Suspend the function and call the scaffolding function, passing it a callback handler from
+        // `AsyncTypes.swift`
+        //
+        // Make sure to hold on to a reference to the continuation in the top-level scope so that
+        // it's not freed before the callback is invoked.
+        var continuation: CheckedContinuation<Void, Error>? = nil
+        return try await withCheckedThrowingContinuation {
+            continuation = $0
+            try! rustCall {
+                uniffi_xmtpv3_fn_method_ffigroup_add_members(
+                    self.pointer,
+
+                    FfiConverterSequenceString.lower(accountAddresses),
+                    FfiConverterForeignExecutor.lower(UniFfiForeignExecutor()),
+                    uniffiFutureCallbackHandlerVoidTypeGenericError,
+                    &continuation,
+                    $0
+                )
+            }
+        }
+    }
+
+    public func findMessages(opts: FfiListMessagesOptions) throws -> [FfiMessage] {
+        return try FfiConverterSequenceTypeFfiMessage.lift(
+            rustCallWithError(FfiConverterTypeGenericError.lift) {
+                uniffi_xmtpv3_fn_method_ffigroup_find_messages(self.pointer,
+                                                               FfiConverterTypeFfiListMessagesOptions.lower(opts), $0)
+            }
+        )
+    }
+
+    public func id() -> [UInt8] {
+        return try! FfiConverterSequenceUInt8.lift(
+            try!
+                rustCall {
+                    uniffi_xmtpv3_fn_method_ffigroup_id(self.pointer, $0)
+                }
+        )
+    }
+
+    public func listMembers() throws -> [FfiGroupMember] {
+        return try FfiConverterSequenceTypeFfiGroupMember.lift(
+            rustCallWithError(FfiConverterTypeGenericError.lift) {
+                uniffi_xmtpv3_fn_method_ffigroup_list_members(self.pointer, $0)
+            }
+        )
+    }
+
+    public func removeMembers(accountAddresses: [String]) async throws {
+        // Suspend the function and call the scaffolding function, passing it a callback handler from
+        // `AsyncTypes.swift`
+        //
+        // Make sure to hold on to a reference to the continuation in the top-level scope so that
+        // it's not freed before the callback is invoked.
+        var continuation: CheckedContinuation<Void, Error>? = nil
+        return try await withCheckedThrowingContinuation {
+            continuation = $0
+            try! rustCall {
+                uniffi_xmtpv3_fn_method_ffigroup_remove_members(
+                    self.pointer,
+
+                    FfiConverterSequenceString.lower(accountAddresses),
+                    FfiConverterForeignExecutor.lower(UniFfiForeignExecutor()),
+                    uniffiFutureCallbackHandlerVoidTypeGenericError,
+                    &continuation,
+                    $0
+                )
+            }
+        }
+    }
+
+    public func send(contentBytes: [UInt8]) async throws {
+        // Suspend the function and call the scaffolding function, passing it a callback handler from
+        // `AsyncTypes.swift`
+        //
+        // Make sure to hold on to a reference to the continuation in the top-level scope so that
+        // it's not freed before the callback is invoked.
+        var continuation: CheckedContinuation<Void, Error>? = nil
+        return try await withCheckedThrowingContinuation {
+            continuation = $0
+            try! rustCall {
+                uniffi_xmtpv3_fn_method_ffigroup_send(
+                    self.pointer,
+
+                    FfiConverterSequenceUInt8.lower(contentBytes),
+                    FfiConverterForeignExecutor.lower(UniFfiForeignExecutor()),
+                    uniffiFutureCallbackHandlerVoidTypeGenericError,
+                    &continuation,
+                    $0
+                )
+            }
+        }
+    }
+
+    public func stream(messageCallback: FfiMessageCallback) async throws -> FfiMessageStreamCloser {
+        // Suspend the function and call the scaffolding function, passing it a callback handler from
+        // `AsyncTypes.swift`
+        //
+        // Make sure to hold on to a reference to the continuation in the top-level scope so that
+        // it's not freed before the callback is invoked.
+        var continuation: CheckedContinuation<FfiMessageStreamCloser, Error>? = nil
+        return try await withCheckedThrowingContinuation {
+            continuation = $0
+            try! rustCall {
+                uniffi_xmtpv3_fn_method_ffigroup_stream(
+                    self.pointer,
+
+                    FfiConverterCallbackInterfaceFfiMessageCallback.lower(messageCallback),
+                    FfiConverterForeignExecutor.lower(UniFfiForeignExecutor()),
+                    uniffiFutureCallbackHandlerTypeFfiMessageStreamCloserTypeGenericError,
+                    &continuation,
+                    $0
+                )
+            }
+        }
+    }
+
+    public func sync() async throws {
+        // Suspend the function and call the scaffolding function, passing it a callback handler from
+        // `AsyncTypes.swift`
+        //
+        // Make sure to hold on to a reference to the continuation in the top-level scope so that
+        // it's not freed before the callback is invoked.
+        var continuation: CheckedContinuation<Void, Error>? = nil
+        return try await withCheckedThrowingContinuation {
+            continuation = $0
+            try! rustCall {
+                uniffi_xmtpv3_fn_method_ffigroup_sync(
+                    self.pointer,
+
+                    FfiConverterForeignExecutor.lower(UniFfiForeignExecutor()),
+                    uniffiFutureCallbackHandlerVoidTypeGenericError,
+                    &continuation,
+                    $0
+                )
+            }
+        }
+    }
+}
+
+public struct FfiConverterTypeFfiGroup: FfiConverter {
+    typealias FfiType = UnsafeMutableRawPointer
+    typealias SwiftType = FfiGroup
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiGroup {
+        let v: UInt64 = try readInt(&buf)
+        // The Rust code won't compile if a pointer won't fit in a UInt64.
+        // We have to go via `UInt` because that's the thing that's the size of a pointer.
+        let ptr = UnsafeMutableRawPointer(bitPattern: UInt(truncatingIfNeeded: v))
+        if ptr == nil {
+            throw UniffiInternalError.unexpectedNullPointer
+        }
+        return try lift(ptr!)
+    }
+
+    public static func write(_ value: FfiGroup, into buf: inout [UInt8]) {
+        // This fiddling is because `Int` is the thing that's the same size as a pointer.
+        // The Rust code won't compile if a pointer won't fit in a `UInt64`.
+        writeInt(&buf, UInt64(bitPattern: Int64(Int(bitPattern: lower(value)))))
+    }
+
+    public static func lift(_ pointer: UnsafeMutableRawPointer) throws -> FfiGroup {
+        return FfiGroup(unsafeFromRawPointer: pointer)
+    }
+
+    public static func lower(_ value: FfiGroup) -> UnsafeMutableRawPointer {
+        return value.pointer
+    }
+}
+
+public func FfiConverterTypeFfiGroup_lift(_ pointer: UnsafeMutableRawPointer) throws -> FfiGroup {
+    return try FfiConverterTypeFfiGroup.lift(pointer)
+}
+
+public func FfiConverterTypeFfiGroup_lower(_ value: FfiGroup) -> UnsafeMutableRawPointer {
+    return FfiConverterTypeFfiGroup.lower(value)
+}
+
+public protocol FfiMessageStreamCloserProtocol {
+    func close()
+}
+
+public class FfiMessageStreamCloser: FfiMessageStreamCloserProtocol {
+    fileprivate let pointer: UnsafeMutableRawPointer
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+    required init(unsafeFromRawPointer pointer: UnsafeMutableRawPointer) {
+        self.pointer = pointer
+    }
+
+    deinit {
+        try! rustCall { uniffi_xmtpv3_fn_free_ffimessagestreamcloser(pointer, $0) }
+    }
+
+    public func close() {
+        try!
+            rustCall {
+                uniffi_xmtpv3_fn_method_ffimessagestreamcloser_close(self.pointer, $0)
+            }
+    }
+}
+
+public struct FfiConverterTypeFfiMessageStreamCloser: FfiConverter {
+    typealias FfiType = UnsafeMutableRawPointer
+    typealias SwiftType = FfiMessageStreamCloser
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiMessageStreamCloser {
+        let v: UInt64 = try readInt(&buf)
+        // The Rust code won't compile if a pointer won't fit in a UInt64.
+        // We have to go via `UInt` because that's the thing that's the size of a pointer.
+        let ptr = UnsafeMutableRawPointer(bitPattern: UInt(truncatingIfNeeded: v))
+        if ptr == nil {
+            throw UniffiInternalError.unexpectedNullPointer
+        }
+        return try lift(ptr!)
+    }
+
+    public static func write(_ value: FfiMessageStreamCloser, into buf: inout [UInt8]) {
+        // This fiddling is because `Int` is the thing that's the same size as a pointer.
+        // The Rust code won't compile if a pointer won't fit in a `UInt64`.
+        writeInt(&buf, UInt64(bitPattern: Int64(Int(bitPattern: lower(value)))))
+    }
+
+    public static func lift(_ pointer: UnsafeMutableRawPointer) throws -> FfiMessageStreamCloser {
+        return FfiMessageStreamCloser(unsafeFromRawPointer: pointer)
+    }
+
+    public static func lower(_ value: FfiMessageStreamCloser) -> UnsafeMutableRawPointer {
+        return value.pointer
+    }
+}
+
+public func FfiConverterTypeFfiMessageStreamCloser_lift(_ pointer: UnsafeMutableRawPointer) throws -> FfiMessageStreamCloser {
+    return try FfiConverterTypeFfiMessageStreamCloser.lift(pointer)
+}
+
+public func FfiConverterTypeFfiMessageStreamCloser_lower(_ value: FfiMessageStreamCloser) -> UnsafeMutableRawPointer {
+    return FfiConverterTypeFfiMessageStreamCloser.lower(value)
+}
+
+public protocol FfiV2ApiClientProtocol {
+    func batchQuery(req: FfiV2BatchQueryRequest) async throws -> FfiV2BatchQueryResponse
+    func publish(request: FfiPublishRequest, authToken: String) async throws
+    func query(request: FfiV2QueryRequest) async throws -> FfiV2QueryResponse
+    func setAppVersion(version: String)
+}
+
+public class FfiV2ApiClient: FfiV2ApiClientProtocol {
+    fileprivate let pointer: UnsafeMutableRawPointer
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+    required init(unsafeFromRawPointer pointer: UnsafeMutableRawPointer) {
+        self.pointer = pointer
+    }
+
+    deinit {
+        try! rustCall { uniffi_xmtpv3_fn_free_ffiv2apiclient(pointer, $0) }
+    }
+
+    public func batchQuery(req: FfiV2BatchQueryRequest) async throws -> FfiV2BatchQueryResponse {
+        // Suspend the function and call the scaffolding function, passing it a callback handler from
+        // `AsyncTypes.swift`
+        //
+        // Make sure to hold on to a reference to the continuation in the top-level scope so that
+        // it's not freed before the callback is invoked.
+        var continuation: CheckedContinuation<FfiV2BatchQueryResponse, Error>? = nil
+        return try await withCheckedThrowingContinuation {
+            continuation = $0
+            try! rustCall {
+                uniffi_xmtpv3_fn_method_ffiv2apiclient_batch_query(
+                    self.pointer,
+
+                    FfiConverterTypeFfiV2BatchQueryRequest.lower(req),
+                    FfiConverterForeignExecutor.lower(UniFfiForeignExecutor()),
+                    uniffiFutureCallbackHandlerTypeFfiV2BatchQueryResponseTypeGenericError,
+                    &continuation,
+                    $0
+                )
+            }
+        }
+    }
+
+    public func publish(request: FfiPublishRequest, authToken: String) async throws {
+        // Suspend the function and call the scaffolding function, passing it a callback handler from
+        // `AsyncTypes.swift`
+        //
+        // Make sure to hold on to a reference to the continuation in the top-level scope so that
+        // it's not freed before the callback is invoked.
+        var continuation: CheckedContinuation<Void, Error>? = nil
+        return try await withCheckedThrowingContinuation {
+            continuation = $0
+            try! rustCall {
+                uniffi_xmtpv3_fn_method_ffiv2apiclient_publish(
+                    self.pointer,
+
+                    FfiConverterTypeFfiPublishRequest.lower(request),
+                    FfiConverterString.lower(authToken),
+                    FfiConverterForeignExecutor.lower(UniFfiForeignExecutor()),
+                    uniffiFutureCallbackHandlerVoidTypeGenericError,
+                    &continuation,
+                    $0
+                )
+            }
+        }
+    }
+
+    public func query(request: FfiV2QueryRequest) async throws -> FfiV2QueryResponse {
+        // Suspend the function and call the scaffolding function, passing it a callback handler from
+        // `AsyncTypes.swift`
+        //
+        // Make sure to hold on to a reference to the continuation in the top-level scope so that
+        // it's not freed before the callback is invoked.
+        var continuation: CheckedContinuation<FfiV2QueryResponse, Error>? = nil
+        return try await withCheckedThrowingContinuation {
+            continuation = $0
+            try! rustCall {
+                uniffi_xmtpv3_fn_method_ffiv2apiclient_query(
+                    self.pointer,
+
+                    FfiConverterTypeFfiV2QueryRequest.lower(request),
+                    FfiConverterForeignExecutor.lower(UniFfiForeignExecutor()),
+                    uniffiFutureCallbackHandlerTypeFfiV2QueryResponseTypeGenericError,
+                    &continuation,
+                    $0
+                )
+            }
+        }
+    }
+
+    public func setAppVersion(version: String) {
+        try!
+            rustCall {
+                uniffi_xmtpv3_fn_method_ffiv2apiclient_set_app_version(self.pointer,
+                                                                       FfiConverterString.lower(version), $0)
+            }
+    }
+}
+
+public struct FfiConverterTypeFfiV2ApiClient: FfiConverter {
+    typealias FfiType = UnsafeMutableRawPointer
+    typealias SwiftType = FfiV2ApiClient
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiV2ApiClient {
+        let v: UInt64 = try readInt(&buf)
+        // The Rust code won't compile if a pointer won't fit in a UInt64.
+        // We have to go via `UInt` because that's the thing that's the size of a pointer.
+        let ptr = UnsafeMutableRawPointer(bitPattern: UInt(truncatingIfNeeded: v))
+        if ptr == nil {
+            throw UniffiInternalError.unexpectedNullPointer
+        }
+        return try lift(ptr!)
+    }
+
+    public static func write(_ value: FfiV2ApiClient, into buf: inout [UInt8]) {
+        // This fiddling is because `Int` is the thing that's the same size as a pointer.
+        // The Rust code won't compile if a pointer won't fit in a `UInt64`.
+        writeInt(&buf, UInt64(bitPattern: Int64(Int(bitPattern: lower(value)))))
+    }
+
+    public static func lift(_ pointer: UnsafeMutableRawPointer) throws -> FfiV2ApiClient {
+        return FfiV2ApiClient(unsafeFromRawPointer: pointer)
+    }
+
+    public static func lower(_ value: FfiV2ApiClient) -> UnsafeMutableRawPointer {
+        return value.pointer
+    }
+}
+
+public func FfiConverterTypeFfiV2ApiClient_lift(_ pointer: UnsafeMutableRawPointer) throws -> FfiV2ApiClient {
+    return try FfiConverterTypeFfiV2ApiClient.lift(pointer)
+}
+
+public func FfiConverterTypeFfiV2ApiClient_lower(_ value: FfiV2ApiClient) -> UnsafeMutableRawPointer {
+    return FfiConverterTypeFfiV2ApiClient.lower(value)
+}
+
 public protocol FfiXmtpClientProtocol {
+    func accountAddress() -> String
     func conversations() -> FfiConversations
-    func walletAddress() -> String
+    func registerIdentity() async throws
 }
 
 public class FfiXmtpClient: FfiXmtpClientProtocol {
@@ -643,6 +949,15 @@ public class FfiXmtpClient: FfiXmtpClientProtocol {
         try! rustCall { uniffi_xmtpv3_fn_free_ffixmtpclient(pointer, $0) }
     }
 
+    public func accountAddress() -> String {
+        return try! FfiConverterString.lift(
+            try!
+                rustCall {
+                    uniffi_xmtpv3_fn_method_ffixmtpclient_account_address(self.pointer, $0)
+                }
+        )
+    }
+
     public func conversations() -> FfiConversations {
         return try! FfiConverterTypeFfiConversations.lift(
             try!
@@ -652,13 +967,26 @@ public class FfiXmtpClient: FfiXmtpClientProtocol {
         )
     }
 
-    public func walletAddress() -> String {
-        return try! FfiConverterString.lift(
-            try!
-                rustCall {
-                    uniffi_xmtpv3_fn_method_ffixmtpclient_wallet_address(self.pointer, $0)
-                }
-        )
+    public func registerIdentity() async throws {
+        // Suspend the function and call the scaffolding function, passing it a callback handler from
+        // `AsyncTypes.swift`
+        //
+        // Make sure to hold on to a reference to the continuation in the top-level scope so that
+        // it's not freed before the callback is invoked.
+        var continuation: CheckedContinuation<Void, Error>? = nil
+        return try await withCheckedThrowingContinuation {
+            continuation = $0
+            try! rustCall {
+                uniffi_xmtpv3_fn_method_ffixmtpclient_register_identity(
+                    self.pointer,
+
+                    FfiConverterForeignExecutor.lower(UniFfiForeignExecutor()),
+                    uniffiFutureCallbackHandlerVoidTypeGenericError,
+                    &continuation,
+                    $0
+                )
+            }
+        }
     }
 }
 
@@ -766,26 +1094,187 @@ private func uniffiInitForeignExecutor() {
     uniffi_foreign_executor_callback_set(uniffiForeignExecutorCallback)
 }
 
+public struct FfiCursor {
+    public var digest: [UInt8]
+    public var senderTimeNs: UInt64
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(digest: [UInt8], senderTimeNs: UInt64) {
+        self.digest = digest
+        self.senderTimeNs = senderTimeNs
+    }
+}
+
+extension FfiCursor: Equatable, Hashable {
+    public static func == (lhs: FfiCursor, rhs: FfiCursor) -> Bool {
+        if lhs.digest != rhs.digest {
+            return false
+        }
+        if lhs.senderTimeNs != rhs.senderTimeNs {
+            return false
+        }
+        return true
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(digest)
+        hasher.combine(senderTimeNs)
+    }
+}
+
+public struct FfiConverterTypeFfiCursor: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiCursor {
+        return try FfiCursor(
+            digest: FfiConverterSequenceUInt8.read(from: &buf),
+            senderTimeNs: FfiConverterUInt64.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: FfiCursor, into buf: inout [UInt8]) {
+        FfiConverterSequenceUInt8.write(value.digest, into: &buf)
+        FfiConverterUInt64.write(value.senderTimeNs, into: &buf)
+    }
+}
+
+public func FfiConverterTypeFfiCursor_lift(_ buf: RustBuffer) throws -> FfiCursor {
+    return try FfiConverterTypeFfiCursor.lift(buf)
+}
+
+public func FfiConverterTypeFfiCursor_lower(_ value: FfiCursor) -> RustBuffer {
+    return FfiConverterTypeFfiCursor.lower(value)
+}
+
+public struct FfiEnvelope {
+    public var contentTopic: String
+    public var timestampNs: UInt64
+    public var message: [UInt8]
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(contentTopic: String, timestampNs: UInt64, message: [UInt8]) {
+        self.contentTopic = contentTopic
+        self.timestampNs = timestampNs
+        self.message = message
+    }
+}
+
+extension FfiEnvelope: Equatable, Hashable {
+    public static func == (lhs: FfiEnvelope, rhs: FfiEnvelope) -> Bool {
+        if lhs.contentTopic != rhs.contentTopic {
+            return false
+        }
+        if lhs.timestampNs != rhs.timestampNs {
+            return false
+        }
+        if lhs.message != rhs.message {
+            return false
+        }
+        return true
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(contentTopic)
+        hasher.combine(timestampNs)
+        hasher.combine(message)
+    }
+}
+
+public struct FfiConverterTypeFfiEnvelope: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiEnvelope {
+        return try FfiEnvelope(
+            contentTopic: FfiConverterString.read(from: &buf),
+            timestampNs: FfiConverterUInt64.read(from: &buf),
+            message: FfiConverterSequenceUInt8.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: FfiEnvelope, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.contentTopic, into: &buf)
+        FfiConverterUInt64.write(value.timestampNs, into: &buf)
+        FfiConverterSequenceUInt8.write(value.message, into: &buf)
+    }
+}
+
+public func FfiConverterTypeFfiEnvelope_lift(_ buf: RustBuffer) throws -> FfiEnvelope {
+    return try FfiConverterTypeFfiEnvelope.lift(buf)
+}
+
+public func FfiConverterTypeFfiEnvelope_lower(_ value: FfiEnvelope) -> RustBuffer {
+    return FfiConverterTypeFfiEnvelope.lower(value)
+}
+
+public struct FfiGroupMember {
+    public var accountAddress: String
+    public var installationIds: [[UInt8]]
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(accountAddress: String, installationIds: [[UInt8]]) {
+        self.accountAddress = accountAddress
+        self.installationIds = installationIds
+    }
+}
+
+extension FfiGroupMember: Equatable, Hashable {
+    public static func == (lhs: FfiGroupMember, rhs: FfiGroupMember) -> Bool {
+        if lhs.accountAddress != rhs.accountAddress {
+            return false
+        }
+        if lhs.installationIds != rhs.installationIds {
+            return false
+        }
+        return true
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(accountAddress)
+        hasher.combine(installationIds)
+    }
+}
+
+public struct FfiConverterTypeFfiGroupMember: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiGroupMember {
+        return try FfiGroupMember(
+            accountAddress: FfiConverterString.read(from: &buf),
+            installationIds: FfiConverterSequenceSequenceUInt8.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: FfiGroupMember, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.accountAddress, into: &buf)
+        FfiConverterSequenceSequenceUInt8.write(value.installationIds, into: &buf)
+    }
+}
+
+public func FfiConverterTypeFfiGroupMember_lift(_ buf: RustBuffer) throws -> FfiGroupMember {
+    return try FfiConverterTypeFfiGroupMember.lift(buf)
+}
+
+public func FfiConverterTypeFfiGroupMember_lower(_ value: FfiGroupMember) -> RustBuffer {
+    return FfiConverterTypeFfiGroupMember.lower(value)
+}
+
 public struct FfiListMessagesOptions {
-    public var startTimeNs: Int64?
-    public var endTimeNs: Int64?
+    public var sentBeforeNs: Int64?
+    public var sentAfterNs: Int64?
     public var limit: Int64?
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
-    public init(startTimeNs: Int64?, endTimeNs: Int64?, limit: Int64?) {
-        self.startTimeNs = startTimeNs
-        self.endTimeNs = endTimeNs
+    public init(sentBeforeNs: Int64?, sentAfterNs: Int64?, limit: Int64?) {
+        self.sentBeforeNs = sentBeforeNs
+        self.sentAfterNs = sentAfterNs
         self.limit = limit
     }
 }
 
 extension FfiListMessagesOptions: Equatable, Hashable {
     public static func == (lhs: FfiListMessagesOptions, rhs: FfiListMessagesOptions) -> Bool {
-        if lhs.startTimeNs != rhs.startTimeNs {
+        if lhs.sentBeforeNs != rhs.sentBeforeNs {
             return false
         }
-        if lhs.endTimeNs != rhs.endTimeNs {
+        if lhs.sentAfterNs != rhs.sentAfterNs {
             return false
         }
         if lhs.limit != rhs.limit {
@@ -795,8 +1284,8 @@ extension FfiListMessagesOptions: Equatable, Hashable {
     }
 
     public func hash(into hasher: inout Hasher) {
-        hasher.combine(startTimeNs)
-        hasher.combine(endTimeNs)
+        hasher.combine(sentBeforeNs)
+        hasher.combine(sentAfterNs)
         hasher.combine(limit)
     }
 }
@@ -804,15 +1293,15 @@ extension FfiListMessagesOptions: Equatable, Hashable {
 public struct FfiConverterTypeFfiListMessagesOptions: FfiConverterRustBuffer {
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiListMessagesOptions {
         return try FfiListMessagesOptions(
-            startTimeNs: FfiConverterOptionInt64.read(from: &buf),
-            endTimeNs: FfiConverterOptionInt64.read(from: &buf),
+            sentBeforeNs: FfiConverterOptionInt64.read(from: &buf),
+            sentAfterNs: FfiConverterOptionInt64.read(from: &buf),
             limit: FfiConverterOptionInt64.read(from: &buf)
         )
     }
 
     public static func write(_ value: FfiListMessagesOptions, into buf: inout [UInt8]) {
-        FfiConverterOptionInt64.write(value.startTimeNs, into: &buf)
-        FfiConverterOptionInt64.write(value.endTimeNs, into: &buf)
+        FfiConverterOptionInt64.write(value.sentBeforeNs, into: &buf)
+        FfiConverterOptionInt64.write(value.sentAfterNs, into: &buf)
         FfiConverterOptionInt64.write(value.limit, into: &buf)
     }
 }
@@ -826,15 +1315,15 @@ public func FfiConverterTypeFfiListMessagesOptions_lower(_ value: FfiListMessage
 }
 
 public struct FfiMessage {
-    public var id: String
+    public var id: Data
     public var sentAtNs: Int64
-    public var convoId: String
+    public var convoId: Data
     public var addrFrom: String
-    public var content: [UInt8]
+    public var content: Data
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
-    public init(id: String, sentAtNs: Int64, convoId: String, addrFrom: String, content: [UInt8]) {
+    public init(id: Data, sentAtNs: Int64, convoId: Data, addrFrom: String, content: Data) {
         self.id = id
         self.sentAtNs = sentAtNs
         self.convoId = convoId
@@ -875,20 +1364,20 @@ extension FfiMessage: Equatable, Hashable {
 public struct FfiConverterTypeFfiMessage: FfiConverterRustBuffer {
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiMessage {
         return try FfiMessage(
-            id: FfiConverterString.read(from: &buf),
+            id: FfiConverterData.read(from: &buf),
             sentAtNs: FfiConverterInt64.read(from: &buf),
-            convoId: FfiConverterString.read(from: &buf),
+            convoId: FfiConverterData.read(from: &buf),
             addrFrom: FfiConverterString.read(from: &buf),
-            content: FfiConverterSequenceUInt8.read(from: &buf)
+            content: FfiConverterData.read(from: &buf)
         )
     }
 
     public static func write(_ value: FfiMessage, into buf: inout [UInt8]) {
-        FfiConverterString.write(value.id, into: &buf)
+        FfiConverterData.write(value.id, into: &buf)
         FfiConverterInt64.write(value.sentAtNs, into: &buf)
-        FfiConverterString.write(value.convoId, into: &buf)
+        FfiConverterData.write(value.convoId, into: &buf)
         FfiConverterString.write(value.addrFrom, into: &buf)
-        FfiConverterSequenceUInt8.write(value.content, into: &buf)
+        FfiConverterData.write(value.content, into: &buf)
     }
 }
 
@@ -899,6 +1388,360 @@ public func FfiConverterTypeFfiMessage_lift(_ buf: RustBuffer) throws -> FfiMess
 public func FfiConverterTypeFfiMessage_lower(_ value: FfiMessage) -> RustBuffer {
     return FfiConverterTypeFfiMessage.lower(value)
 }
+
+public struct FfiPagingInfo {
+    public var limit: UInt32
+    public var cursor: FfiCursor?
+    public var direction: FfiSortDirection
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(limit: UInt32, cursor: FfiCursor?, direction: FfiSortDirection) {
+        self.limit = limit
+        self.cursor = cursor
+        self.direction = direction
+    }
+}
+
+extension FfiPagingInfo: Equatable, Hashable {
+    public static func == (lhs: FfiPagingInfo, rhs: FfiPagingInfo) -> Bool {
+        if lhs.limit != rhs.limit {
+            return false
+        }
+        if lhs.cursor != rhs.cursor {
+            return false
+        }
+        if lhs.direction != rhs.direction {
+            return false
+        }
+        return true
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(limit)
+        hasher.combine(cursor)
+        hasher.combine(direction)
+    }
+}
+
+public struct FfiConverterTypeFfiPagingInfo: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiPagingInfo {
+        return try FfiPagingInfo(
+            limit: FfiConverterUInt32.read(from: &buf),
+            cursor: FfiConverterOptionTypeFfiCursor.read(from: &buf),
+            direction: FfiConverterTypeFfiSortDirection.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: FfiPagingInfo, into buf: inout [UInt8]) {
+        FfiConverterUInt32.write(value.limit, into: &buf)
+        FfiConverterOptionTypeFfiCursor.write(value.cursor, into: &buf)
+        FfiConverterTypeFfiSortDirection.write(value.direction, into: &buf)
+    }
+}
+
+public func FfiConverterTypeFfiPagingInfo_lift(_ buf: RustBuffer) throws -> FfiPagingInfo {
+    return try FfiConverterTypeFfiPagingInfo.lift(buf)
+}
+
+public func FfiConverterTypeFfiPagingInfo_lower(_ value: FfiPagingInfo) -> RustBuffer {
+    return FfiConverterTypeFfiPagingInfo.lower(value)
+}
+
+public struct FfiPublishRequest {
+    public var envelopes: [FfiEnvelope]
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(envelopes: [FfiEnvelope]) {
+        self.envelopes = envelopes
+    }
+}
+
+extension FfiPublishRequest: Equatable, Hashable {
+    public static func == (lhs: FfiPublishRequest, rhs: FfiPublishRequest) -> Bool {
+        if lhs.envelopes != rhs.envelopes {
+            return false
+        }
+        return true
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(envelopes)
+    }
+}
+
+public struct FfiConverterTypeFfiPublishRequest: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiPublishRequest {
+        return try FfiPublishRequest(
+            envelopes: FfiConverterSequenceTypeFfiEnvelope.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: FfiPublishRequest, into buf: inout [UInt8]) {
+        FfiConverterSequenceTypeFfiEnvelope.write(value.envelopes, into: &buf)
+    }
+}
+
+public func FfiConverterTypeFfiPublishRequest_lift(_ buf: RustBuffer) throws -> FfiPublishRequest {
+    return try FfiConverterTypeFfiPublishRequest.lift(buf)
+}
+
+public func FfiConverterTypeFfiPublishRequest_lower(_ value: FfiPublishRequest) -> RustBuffer {
+    return FfiConverterTypeFfiPublishRequest.lower(value)
+}
+
+public struct FfiV2BatchQueryRequest {
+    public var requests: [FfiV2QueryRequest]
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(requests: [FfiV2QueryRequest]) {
+        self.requests = requests
+    }
+}
+
+extension FfiV2BatchQueryRequest: Equatable, Hashable {
+    public static func == (lhs: FfiV2BatchQueryRequest, rhs: FfiV2BatchQueryRequest) -> Bool {
+        if lhs.requests != rhs.requests {
+            return false
+        }
+        return true
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(requests)
+    }
+}
+
+public struct FfiConverterTypeFfiV2BatchQueryRequest: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiV2BatchQueryRequest {
+        return try FfiV2BatchQueryRequest(
+            requests: FfiConverterSequenceTypeFfiV2QueryRequest.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: FfiV2BatchQueryRequest, into buf: inout [UInt8]) {
+        FfiConverterSequenceTypeFfiV2QueryRequest.write(value.requests, into: &buf)
+    }
+}
+
+public func FfiConverterTypeFfiV2BatchQueryRequest_lift(_ buf: RustBuffer) throws -> FfiV2BatchQueryRequest {
+    return try FfiConverterTypeFfiV2BatchQueryRequest.lift(buf)
+}
+
+public func FfiConverterTypeFfiV2BatchQueryRequest_lower(_ value: FfiV2BatchQueryRequest) -> RustBuffer {
+    return FfiConverterTypeFfiV2BatchQueryRequest.lower(value)
+}
+
+public struct FfiV2BatchQueryResponse {
+    public var responses: [FfiV2QueryResponse]
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(responses: [FfiV2QueryResponse]) {
+        self.responses = responses
+    }
+}
+
+extension FfiV2BatchQueryResponse: Equatable, Hashable {
+    public static func == (lhs: FfiV2BatchQueryResponse, rhs: FfiV2BatchQueryResponse) -> Bool {
+        if lhs.responses != rhs.responses {
+            return false
+        }
+        return true
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(responses)
+    }
+}
+
+public struct FfiConverterTypeFfiV2BatchQueryResponse: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiV2BatchQueryResponse {
+        return try FfiV2BatchQueryResponse(
+            responses: FfiConverterSequenceTypeFfiV2QueryResponse.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: FfiV2BatchQueryResponse, into buf: inout [UInt8]) {
+        FfiConverterSequenceTypeFfiV2QueryResponse.write(value.responses, into: &buf)
+    }
+}
+
+public func FfiConverterTypeFfiV2BatchQueryResponse_lift(_ buf: RustBuffer) throws -> FfiV2BatchQueryResponse {
+    return try FfiConverterTypeFfiV2BatchQueryResponse.lift(buf)
+}
+
+public func FfiConverterTypeFfiV2BatchQueryResponse_lower(_ value: FfiV2BatchQueryResponse) -> RustBuffer {
+    return FfiConverterTypeFfiV2BatchQueryResponse.lower(value)
+}
+
+public struct FfiV2QueryRequest {
+    public var contentTopics: [String]
+    public var startTimeNs: UInt64
+    public var endTimeNs: UInt64
+    public var pagingInfo: FfiPagingInfo?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(contentTopics: [String], startTimeNs: UInt64, endTimeNs: UInt64, pagingInfo: FfiPagingInfo?) {
+        self.contentTopics = contentTopics
+        self.startTimeNs = startTimeNs
+        self.endTimeNs = endTimeNs
+        self.pagingInfo = pagingInfo
+    }
+}
+
+extension FfiV2QueryRequest: Equatable, Hashable {
+    public static func == (lhs: FfiV2QueryRequest, rhs: FfiV2QueryRequest) -> Bool {
+        if lhs.contentTopics != rhs.contentTopics {
+            return false
+        }
+        if lhs.startTimeNs != rhs.startTimeNs {
+            return false
+        }
+        if lhs.endTimeNs != rhs.endTimeNs {
+            return false
+        }
+        if lhs.pagingInfo != rhs.pagingInfo {
+            return false
+        }
+        return true
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(contentTopics)
+        hasher.combine(startTimeNs)
+        hasher.combine(endTimeNs)
+        hasher.combine(pagingInfo)
+    }
+}
+
+public struct FfiConverterTypeFfiV2QueryRequest: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiV2QueryRequest {
+        return try FfiV2QueryRequest(
+            contentTopics: FfiConverterSequenceString.read(from: &buf),
+            startTimeNs: FfiConverterUInt64.read(from: &buf),
+            endTimeNs: FfiConverterUInt64.read(from: &buf),
+            pagingInfo: FfiConverterOptionTypeFfiPagingInfo.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: FfiV2QueryRequest, into buf: inout [UInt8]) {
+        FfiConverterSequenceString.write(value.contentTopics, into: &buf)
+        FfiConverterUInt64.write(value.startTimeNs, into: &buf)
+        FfiConverterUInt64.write(value.endTimeNs, into: &buf)
+        FfiConverterOptionTypeFfiPagingInfo.write(value.pagingInfo, into: &buf)
+    }
+}
+
+public func FfiConverterTypeFfiV2QueryRequest_lift(_ buf: RustBuffer) throws -> FfiV2QueryRequest {
+    return try FfiConverterTypeFfiV2QueryRequest.lift(buf)
+}
+
+public func FfiConverterTypeFfiV2QueryRequest_lower(_ value: FfiV2QueryRequest) -> RustBuffer {
+    return FfiConverterTypeFfiV2QueryRequest.lower(value)
+}
+
+public struct FfiV2QueryResponse {
+    public var envelopes: [FfiEnvelope]
+    public var pagingInfo: FfiPagingInfo?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(envelopes: [FfiEnvelope], pagingInfo: FfiPagingInfo?) {
+        self.envelopes = envelopes
+        self.pagingInfo = pagingInfo
+    }
+}
+
+extension FfiV2QueryResponse: Equatable, Hashable {
+    public static func == (lhs: FfiV2QueryResponse, rhs: FfiV2QueryResponse) -> Bool {
+        if lhs.envelopes != rhs.envelopes {
+            return false
+        }
+        if lhs.pagingInfo != rhs.pagingInfo {
+            return false
+        }
+        return true
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(envelopes)
+        hasher.combine(pagingInfo)
+    }
+}
+
+public struct FfiConverterTypeFfiV2QueryResponse: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiV2QueryResponse {
+        return try FfiV2QueryResponse(
+            envelopes: FfiConverterSequenceTypeFfiEnvelope.read(from: &buf),
+            pagingInfo: FfiConverterOptionTypeFfiPagingInfo.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: FfiV2QueryResponse, into buf: inout [UInt8]) {
+        FfiConverterSequenceTypeFfiEnvelope.write(value.envelopes, into: &buf)
+        FfiConverterOptionTypeFfiPagingInfo.write(value.pagingInfo, into: &buf)
+    }
+}
+
+public func FfiConverterTypeFfiV2QueryResponse_lift(_ buf: RustBuffer) throws -> FfiV2QueryResponse {
+    return try FfiConverterTypeFfiV2QueryResponse.lift(buf)
+}
+
+public func FfiConverterTypeFfiV2QueryResponse_lower(_ value: FfiV2QueryResponse) -> RustBuffer {
+    return FfiConverterTypeFfiV2QueryResponse.lower(value)
+}
+
+// Note that we don't yet support `indirect` for enums.
+// See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
+public enum FfiSortDirection {
+    case unspecified
+    case ascending
+    case descending
+}
+
+public struct FfiConverterTypeFfiSortDirection: FfiConverterRustBuffer {
+    typealias SwiftType = FfiSortDirection
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiSortDirection {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        case 1: return .unspecified
+
+        case 2: return .ascending
+
+        case 3: return .descending
+
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: FfiSortDirection, into buf: inout [UInt8]) {
+        switch value {
+        case .unspecified:
+            writeInt(&buf, Int32(1))
+
+        case .ascending:
+            writeInt(&buf, Int32(2))
+
+        case .descending:
+            writeInt(&buf, Int32(3))
+        }
+    }
+}
+
+public func FfiConverterTypeFfiSortDirection_lift(_ buf: RustBuffer) throws -> FfiSortDirection {
+    return try FfiConverterTypeFfiSortDirection.lift(buf)
+}
+
+public func FfiConverterTypeFfiSortDirection_lower(_ value: FfiSortDirection) -> RustBuffer {
+    return FfiConverterTypeFfiSortDirection.lower(value)
+}
+
+extension FfiSortDirection: Equatable, Hashable {}
 
 public enum GenericError {
     case Generic(err: String)
@@ -1043,84 +1886,83 @@ public protocol FfiInboxOwner: AnyObject {
 }
 
 // The ForeignCallback that is passed to Rust.
-private let foreignCallbackCallbackInterfaceFfiInboxOwner: ForeignCallback =
-    { (handle: UniFFICallbackHandle, method: Int32, argsData: UnsafePointer<UInt8>, argsLen: Int32, out_buf: UnsafeMutablePointer<RustBuffer>) -> Int32 in
+private let foreignCallbackCallbackInterfaceFfiInboxOwner: ForeignCallback = { (handle: UniFFICallbackHandle, method: Int32, argsData: UnsafePointer<UInt8>, argsLen: Int32, out_buf: UnsafeMutablePointer<RustBuffer>) -> Int32 in
 
-        func invokeGetAddress(_ swiftCallbackInterface: FfiInboxOwner, _: UnsafePointer<UInt8>, _: Int32, _ out_buf: UnsafeMutablePointer<RustBuffer>) throws -> Int32 {
-            func makeCall() throws -> Int32 {
-                let result = swiftCallbackInterface.getAddress(
-                )
-                var writer = [UInt8]()
-                FfiConverterString.write(result, into: &writer)
-                out_buf.pointee = RustBuffer(bytes: writer)
-                return UNIFFI_CALLBACK_SUCCESS
-            }
-            return try makeCall()
-        }
-
-        func invokeSign(_ swiftCallbackInterface: FfiInboxOwner, _ argsData: UnsafePointer<UInt8>, _ argsLen: Int32, _ out_buf: UnsafeMutablePointer<RustBuffer>) throws -> Int32 {
-            var reader = createReader(data: Data(bytes: argsData, count: Int(argsLen)))
-            func makeCall() throws -> Int32 {
-                let result = try swiftCallbackInterface.sign(
-                    text: FfiConverterString.read(from: &reader)
-                )
-                var writer = [UInt8]()
-                FfiConverterData.write(result, into: &writer)
-                out_buf.pointee = RustBuffer(bytes: writer)
-                return UNIFFI_CALLBACK_SUCCESS
-            }
-            do {
-                return try makeCall()
-            } catch let error as SigningError {
-                out_buf.pointee = FfiConverterTypeSigningError.lower(error)
-                return UNIFFI_CALLBACK_ERROR
-            }
-        }
-
-        switch method {
-        case IDX_CALLBACK_FREE:
-            FfiConverterCallbackInterfaceFfiInboxOwner.drop(handle: handle)
-            // Sucessful return
-            // See docs of ForeignCallback in `uniffi_core/src/ffi/foreigncallbacks.rs`
+    func invokeGetAddress(_ swiftCallbackInterface: FfiInboxOwner, _: UnsafePointer<UInt8>, _: Int32, _ out_buf: UnsafeMutablePointer<RustBuffer>) throws -> Int32 {
+        func makeCall() throws -> Int32 {
+            let result = swiftCallbackInterface.getAddress(
+            )
+            var writer = [UInt8]()
+            FfiConverterString.write(result, into: &writer)
+            out_buf.pointee = RustBuffer(bytes: writer)
             return UNIFFI_CALLBACK_SUCCESS
-        case 1:
-            let cb: FfiInboxOwner
-            do {
-                cb = try FfiConverterCallbackInterfaceFfiInboxOwner.lift(handle)
-            } catch {
-                out_buf.pointee = FfiConverterString.lower("FfiInboxOwner: Invalid handle")
-                return UNIFFI_CALLBACK_UNEXPECTED_ERROR
-            }
-            do {
-                return try invokeGetAddress(cb, argsData, argsLen, out_buf)
-            } catch {
-                out_buf.pointee = FfiConverterString.lower(String(describing: error))
-                return UNIFFI_CALLBACK_UNEXPECTED_ERROR
-            }
-        case 2:
-            let cb: FfiInboxOwner
-            do {
-                cb = try FfiConverterCallbackInterfaceFfiInboxOwner.lift(handle)
-            } catch {
-                out_buf.pointee = FfiConverterString.lower("FfiInboxOwner: Invalid handle")
-                return UNIFFI_CALLBACK_UNEXPECTED_ERROR
-            }
-            do {
-                return try invokeSign(cb, argsData, argsLen, out_buf)
-            } catch {
-                out_buf.pointee = FfiConverterString.lower(String(describing: error))
-                return UNIFFI_CALLBACK_UNEXPECTED_ERROR
-            }
+        }
+        return try makeCall()
+    }
 
-        // This should never happen, because an out of bounds method index won't
-        // ever be used. Once we can catch errors, we should return an InternalError.
-        // https://github.com/mozilla/uniffi-rs/issues/351
-        default:
-            // An unexpected error happened.
-            // See docs of ForeignCallback in `uniffi_core/src/ffi/foreigncallbacks.rs`
-            return UNIFFI_CALLBACK_UNEXPECTED_ERROR
+    func invokeSign(_ swiftCallbackInterface: FfiInboxOwner, _ argsData: UnsafePointer<UInt8>, _ argsLen: Int32, _ out_buf: UnsafeMutablePointer<RustBuffer>) throws -> Int32 {
+        var reader = createReader(data: Data(bytes: argsData, count: Int(argsLen)))
+        func makeCall() throws -> Int32 {
+            let result = try swiftCallbackInterface.sign(
+                text: FfiConverterString.read(from: &reader)
+            )
+            var writer = [UInt8]()
+            FfiConverterData.write(result, into: &writer)
+            out_buf.pointee = RustBuffer(bytes: writer)
+            return UNIFFI_CALLBACK_SUCCESS
+        }
+        do {
+            return try makeCall()
+        } catch let error as SigningError {
+            out_buf.pointee = FfiConverterTypeSigningError.lower(error)
+            return UNIFFI_CALLBACK_ERROR
         }
     }
+
+    switch method {
+    case IDX_CALLBACK_FREE:
+        FfiConverterCallbackInterfaceFfiInboxOwner.drop(handle: handle)
+        // Sucessful return
+        // See docs of ForeignCallback in `uniffi_core/src/ffi/foreigncallbacks.rs`
+        return UNIFFI_CALLBACK_SUCCESS
+    case 1:
+        let cb: FfiInboxOwner
+        do {
+            cb = try FfiConverterCallbackInterfaceFfiInboxOwner.lift(handle)
+        } catch {
+            out_buf.pointee = FfiConverterString.lower("FfiInboxOwner: Invalid handle")
+            return UNIFFI_CALLBACK_UNEXPECTED_ERROR
+        }
+        do {
+            return try invokeGetAddress(cb, argsData, argsLen, out_buf)
+        } catch {
+            out_buf.pointee = FfiConverterString.lower(String(describing: error))
+            return UNIFFI_CALLBACK_UNEXPECTED_ERROR
+        }
+    case 2:
+        let cb: FfiInboxOwner
+        do {
+            cb = try FfiConverterCallbackInterfaceFfiInboxOwner.lift(handle)
+        } catch {
+            out_buf.pointee = FfiConverterString.lower("FfiInboxOwner: Invalid handle")
+            return UNIFFI_CALLBACK_UNEXPECTED_ERROR
+        }
+        do {
+            return try invokeSign(cb, argsData, argsLen, out_buf)
+        } catch {
+            out_buf.pointee = FfiConverterString.lower(String(describing: error))
+            return UNIFFI_CALLBACK_UNEXPECTED_ERROR
+        }
+
+    // This should never happen, because an out of bounds method index won't
+    // ever be used. Once we can catch errors, we should return an InternalError.
+    // https://github.com/mozilla/uniffi-rs/issues/351
+    default:
+        // An unexpected error happened.
+        // See docs of ForeignCallback in `uniffi_core/src/ffi/foreigncallbacks.rs`
+        return UNIFFI_CALLBACK_UNEXPECTED_ERROR
+    }
+}
 
 // FfiConverter protocol for callback interfaces
 private enum FfiConverterCallbackInterfaceFfiInboxOwner {
@@ -1179,52 +2021,51 @@ public protocol FfiLogger: AnyObject {
 }
 
 // The ForeignCallback that is passed to Rust.
-private let foreignCallbackCallbackInterfaceFfiLogger: ForeignCallback =
-    { (handle: UniFFICallbackHandle, method: Int32, argsData: UnsafePointer<UInt8>, argsLen: Int32, out_buf: UnsafeMutablePointer<RustBuffer>) -> Int32 in
+private let foreignCallbackCallbackInterfaceFfiLogger: ForeignCallback = { (handle: UniFFICallbackHandle, method: Int32, argsData: UnsafePointer<UInt8>, argsLen: Int32, out_buf: UnsafeMutablePointer<RustBuffer>) -> Int32 in
 
-        func invokeLog(_ swiftCallbackInterface: FfiLogger, _ argsData: UnsafePointer<UInt8>, _ argsLen: Int32, _: UnsafeMutablePointer<RustBuffer>) throws -> Int32 {
-            var reader = createReader(data: Data(bytes: argsData, count: Int(argsLen)))
-            func makeCall() throws -> Int32 {
-                try swiftCallbackInterface.log(
-                    level: FfiConverterUInt32.read(from: &reader),
-                    levelLabel: FfiConverterString.read(from: &reader),
-                    message: FfiConverterString.read(from: &reader)
-                )
-                return UNIFFI_CALLBACK_SUCCESS
-            }
-            return try makeCall()
-        }
-
-        switch method {
-        case IDX_CALLBACK_FREE:
-            FfiConverterCallbackInterfaceFfiLogger.drop(handle: handle)
-            // Sucessful return
-            // See docs of ForeignCallback in `uniffi_core/src/ffi/foreigncallbacks.rs`
+    func invokeLog(_ swiftCallbackInterface: FfiLogger, _ argsData: UnsafePointer<UInt8>, _ argsLen: Int32, _: UnsafeMutablePointer<RustBuffer>) throws -> Int32 {
+        var reader = createReader(data: Data(bytes: argsData, count: Int(argsLen)))
+        func makeCall() throws -> Int32 {
+            try swiftCallbackInterface.log(
+                level: FfiConverterUInt32.read(from: &reader),
+                levelLabel: FfiConverterString.read(from: &reader),
+                message: FfiConverterString.read(from: &reader)
+            )
             return UNIFFI_CALLBACK_SUCCESS
-        case 1:
-            let cb: FfiLogger
-            do {
-                cb = try FfiConverterCallbackInterfaceFfiLogger.lift(handle)
-            } catch {
-                out_buf.pointee = FfiConverterString.lower("FfiLogger: Invalid handle")
-                return UNIFFI_CALLBACK_UNEXPECTED_ERROR
-            }
-            do {
-                return try invokeLog(cb, argsData, argsLen, out_buf)
-            } catch {
-                out_buf.pointee = FfiConverterString.lower(String(describing: error))
-                return UNIFFI_CALLBACK_UNEXPECTED_ERROR
-            }
+        }
+        return try makeCall()
+    }
 
-        // This should never happen, because an out of bounds method index won't
-        // ever be used. Once we can catch errors, we should return an InternalError.
-        // https://github.com/mozilla/uniffi-rs/issues/351
-        default:
-            // An unexpected error happened.
-            // See docs of ForeignCallback in `uniffi_core/src/ffi/foreigncallbacks.rs`
+    switch method {
+    case IDX_CALLBACK_FREE:
+        FfiConverterCallbackInterfaceFfiLogger.drop(handle: handle)
+        // Sucessful return
+        // See docs of ForeignCallback in `uniffi_core/src/ffi/foreigncallbacks.rs`
+        return UNIFFI_CALLBACK_SUCCESS
+    case 1:
+        let cb: FfiLogger
+        do {
+            cb = try FfiConverterCallbackInterfaceFfiLogger.lift(handle)
+        } catch {
+            out_buf.pointee = FfiConverterString.lower("FfiLogger: Invalid handle")
             return UNIFFI_CALLBACK_UNEXPECTED_ERROR
         }
+        do {
+            return try invokeLog(cb, argsData, argsLen, out_buf)
+        } catch {
+            out_buf.pointee = FfiConverterString.lower(String(describing: error))
+            return UNIFFI_CALLBACK_UNEXPECTED_ERROR
+        }
+
+    // This should never happen, because an out of bounds method index won't
+    // ever be used. Once we can catch errors, we should return an InternalError.
+    // https://github.com/mozilla/uniffi-rs/issues/351
+    default:
+        // An unexpected error happened.
+        // See docs of ForeignCallback in `uniffi_core/src/ffi/foreigncallbacks.rs`
+        return UNIFFI_CALLBACK_UNEXPECTED_ERROR
     }
+}
 
 // FfiConverter protocol for callback interfaces
 private enum FfiConverterCallbackInterfaceFfiLogger {
@@ -1248,6 +2089,107 @@ private enum FfiConverterCallbackInterfaceFfiLogger {
 
 extension FfiConverterCallbackInterfaceFfiLogger: FfiConverter {
     typealias SwiftType = FfiLogger
+    // We can use Handle as the FfiType because it's a typealias to UInt64
+    typealias FfiType = UniFFICallbackHandle
+
+    public static func lift(_ handle: UniFFICallbackHandle) throws -> SwiftType {
+        ensureCallbackinitialized()
+        guard let callback = handleMap.get(handle: handle) else {
+            throw UniffiInternalError.unexpectedStaleHandle
+        }
+        return callback
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        ensureCallbackinitialized()
+        let handle: UniFFICallbackHandle = try readInt(&buf)
+        return try lift(handle)
+    }
+
+    public static func lower(_ v: SwiftType) -> UniFFICallbackHandle {
+        ensureCallbackinitialized()
+        return handleMap.insert(obj: v)
+    }
+
+    public static func write(_ v: SwiftType, into buf: inout [UInt8]) {
+        ensureCallbackinitialized()
+        writeInt(&buf, lower(v))
+    }
+}
+
+// Declaration and FfiConverters for FfiMessageCallback Callback Interface
+
+public protocol FfiMessageCallback: AnyObject {
+    func onMessage(message: FfiMessage)
+}
+
+// The ForeignCallback that is passed to Rust.
+private let foreignCallbackCallbackInterfaceFfiMessageCallback: ForeignCallback = { (handle: UniFFICallbackHandle, method: Int32, argsData: UnsafePointer<UInt8>, argsLen: Int32, out_buf: UnsafeMutablePointer<RustBuffer>) -> Int32 in
+
+    func invokeOnMessage(_ swiftCallbackInterface: FfiMessageCallback, _ argsData: UnsafePointer<UInt8>, _ argsLen: Int32, _: UnsafeMutablePointer<RustBuffer>) throws -> Int32 {
+        var reader = createReader(data: Data(bytes: argsData, count: Int(argsLen)))
+        func makeCall() throws -> Int32 {
+            try swiftCallbackInterface.onMessage(
+                message: FfiConverterTypeFfiMessage.read(from: &reader)
+            )
+            return UNIFFI_CALLBACK_SUCCESS
+        }
+        return try makeCall()
+    }
+
+    switch method {
+    case IDX_CALLBACK_FREE:
+        FfiConverterCallbackInterfaceFfiMessageCallback.drop(handle: handle)
+        // Sucessful return
+        // See docs of ForeignCallback in `uniffi_core/src/ffi/foreigncallbacks.rs`
+        return UNIFFI_CALLBACK_SUCCESS
+    case 1:
+        let cb: FfiMessageCallback
+        do {
+            cb = try FfiConverterCallbackInterfaceFfiMessageCallback.lift(handle)
+        } catch {
+            out_buf.pointee = FfiConverterString.lower("FfiMessageCallback: Invalid handle")
+            return UNIFFI_CALLBACK_UNEXPECTED_ERROR
+        }
+        do {
+            return try invokeOnMessage(cb, argsData, argsLen, out_buf)
+        } catch {
+            out_buf.pointee = FfiConverterString.lower(String(describing: error))
+            return UNIFFI_CALLBACK_UNEXPECTED_ERROR
+        }
+
+    // This should never happen, because an out of bounds method index won't
+    // ever be used. Once we can catch errors, we should return an InternalError.
+    // https://github.com/mozilla/uniffi-rs/issues/351
+    default:
+        // An unexpected error happened.
+        // See docs of ForeignCallback in `uniffi_core/src/ffi/foreigncallbacks.rs`
+        return UNIFFI_CALLBACK_UNEXPECTED_ERROR
+    }
+}
+
+// FfiConverter protocol for callback interfaces
+private enum FfiConverterCallbackInterfaceFfiMessageCallback {
+    private static let initCallbackOnce: () = {
+        // Swift ensures this initializer code will once run once, even when accessed by multiple threads.
+        try! rustCall { (err: UnsafeMutablePointer<RustCallStatus>) in
+            uniffi_xmtpv3_fn_init_callback_ffimessagecallback(foreignCallbackCallbackInterfaceFfiMessageCallback, err)
+        }
+    }()
+
+    private static func ensureCallbackinitialized() {
+        _ = initCallbackOnce
+    }
+
+    static func drop(handle: UniFFICallbackHandle) {
+        handleMap.remove(handle: handle)
+    }
+
+    private static var handleMap = UniFFICallbackHandleMap<FfiMessageCallback>()
+}
+
+extension FfiConverterCallbackInterfaceFfiMessageCallback: FfiConverter {
+    typealias SwiftType = FfiMessageCallback
     // We can use Handle as the FfiType because it's a typealias to UInt64
     typealias FfiType = UniFFICallbackHandle
 
@@ -1318,6 +2260,48 @@ private struct FfiConverterOptionString: FfiConverterRustBuffer {
     }
 }
 
+private struct FfiConverterOptionTypeFfiCursor: FfiConverterRustBuffer {
+    typealias SwiftType = FfiCursor?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeFfiCursor.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeFfiCursor.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+private struct FfiConverterOptionTypeFfiPagingInfo: FfiConverterRustBuffer {
+    typealias SwiftType = FfiPagingInfo?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeFfiPagingInfo.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeFfiPagingInfo.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
 private struct FfiConverterOptionSequenceUInt8: FfiConverterRustBuffer {
     typealias SwiftType = [UInt8]?
 
@@ -1361,23 +2345,89 @@ private struct FfiConverterSequenceUInt8: FfiConverterRustBuffer {
     }
 }
 
-private struct FfiConverterSequenceTypeFfiConversation: FfiConverterRustBuffer {
-    typealias SwiftType = [FfiConversation]
+private struct FfiConverterSequenceString: FfiConverterRustBuffer {
+    typealias SwiftType = [String]
 
-    public static func write(_ value: [FfiConversation], into buf: inout [UInt8]) {
+    public static func write(_ value: [String], into buf: inout [UInt8]) {
         let len = Int32(value.count)
         writeInt(&buf, len)
         for item in value {
-            FfiConverterTypeFfiConversation.write(item, into: &buf)
+            FfiConverterString.write(item, into: &buf)
         }
     }
 
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [FfiConversation] {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [String] {
         let len: Int32 = try readInt(&buf)
-        var seq = [FfiConversation]()
+        var seq = [String]()
         seq.reserveCapacity(Int(len))
         for _ in 0 ..< len {
-            try seq.append(FfiConverterTypeFfiConversation.read(from: &buf))
+            try seq.append(FfiConverterString.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+private struct FfiConverterSequenceTypeFfiGroup: FfiConverterRustBuffer {
+    typealias SwiftType = [FfiGroup]
+
+    public static func write(_ value: [FfiGroup], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeFfiGroup.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [FfiGroup] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [FfiGroup]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            try seq.append(FfiConverterTypeFfiGroup.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+private struct FfiConverterSequenceTypeFfiEnvelope: FfiConverterRustBuffer {
+    typealias SwiftType = [FfiEnvelope]
+
+    public static func write(_ value: [FfiEnvelope], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeFfiEnvelope.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [FfiEnvelope] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [FfiEnvelope]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            try seq.append(FfiConverterTypeFfiEnvelope.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+private struct FfiConverterSequenceTypeFfiGroupMember: FfiConverterRustBuffer {
+    typealias SwiftType = [FfiGroupMember]
+
+    public static func write(_ value: [FfiGroupMember], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeFfiGroupMember.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [FfiGroupMember] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [FfiGroupMember]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            try seq.append(FfiConverterTypeFfiGroupMember.read(from: &buf))
         }
         return seq
     }
@@ -1403,10 +2453,94 @@ private struct FfiConverterSequenceTypeFfiMessage: FfiConverterRustBuffer {
         }
         return seq
     }
+}
+
+private struct FfiConverterSequenceTypeFfiV2QueryRequest: FfiConverterRustBuffer {
+    typealias SwiftType = [FfiV2QueryRequest]
+
+    public static func write(_ value: [FfiV2QueryRequest], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeFfiV2QueryRequest.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [FfiV2QueryRequest] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [FfiV2QueryRequest]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            try seq.append(FfiConverterTypeFfiV2QueryRequest.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+private struct FfiConverterSequenceTypeFfiV2QueryResponse: FfiConverterRustBuffer {
+    typealias SwiftType = [FfiV2QueryResponse]
+
+    public static func write(_ value: [FfiV2QueryResponse], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeFfiV2QueryResponse.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [FfiV2QueryResponse] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [FfiV2QueryResponse]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            try seq.append(FfiConverterTypeFfiV2QueryResponse.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+private struct FfiConverterSequenceSequenceUInt8: FfiConverterRustBuffer {
+    typealias SwiftType = [[UInt8]]
+
+    public static func write(_ value: [[UInt8]], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterSequenceUInt8.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [[UInt8]] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [[UInt8]]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            try seq.append(FfiConverterSequenceUInt8.read(from: &buf))
+        }
+        return seq
+    }
 } // Callbacks for async functions
 
 // Callback handlers for an async calls.  These are invoked by Rust when the future is ready.  They
 // lift the return value or error and resume the suspended function.
+private func uniffiFutureCallbackHandlerVoid(
+    rawContinutation: UnsafeRawPointer,
+    returnValue _: UInt8,
+    callStatus: RustCallStatus
+) {
+    let continuation = rawContinutation.bindMemory(
+        to: CheckedContinuation<Void, Error>.self,
+        capacity: 1
+    )
+
+    do {
+        try uniffiCheckCallStatus(callStatus: callStatus, errorHandler: nil)
+        continuation.pointee.resume(returning: ())
+    } catch {
+        continuation.pointee.resume(throwing: error)
+    }
+}
+
 private func uniffiFutureCallbackHandlerVoidTypeGenericError(
     rawContinutation: UnsafeRawPointer,
     returnValue _: UInt8,
@@ -1479,24 +2613,6 @@ private func uniffiFutureCallbackHandlerStringTypeGenericError(
     }
 }
 
-private func uniffiFutureCallbackHandlerTypeFfiConversationTypeGenericError(
-    rawContinutation: UnsafeRawPointer,
-    returnValue: UnsafeMutableRawPointer,
-    callStatus: RustCallStatus
-) {
-    let continuation = rawContinutation.bindMemory(
-        to: CheckedContinuation<FfiConversation, Error>.self,
-        capacity: 1
-    )
-
-    do {
-        try uniffiCheckCallStatus(callStatus: callStatus, errorHandler: FfiConverterTypeGenericError.lift)
-        try continuation.pointee.resume(returning: FfiConverterTypeFfiConversation.lift(returnValue))
-    } catch {
-        continuation.pointee.resume(throwing: error)
-    }
-}
-
 private func uniffiFutureCallbackHandlerTypeFfiConversations(
     rawContinutation: UnsafeRawPointer,
     returnValue: UnsafeMutableRawPointer,
@@ -1510,6 +2626,60 @@ private func uniffiFutureCallbackHandlerTypeFfiConversations(
     do {
         try uniffiCheckCallStatus(callStatus: callStatus, errorHandler: nil)
         try continuation.pointee.resume(returning: FfiConverterTypeFfiConversations.lift(returnValue))
+    } catch {
+        continuation.pointee.resume(throwing: error)
+    }
+}
+
+private func uniffiFutureCallbackHandlerTypeFfiGroupTypeGenericError(
+    rawContinutation: UnsafeRawPointer,
+    returnValue: UnsafeMutableRawPointer,
+    callStatus: RustCallStatus
+) {
+    let continuation = rawContinutation.bindMemory(
+        to: CheckedContinuation<FfiGroup, Error>.self,
+        capacity: 1
+    )
+
+    do {
+        try uniffiCheckCallStatus(callStatus: callStatus, errorHandler: FfiConverterTypeGenericError.lift)
+        try continuation.pointee.resume(returning: FfiConverterTypeFfiGroup.lift(returnValue))
+    } catch {
+        continuation.pointee.resume(throwing: error)
+    }
+}
+
+private func uniffiFutureCallbackHandlerTypeFfiMessageStreamCloserTypeGenericError(
+    rawContinutation: UnsafeRawPointer,
+    returnValue: UnsafeMutableRawPointer,
+    callStatus: RustCallStatus
+) {
+    let continuation = rawContinutation.bindMemory(
+        to: CheckedContinuation<FfiMessageStreamCloser, Error>.self,
+        capacity: 1
+    )
+
+    do {
+        try uniffiCheckCallStatus(callStatus: callStatus, errorHandler: FfiConverterTypeGenericError.lift)
+        try continuation.pointee.resume(returning: FfiConverterTypeFfiMessageStreamCloser.lift(returnValue))
+    } catch {
+        continuation.pointee.resume(throwing: error)
+    }
+}
+
+private func uniffiFutureCallbackHandlerTypeFfiV2ApiClientTypeGenericError(
+    rawContinutation: UnsafeRawPointer,
+    returnValue: UnsafeMutableRawPointer,
+    callStatus: RustCallStatus
+) {
+    let continuation = rawContinutation.bindMemory(
+        to: CheckedContinuation<FfiV2ApiClient, Error>.self,
+        capacity: 1
+    )
+
+    do {
+        try uniffiCheckCallStatus(callStatus: callStatus, errorHandler: FfiConverterTypeGenericError.lift)
+        try continuation.pointee.resume(returning: FfiConverterTypeFfiV2ApiClient.lift(returnValue))
     } catch {
         continuation.pointee.resume(throwing: error)
     }
@@ -1533,6 +2703,60 @@ private func uniffiFutureCallbackHandlerTypeFfiXmtpClientTypeGenericError(
     }
 }
 
+private func uniffiFutureCallbackHandlerTypeFfiV2BatchQueryResponseTypeGenericError(
+    rawContinutation: UnsafeRawPointer,
+    returnValue: RustBuffer,
+    callStatus: RustCallStatus
+) {
+    let continuation = rawContinutation.bindMemory(
+        to: CheckedContinuation<FfiV2BatchQueryResponse, Error>.self,
+        capacity: 1
+    )
+
+    do {
+        try uniffiCheckCallStatus(callStatus: callStatus, errorHandler: FfiConverterTypeGenericError.lift)
+        try continuation.pointee.resume(returning: FfiConverterTypeFfiV2BatchQueryResponse.lift(returnValue))
+    } catch {
+        continuation.pointee.resume(throwing: error)
+    }
+}
+
+private func uniffiFutureCallbackHandlerTypeFfiV2QueryResponseTypeGenericError(
+    rawContinutation: UnsafeRawPointer,
+    returnValue: RustBuffer,
+    callStatus: RustCallStatus
+) {
+    let continuation = rawContinutation.bindMemory(
+        to: CheckedContinuation<FfiV2QueryResponse, Error>.self,
+        capacity: 1
+    )
+
+    do {
+        try uniffiCheckCallStatus(callStatus: callStatus, errorHandler: FfiConverterTypeGenericError.lift)
+        try continuation.pointee.resume(returning: FfiConverterTypeFfiV2QueryResponse.lift(returnValue))
+    } catch {
+        continuation.pointee.resume(throwing: error)
+    }
+}
+
+private func uniffiFutureCallbackHandlerSequenceUInt8(
+    rawContinutation: UnsafeRawPointer,
+    returnValue: RustBuffer,
+    callStatus: RustCallStatus
+) {
+    let continuation = rawContinutation.bindMemory(
+        to: CheckedContinuation<[UInt8], Error>.self,
+        capacity: 1
+    )
+
+    do {
+        try uniffiCheckCallStatus(callStatus: callStatus, errorHandler: nil)
+        try continuation.pointee.resume(returning: FfiConverterSequenceUInt8.lift(returnValue))
+    } catch {
+        continuation.pointee.resume(throwing: error)
+    }
+}
+
 private func uniffiFutureCallbackHandlerSequenceUInt8TypeGenericError(
     rawContinutation: UnsafeRawPointer,
     returnValue: RustBuffer,
@@ -1551,19 +2775,37 @@ private func uniffiFutureCallbackHandlerSequenceUInt8TypeGenericError(
     }
 }
 
-private func uniffiFutureCallbackHandlerSequenceTypeFfiConversationTypeGenericError(
+private func uniffiFutureCallbackHandlerSequenceTypeFfiGroupTypeGenericError(
     rawContinutation: UnsafeRawPointer,
     returnValue: RustBuffer,
     callStatus: RustCallStatus
 ) {
     let continuation = rawContinutation.bindMemory(
-        to: CheckedContinuation<[FfiConversation], Error>.self,
+        to: CheckedContinuation<[FfiGroup], Error>.self,
         capacity: 1
     )
 
     do {
         try uniffiCheckCallStatus(callStatus: callStatus, errorHandler: FfiConverterTypeGenericError.lift)
-        try continuation.pointee.resume(returning: FfiConverterSequenceTypeFfiConversation.lift(returnValue))
+        try continuation.pointee.resume(returning: FfiConverterSequenceTypeFfiGroup.lift(returnValue))
+    } catch {
+        continuation.pointee.resume(throwing: error)
+    }
+}
+
+private func uniffiFutureCallbackHandlerSequenceTypeFfiGroupMemberTypeGenericError(
+    rawContinutation: UnsafeRawPointer,
+    returnValue: RustBuffer,
+    callStatus: RustCallStatus
+) {
+    let continuation = rawContinutation.bindMemory(
+        to: CheckedContinuation<[FfiGroupMember], Error>.self,
+        capacity: 1
+    )
+
+    do {
+        try uniffiCheckCallStatus(callStatus: callStatus, errorHandler: FfiConverterTypeGenericError.lift)
+        try continuation.pointee.resume(returning: FfiConverterSequenceTypeFfiGroupMember.lift(returnValue))
     } catch {
         continuation.pointee.resume(throwing: error)
     }
@@ -1613,6 +2855,28 @@ public func createClient(logger: FfiLogger, ffiInboxOwner: FfiInboxOwner, host: 
     }
 }
 
+public func createV2Client(host: String, isSecure: Bool) async throws -> FfiV2ApiClient {
+    var continuation: CheckedContinuation<FfiV2ApiClient, Error>? = nil
+    // Suspend the function and call the scaffolding function, passing it a callback handler from
+    // `AsyncTypes.swift`
+    //
+    // Make sure to hold on to a reference to the continuation in the top-level scope so that
+    // it's not freed before the callback is invoked.
+    return try await withCheckedThrowingContinuation {
+        continuation = $0
+        try! rustCall {
+            uniffi_xmtpv3_fn_func_create_v2_client(
+                FfiConverterString.lower(host),
+                FfiConverterBool.lower(isSecure),
+                FfiConverterForeignExecutor.lower(UniFfiForeignExecutor()),
+                uniffiFutureCallbackHandlerTypeFfiV2ApiClientTypeGenericError,
+                &continuation,
+                $0
+            )
+        }
+    }
+}
+
 public func diffieHellmanK256(privateKeyBytes: [UInt8], publicKeyBytes: [UInt8]) throws -> [UInt8] {
     return try FfiConverterSequenceUInt8.lift(
         rustCallWithError(FfiConverterTypeGenericError.lift) {
@@ -1624,12 +2888,98 @@ public func diffieHellmanK256(privateKeyBytes: [UInt8], publicKeyBytes: [UInt8])
     )
 }
 
+public func generatePrivatePreferencesTopicIdentifier(privateKey: [UInt8]) throws -> String {
+    return try FfiConverterString.lift(
+        rustCallWithError(FfiConverterTypeGenericError.lift) {
+            uniffi_xmtpv3_fn_func_generate_private_preferences_topic_identifier(
+                FfiConverterSequenceUInt8.lower(privateKey), $0
+            )
+        }
+    )
+}
+
+public func keccak256(input: [UInt8]) -> [UInt8] {
+    return try! FfiConverterSequenceUInt8.lift(
+        try! rustCall {
+            uniffi_xmtpv3_fn_func_keccak256(
+                FfiConverterSequenceUInt8.lower(input), $0
+            )
+        }
+    )
+}
+
+public func publicKeyFromPrivateKeyK256(privateKeyBytes: [UInt8]) throws -> [UInt8] {
+    return try FfiConverterSequenceUInt8.lift(
+        rustCallWithError(FfiConverterTypeGenericError.lift) {
+            uniffi_xmtpv3_fn_func_public_key_from_private_key_k256(
+                FfiConverterSequenceUInt8.lower(privateKeyBytes), $0
+            )
+        }
+    )
+}
+
 public func recoverAddress(signatureBytes: [UInt8], predigestMessage: String) throws -> String {
     return try FfiConverterString.lift(
         rustCallWithError(FfiConverterTypeGenericError.lift) {
             uniffi_xmtpv3_fn_func_recover_address(
                 FfiConverterSequenceUInt8.lower(signatureBytes),
                 FfiConverterString.lower(predigestMessage), $0
+            )
+        }
+    )
+}
+
+public func recoverPublicKeyK256Keccak256(message: [UInt8], signature: [UInt8]) throws -> [UInt8] {
+    return try FfiConverterSequenceUInt8.lift(
+        rustCallWithError(FfiConverterTypeGenericError.lift) {
+            uniffi_xmtpv3_fn_func_recover_public_key_k256_keccak256(
+                FfiConverterSequenceUInt8.lower(message),
+                FfiConverterSequenceUInt8.lower(signature), $0
+            )
+        }
+    )
+}
+
+public func recoverPublicKeyK256Sha256(message: [UInt8], signature: [UInt8]) throws -> [UInt8] {
+    return try FfiConverterSequenceUInt8.lift(
+        rustCallWithError(FfiConverterTypeGenericError.lift) {
+            uniffi_xmtpv3_fn_func_recover_public_key_k256_sha256(
+                FfiConverterSequenceUInt8.lower(message),
+                FfiConverterSequenceUInt8.lower(signature), $0
+            )
+        }
+    )
+}
+
+public func sha256(input: [UInt8]) -> [UInt8] {
+    return try! FfiConverterSequenceUInt8.lift(
+        try! rustCall {
+            uniffi_xmtpv3_fn_func_sha256(
+                FfiConverterSequenceUInt8.lower(input), $0
+            )
+        }
+    )
+}
+
+public func userPreferencesDecrypt(publicKey: [UInt8], privateKey: [UInt8], message: [UInt8]) throws -> [UInt8] {
+    return try FfiConverterSequenceUInt8.lift(
+        rustCallWithError(FfiConverterTypeGenericError.lift) {
+            uniffi_xmtpv3_fn_func_user_preferences_decrypt(
+                FfiConverterSequenceUInt8.lower(publicKey),
+                FfiConverterSequenceUInt8.lower(privateKey),
+                FfiConverterSequenceUInt8.lower(message), $0
+            )
+        }
+    )
+}
+
+public func userPreferencesEncrypt(publicKey: [UInt8], privateKey: [UInt8], message: [UInt8]) throws -> [UInt8] {
+    return try FfiConverterSequenceUInt8.lift(
+        rustCallWithError(FfiConverterTypeGenericError.lift) {
+            uniffi_xmtpv3_fn_func_user_preferences_encrypt(
+                FfiConverterSequenceUInt8.lower(publicKey),
+                FfiConverterSequenceUInt8.lower(privateKey),
+                FfiConverterSequenceUInt8.lower(message), $0
             )
         }
     )
@@ -1667,34 +3017,94 @@ private var initializationResult: InitializationResult {
     if uniffi_xmtpv3_checksum_func_create_client() != 23882 {
         return InitializationResult.apiChecksumMismatch
     }
+    if uniffi_xmtpv3_checksum_func_create_v2_client() != 49516 {
+        return InitializationResult.apiChecksumMismatch
+    }
     if uniffi_xmtpv3_checksum_func_diffie_hellman_k256() != 23225 {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if uniffi_xmtpv3_checksum_func_generate_private_preferences_topic_identifier() != 5952 {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if uniffi_xmtpv3_checksum_func_keccak256() != 17749 {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if uniffi_xmtpv3_checksum_func_public_key_from_private_key_k256() != 2943 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_func_recover_address() != 45923 {
         return InitializationResult.apiChecksumMismatch
     }
+    if uniffi_xmtpv3_checksum_func_recover_public_key_k256_keccak256() != 59591 {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if uniffi_xmtpv3_checksum_func_recover_public_key_k256_sha256() != 13070 {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if uniffi_xmtpv3_checksum_func_sha256() != 62964 {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if uniffi_xmtpv3_checksum_func_user_preferences_decrypt() != 4361 {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if uniffi_xmtpv3_checksum_func_user_preferences_encrypt() != 47149 {
+        return InitializationResult.apiChecksumMismatch
+    }
     if uniffi_xmtpv3_checksum_func_verify_k256_sha256() != 31332 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_xmtpv3_checksum_method_fficonversation_id() != 30962 {
+    if uniffi_xmtpv3_checksum_method_fficonversations_create_group() != 30537 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_xmtpv3_checksum_method_fficonversation_list_messages() != 43747 {
+    if uniffi_xmtpv3_checksum_method_fficonversations_list() != 49805 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_xmtpv3_checksum_method_fficonversation_send() != 60096 {
+    if uniffi_xmtpv3_checksum_method_ffigroup_add_members() != 24978 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_xmtpv3_checksum_method_fficonversations_list() != 29036 {
+    if uniffi_xmtpv3_checksum_method_ffigroup_find_messages() != 61973 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_xmtpv3_checksum_method_fficonversations_new_conversation() != 32304 {
+    if uniffi_xmtpv3_checksum_method_ffigroup_id() != 35243 {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if uniffi_xmtpv3_checksum_method_ffigroup_list_members() != 15786 {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if uniffi_xmtpv3_checksum_method_ffigroup_remove_members() != 1645 {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if uniffi_xmtpv3_checksum_method_ffigroup_send() != 55957 {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if uniffi_xmtpv3_checksum_method_ffigroup_stream() != 10513 {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if uniffi_xmtpv3_checksum_method_ffigroup_sync() != 9422 {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if uniffi_xmtpv3_checksum_method_ffimessagestreamcloser_close() != 46827 {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if uniffi_xmtpv3_checksum_method_ffiv2apiclient_batch_query() != 10812 {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if uniffi_xmtpv3_checksum_method_ffiv2apiclient_publish() != 13419 {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if uniffi_xmtpv3_checksum_method_ffiv2apiclient_query() != 7220 {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if uniffi_xmtpv3_checksum_method_ffiv2apiclient_set_app_version() != 23872 {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if uniffi_xmtpv3_checksum_method_ffixmtpclient_account_address() != 65151 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_ffixmtpclient_conversations() != 31628 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_xmtpv3_checksum_method_ffixmtpclient_wallet_address() != 52835 {
+    if uniffi_xmtpv3_checksum_method_ffixmtpclient_register_identity() != 18577 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_ffiinboxowner_get_address() != 2205 {
@@ -1704,6 +3114,9 @@ private var initializationResult: InitializationResult {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_ffilogger_log() != 56011 {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if uniffi_xmtpv3_checksum_method_ffimessagecallback_on_message() != 59170 {
         return InitializationResult.apiChecksumMismatch
     }
 
