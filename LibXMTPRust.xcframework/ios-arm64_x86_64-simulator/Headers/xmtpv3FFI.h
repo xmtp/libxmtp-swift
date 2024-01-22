@@ -59,28 +59,19 @@ typedef struct RustCallStatus {
 // ⚠️ increment the version suffix in all instances of UNIFFI_SHARED_HEADER_V4 in this file.           ⚠️
 #endif // def UNIFFI_SHARED_H
 
-// Callbacks for UniFFI Futures
-typedef void (*UniFfiFutureCallbackUInt8)(const void * _Nonnull, uint8_t, RustCallStatus);
-typedef void (*UniFfiFutureCallbackInt8)(const void * _Nonnull, int8_t, RustCallStatus);
-typedef void (*UniFfiFutureCallbackInt64)(const void * _Nonnull, int64_t, RustCallStatus);
-typedef void (*UniFfiFutureCallbackUnsafeMutableRawPointer)(const void * _Nonnull, void*_Nonnull, RustCallStatus);
-typedef void (*UniFfiFutureCallbackUnsafeMutableRawPointer)(const void * _Nonnull, void*_Nonnull, RustCallStatus);
-typedef void (*UniFfiFutureCallbackUnsafeMutableRawPointer)(const void * _Nonnull, void*_Nonnull, RustCallStatus);
-typedef void (*UniFfiFutureCallbackUnsafeMutableRawPointer)(const void * _Nonnull, void*_Nonnull, RustCallStatus);
-typedef void (*UniFfiFutureCallbackUnsafeMutableRawPointer)(const void * _Nonnull, void*_Nonnull, RustCallStatus);
-typedef void (*UniFfiFutureCallbackUnsafeMutableRawPointer)(const void * _Nonnull, void*_Nonnull, RustCallStatus);
-typedef void (*UniFfiFutureCallbackRustBuffer)(const void * _Nonnull, RustBuffer, RustCallStatus);
+// Continuation callback for UniFFI Futures
+typedef void (*UniFfiRustFutureContinuation)(void * _Nonnull, int8_t);
 
 // Scaffolding functions
 void uniffi_xmtpv3_fn_free_fficonversations(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
 );
-void uniffi_xmtpv3_fn_method_fficonversations_create_group(void*_Nonnull ptr, RustBuffer _account_address, size_t uniffi_executor, UniFfiFutureCallbackUnsafeMutableRawPointer _Nonnull uniffi_callback, void* _Nonnull uniffi_callback_data, RustCallStatus *_Nonnull out_status
+void* _Nonnull uniffi_xmtpv3_fn_method_fficonversations_create_group(void*_Nonnull ptr, RustBuffer _account_address
 );
-void uniffi_xmtpv3_fn_method_fficonversations_list(void*_Nonnull ptr, size_t uniffi_executor, UniFfiFutureCallbackRustBuffer _Nonnull uniffi_callback, void* _Nonnull uniffi_callback_data, RustCallStatus *_Nonnull out_status
+void* _Nonnull uniffi_xmtpv3_fn_method_fficonversations_list(void*_Nonnull ptr
 );
 void uniffi_xmtpv3_fn_free_ffigroup(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
 );
-void uniffi_xmtpv3_fn_method_ffigroup_add_members(void*_Nonnull ptr, RustBuffer account_addresses, size_t uniffi_executor, UniFfiFutureCallbackUInt8 _Nonnull uniffi_callback, void* _Nonnull uniffi_callback_data, RustCallStatus *_Nonnull out_status
+void* _Nonnull uniffi_xmtpv3_fn_method_ffigroup_add_members(void*_Nonnull ptr, RustBuffer account_addresses
 );
 int64_t uniffi_xmtpv3_fn_method_ffigroup_created_at_ns(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
 );
@@ -90,13 +81,13 @@ RustBuffer uniffi_xmtpv3_fn_method_ffigroup_id(void*_Nonnull ptr, RustCallStatus
 );
 RustBuffer uniffi_xmtpv3_fn_method_ffigroup_list_members(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
 );
-void uniffi_xmtpv3_fn_method_ffigroup_remove_members(void*_Nonnull ptr, RustBuffer account_addresses, size_t uniffi_executor, UniFfiFutureCallbackUInt8 _Nonnull uniffi_callback, void* _Nonnull uniffi_callback_data, RustCallStatus *_Nonnull out_status
+void* _Nonnull uniffi_xmtpv3_fn_method_ffigroup_remove_members(void*_Nonnull ptr, RustBuffer account_addresses
 );
-void uniffi_xmtpv3_fn_method_ffigroup_send(void*_Nonnull ptr, RustBuffer content_bytes, size_t uniffi_executor, UniFfiFutureCallbackUInt8 _Nonnull uniffi_callback, void* _Nonnull uniffi_callback_data, RustCallStatus *_Nonnull out_status
+void* _Nonnull uniffi_xmtpv3_fn_method_ffigroup_send(void*_Nonnull ptr, RustBuffer content_bytes
 );
-void uniffi_xmtpv3_fn_method_ffigroup_stream(void*_Nonnull ptr, uint64_t message_callback, size_t uniffi_executor, UniFfiFutureCallbackUnsafeMutableRawPointer _Nonnull uniffi_callback, void* _Nonnull uniffi_callback_data, RustCallStatus *_Nonnull out_status
+void* _Nonnull uniffi_xmtpv3_fn_method_ffigroup_stream(void*_Nonnull ptr, uint64_t message_callback
 );
-void uniffi_xmtpv3_fn_method_ffigroup_sync(void*_Nonnull ptr, size_t uniffi_executor, UniFfiFutureCallbackUInt8 _Nonnull uniffi_callback, void* _Nonnull uniffi_callback_data, RustCallStatus *_Nonnull out_status
+void* _Nonnull uniffi_xmtpv3_fn_method_ffigroup_sync(void*_Nonnull ptr
 );
 void uniffi_xmtpv3_fn_free_ffimessagestreamcloser(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
 );
@@ -104,33 +95,33 @@ void uniffi_xmtpv3_fn_method_ffimessagestreamcloser_close(void*_Nonnull ptr, Rus
 );
 void uniffi_xmtpv3_fn_free_ffiv2apiclient(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
 );
-void uniffi_xmtpv3_fn_method_ffiv2apiclient_batch_query(void*_Nonnull ptr, RustBuffer req, size_t uniffi_executor, UniFfiFutureCallbackRustBuffer _Nonnull uniffi_callback, void* _Nonnull uniffi_callback_data, RustCallStatus *_Nonnull out_status
+void* _Nonnull uniffi_xmtpv3_fn_method_ffiv2apiclient_batch_query(void*_Nonnull ptr, RustBuffer req
 );
-void uniffi_xmtpv3_fn_method_ffiv2apiclient_publish(void*_Nonnull ptr, RustBuffer request, RustBuffer auth_token, size_t uniffi_executor, UniFfiFutureCallbackUInt8 _Nonnull uniffi_callback, void* _Nonnull uniffi_callback_data, RustCallStatus *_Nonnull out_status
+void* _Nonnull uniffi_xmtpv3_fn_method_ffiv2apiclient_publish(void*_Nonnull ptr, RustBuffer request, RustBuffer auth_token
 );
-void uniffi_xmtpv3_fn_method_ffiv2apiclient_query(void*_Nonnull ptr, RustBuffer request, size_t uniffi_executor, UniFfiFutureCallbackRustBuffer _Nonnull uniffi_callback, void* _Nonnull uniffi_callback_data, RustCallStatus *_Nonnull out_status
+void* _Nonnull uniffi_xmtpv3_fn_method_ffiv2apiclient_query(void*_Nonnull ptr, RustBuffer request
 );
 void uniffi_xmtpv3_fn_method_ffiv2apiclient_set_app_version(void*_Nonnull ptr, RustBuffer _version, RustCallStatus *_Nonnull out_status
 );
-void uniffi_xmtpv3_fn_method_ffiv2apiclient_subscribe(void*_Nonnull ptr, RustBuffer request, size_t uniffi_executor, UniFfiFutureCallbackUnsafeMutableRawPointer _Nonnull uniffi_callback, void* _Nonnull uniffi_callback_data, RustCallStatus *_Nonnull out_status
+void* _Nonnull uniffi_xmtpv3_fn_method_ffiv2apiclient_subscribe(void*_Nonnull ptr, RustBuffer request
 );
 void uniffi_xmtpv3_fn_free_ffiv2subscription(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
 );
-void uniffi_xmtpv3_fn_method_ffiv2subscription_end(void*_Nonnull ptr, size_t uniffi_executor, UniFfiFutureCallbackUInt8 _Nonnull uniffi_callback, void* _Nonnull uniffi_callback_data, RustCallStatus *_Nonnull out_status
+void* _Nonnull uniffi_xmtpv3_fn_method_ffiv2subscription_end(void*_Nonnull ptr
 );
-void uniffi_xmtpv3_fn_method_ffiv2subscription_next(void*_Nonnull ptr, size_t uniffi_executor, UniFfiFutureCallbackRustBuffer _Nonnull uniffi_callback, void* _Nonnull uniffi_callback_data, RustCallStatus *_Nonnull out_status
+void* _Nonnull uniffi_xmtpv3_fn_method_ffiv2subscription_next(void*_Nonnull ptr
 );
-void uniffi_xmtpv3_fn_method_ffiv2subscription_update(void*_Nonnull ptr, RustBuffer req, size_t uniffi_executor, UniFfiFutureCallbackUInt8 _Nonnull uniffi_callback, void* _Nonnull uniffi_callback_data, RustCallStatus *_Nonnull out_status
+void* _Nonnull uniffi_xmtpv3_fn_method_ffiv2subscription_update(void*_Nonnull ptr, RustBuffer req
 );
 void uniffi_xmtpv3_fn_free_ffixmtpclient(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
 );
 RustBuffer uniffi_xmtpv3_fn_method_ffixmtpclient_account_address(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
 );
-void uniffi_xmtpv3_fn_method_ffixmtpclient_can_message(void*_Nonnull ptr, RustBuffer account_addresses, size_t uniffi_executor, UniFfiFutureCallbackRustBuffer _Nonnull uniffi_callback, void* _Nonnull uniffi_callback_data, RustCallStatus *_Nonnull out_status
+void* _Nonnull uniffi_xmtpv3_fn_method_ffixmtpclient_can_message(void*_Nonnull ptr, RustBuffer account_addresses
 );
 void*_Nonnull uniffi_xmtpv3_fn_method_ffixmtpclient_conversations(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
 );
-void uniffi_xmtpv3_fn_method_ffixmtpclient_register_identity(void*_Nonnull ptr, size_t uniffi_executor, UniFfiFutureCallbackUInt8 _Nonnull uniffi_callback, void* _Nonnull uniffi_callback_data, RustCallStatus *_Nonnull out_status
+void* _Nonnull uniffi_xmtpv3_fn_method_ffixmtpclient_register_identity(void*_Nonnull ptr
 );
 void uniffi_xmtpv3_fn_init_callback_ffiinboxowner(ForeignCallback _Nonnull callback_stub, RustCallStatus *_Nonnull out_status
 );
@@ -138,9 +129,9 @@ void uniffi_xmtpv3_fn_init_callback_ffilogger(ForeignCallback _Nonnull callback_
 );
 void uniffi_xmtpv3_fn_init_callback_ffimessagecallback(ForeignCallback _Nonnull callback_stub, RustCallStatus *_Nonnull out_status
 );
-void uniffi_xmtpv3_fn_func_create_client(uint64_t logger, uint64_t ffi_inbox_owner, RustBuffer host, int8_t is_secure, RustBuffer db, RustBuffer encryption_key, size_t uniffi_executor, UniFfiFutureCallbackUnsafeMutableRawPointer _Nonnull uniffi_callback, void* _Nonnull uniffi_callback_data, RustCallStatus *_Nonnull out_status
+void* _Nonnull uniffi_xmtpv3_fn_func_create_client(uint64_t logger, uint64_t ffi_inbox_owner, RustBuffer host, int8_t is_secure, RustBuffer db, RustBuffer encryption_key
 );
-void uniffi_xmtpv3_fn_func_create_v2_client(RustBuffer host, int8_t is_secure, size_t uniffi_executor, UniFfiFutureCallbackUnsafeMutableRawPointer _Nonnull uniffi_callback, void* _Nonnull uniffi_callback_data, RustCallStatus *_Nonnull out_status
+void* _Nonnull uniffi_xmtpv3_fn_func_create_v2_client(RustBuffer host, int8_t is_secure
 );
 RustBuffer uniffi_xmtpv3_fn_func_diffie_hellman_k256(RustBuffer private_key_bytes, RustBuffer public_key_bytes, RustCallStatus *_Nonnull out_status
 );
@@ -171,6 +162,112 @@ RustBuffer ffi_xmtpv3_rustbuffer_from_bytes(ForeignBytes bytes, RustCallStatus *
 void ffi_xmtpv3_rustbuffer_free(RustBuffer buf, RustCallStatus *_Nonnull out_status
 );
 RustBuffer ffi_xmtpv3_rustbuffer_reserve(RustBuffer buf, int32_t additional, RustCallStatus *_Nonnull out_status
+);
+void ffi_xmtpv3_rust_future_continuation_callback_set(UniFfiRustFutureContinuation _Nonnull callback
+);
+void ffi_xmtpv3_rust_future_poll_u8(void* _Nonnull handle, void* _Nonnull uniffi_callback
+);
+void ffi_xmtpv3_rust_future_cancel_u8(void* _Nonnull handle
+);
+void ffi_xmtpv3_rust_future_free_u8(void* _Nonnull handle
+);
+uint8_t ffi_xmtpv3_rust_future_complete_u8(void* _Nonnull handle, RustCallStatus *_Nonnull out_status
+);
+void ffi_xmtpv3_rust_future_poll_i8(void* _Nonnull handle, void* _Nonnull uniffi_callback
+);
+void ffi_xmtpv3_rust_future_cancel_i8(void* _Nonnull handle
+);
+void ffi_xmtpv3_rust_future_free_i8(void* _Nonnull handle
+);
+int8_t ffi_xmtpv3_rust_future_complete_i8(void* _Nonnull handle, RustCallStatus *_Nonnull out_status
+);
+void ffi_xmtpv3_rust_future_poll_u16(void* _Nonnull handle, void* _Nonnull uniffi_callback
+);
+void ffi_xmtpv3_rust_future_cancel_u16(void* _Nonnull handle
+);
+void ffi_xmtpv3_rust_future_free_u16(void* _Nonnull handle
+);
+uint16_t ffi_xmtpv3_rust_future_complete_u16(void* _Nonnull handle, RustCallStatus *_Nonnull out_status
+);
+void ffi_xmtpv3_rust_future_poll_i16(void* _Nonnull handle, void* _Nonnull uniffi_callback
+);
+void ffi_xmtpv3_rust_future_cancel_i16(void* _Nonnull handle
+);
+void ffi_xmtpv3_rust_future_free_i16(void* _Nonnull handle
+);
+int16_t ffi_xmtpv3_rust_future_complete_i16(void* _Nonnull handle, RustCallStatus *_Nonnull out_status
+);
+void ffi_xmtpv3_rust_future_poll_u32(void* _Nonnull handle, void* _Nonnull uniffi_callback
+);
+void ffi_xmtpv3_rust_future_cancel_u32(void* _Nonnull handle
+);
+void ffi_xmtpv3_rust_future_free_u32(void* _Nonnull handle
+);
+uint32_t ffi_xmtpv3_rust_future_complete_u32(void* _Nonnull handle, RustCallStatus *_Nonnull out_status
+);
+void ffi_xmtpv3_rust_future_poll_i32(void* _Nonnull handle, void* _Nonnull uniffi_callback
+);
+void ffi_xmtpv3_rust_future_cancel_i32(void* _Nonnull handle
+);
+void ffi_xmtpv3_rust_future_free_i32(void* _Nonnull handle
+);
+int32_t ffi_xmtpv3_rust_future_complete_i32(void* _Nonnull handle, RustCallStatus *_Nonnull out_status
+);
+void ffi_xmtpv3_rust_future_poll_u64(void* _Nonnull handle, void* _Nonnull uniffi_callback
+);
+void ffi_xmtpv3_rust_future_cancel_u64(void* _Nonnull handle
+);
+void ffi_xmtpv3_rust_future_free_u64(void* _Nonnull handle
+);
+uint64_t ffi_xmtpv3_rust_future_complete_u64(void* _Nonnull handle, RustCallStatus *_Nonnull out_status
+);
+void ffi_xmtpv3_rust_future_poll_i64(void* _Nonnull handle, void* _Nonnull uniffi_callback
+);
+void ffi_xmtpv3_rust_future_cancel_i64(void* _Nonnull handle
+);
+void ffi_xmtpv3_rust_future_free_i64(void* _Nonnull handle
+);
+int64_t ffi_xmtpv3_rust_future_complete_i64(void* _Nonnull handle, RustCallStatus *_Nonnull out_status
+);
+void ffi_xmtpv3_rust_future_poll_f32(void* _Nonnull handle, void* _Nonnull uniffi_callback
+);
+void ffi_xmtpv3_rust_future_cancel_f32(void* _Nonnull handle
+);
+void ffi_xmtpv3_rust_future_free_f32(void* _Nonnull handle
+);
+float ffi_xmtpv3_rust_future_complete_f32(void* _Nonnull handle, RustCallStatus *_Nonnull out_status
+);
+void ffi_xmtpv3_rust_future_poll_f64(void* _Nonnull handle, void* _Nonnull uniffi_callback
+);
+void ffi_xmtpv3_rust_future_cancel_f64(void* _Nonnull handle
+);
+void ffi_xmtpv3_rust_future_free_f64(void* _Nonnull handle
+);
+double ffi_xmtpv3_rust_future_complete_f64(void* _Nonnull handle, RustCallStatus *_Nonnull out_status
+);
+void ffi_xmtpv3_rust_future_poll_pointer(void* _Nonnull handle, void* _Nonnull uniffi_callback
+);
+void ffi_xmtpv3_rust_future_cancel_pointer(void* _Nonnull handle
+);
+void ffi_xmtpv3_rust_future_free_pointer(void* _Nonnull handle
+);
+void*_Nonnull ffi_xmtpv3_rust_future_complete_pointer(void* _Nonnull handle, RustCallStatus *_Nonnull out_status
+);
+void ffi_xmtpv3_rust_future_poll_rust_buffer(void* _Nonnull handle, void* _Nonnull uniffi_callback
+);
+void ffi_xmtpv3_rust_future_cancel_rust_buffer(void* _Nonnull handle
+);
+void ffi_xmtpv3_rust_future_free_rust_buffer(void* _Nonnull handle
+);
+RustBuffer ffi_xmtpv3_rust_future_complete_rust_buffer(void* _Nonnull handle, RustCallStatus *_Nonnull out_status
+);
+void ffi_xmtpv3_rust_future_poll_void(void* _Nonnull handle, void* _Nonnull uniffi_callback
+);
+void ffi_xmtpv3_rust_future_cancel_void(void* _Nonnull handle
+);
+void ffi_xmtpv3_rust_future_free_void(void* _Nonnull handle
+);
+void ffi_xmtpv3_rust_future_complete_void(void* _Nonnull handle, RustCallStatus *_Nonnull out_status
 );
 uint16_t uniffi_xmtpv3_checksum_func_create_client(void
     
@@ -294,8 +391,6 @@ uint16_t uniffi_xmtpv3_checksum_method_ffilogger_log(void
 );
 uint16_t uniffi_xmtpv3_checksum_method_ffimessagecallback_on_message(void
     
-);
-void uniffi_foreign_executor_callback_set(UniFfiForeignExecutorCallback _Nonnull callback
 );
 uint32_t ffi_xmtpv3_uniffi_contract_version(void
     
