@@ -116,7 +116,7 @@ void uniffi_xmtpv3_fn_method_ffiv2apiclient_subscribe(void*_Nonnull ptr, RustBuf
 );
 void uniffi_xmtpv3_fn_free_ffiv2subscription(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
 );
-void uniffi_xmtpv3_fn_method_ffiv2subscription_close(void*_Nonnull ptr, size_t uniffi_executor, UniFfiFutureCallbackUInt8 _Nonnull uniffi_callback, void* _Nonnull uniffi_callback_data, RustCallStatus *_Nonnull out_status
+void uniffi_xmtpv3_fn_method_ffiv2subscription_end(void*_Nonnull ptr, size_t uniffi_executor, UniFfiFutureCallbackUInt8 _Nonnull uniffi_callback, void* _Nonnull uniffi_callback_data, RustCallStatus *_Nonnull out_status
 );
 void uniffi_xmtpv3_fn_method_ffiv2subscription_next(void*_Nonnull ptr, size_t uniffi_executor, UniFfiFutureCallbackRustBuffer _Nonnull uniffi_callback, void* _Nonnull uniffi_callback_data, RustCallStatus *_Nonnull out_status
 );
@@ -262,7 +262,7 @@ uint16_t uniffi_xmtpv3_checksum_method_ffiv2apiclient_set_app_version(void
 uint16_t uniffi_xmtpv3_checksum_method_ffiv2apiclient_subscribe(void
     
 );
-uint16_t uniffi_xmtpv3_checksum_method_ffiv2subscription_close(void
+uint16_t uniffi_xmtpv3_checksum_method_ffiv2subscription_end(void
     
 );
 uint16_t uniffi_xmtpv3_checksum_method_ffiv2subscription_next(void
