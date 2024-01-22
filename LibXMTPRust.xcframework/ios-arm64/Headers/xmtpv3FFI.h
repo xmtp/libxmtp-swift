@@ -62,6 +62,8 @@ typedef struct RustCallStatus {
 // Callbacks for UniFFI Futures
 typedef void (*UniFfiFutureCallbackUInt8)(const void * _Nonnull, uint8_t, RustCallStatus);
 typedef void (*UniFfiFutureCallbackInt8)(const void * _Nonnull, int8_t, RustCallStatus);
+typedef void (*UniFfiFutureCallbackInt64)(const void * _Nonnull, int64_t, RustCallStatus);
+typedef void (*UniFfiFutureCallbackUnsafeMutableRawPointer)(const void * _Nonnull, void*_Nonnull, RustCallStatus);
 typedef void (*UniFfiFutureCallbackUnsafeMutableRawPointer)(const void * _Nonnull, void*_Nonnull, RustCallStatus);
 typedef void (*UniFfiFutureCallbackUnsafeMutableRawPointer)(const void * _Nonnull, void*_Nonnull, RustCallStatus);
 typedef void (*UniFfiFutureCallbackUnsafeMutableRawPointer)(const void * _Nonnull, void*_Nonnull, RustCallStatus);
@@ -79,6 +81,8 @@ void uniffi_xmtpv3_fn_method_fficonversations_list(void*_Nonnull ptr, size_t uni
 void uniffi_xmtpv3_fn_free_ffigroup(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
 );
 void uniffi_xmtpv3_fn_method_ffigroup_add_members(void*_Nonnull ptr, RustBuffer account_addresses, size_t uniffi_executor, UniFfiFutureCallbackUInt8 _Nonnull uniffi_callback, void* _Nonnull uniffi_callback_data, RustCallStatus *_Nonnull out_status
+);
+int64_t uniffi_xmtpv3_fn_method_ffigroup_created_at_ns(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
 );
 RustBuffer uniffi_xmtpv3_fn_method_ffigroup_find_messages(void*_Nonnull ptr, RustBuffer opts, RustCallStatus *_Nonnull out_status
 );
@@ -108,9 +112,21 @@ void uniffi_xmtpv3_fn_method_ffiv2apiclient_query(void*_Nonnull ptr, RustBuffer 
 );
 void uniffi_xmtpv3_fn_method_ffiv2apiclient_set_app_version(void*_Nonnull ptr, RustBuffer _version, RustCallStatus *_Nonnull out_status
 );
+void uniffi_xmtpv3_fn_method_ffiv2apiclient_subscribe(void*_Nonnull ptr, RustBuffer request, size_t uniffi_executor, UniFfiFutureCallbackUnsafeMutableRawPointer _Nonnull uniffi_callback, void* _Nonnull uniffi_callback_data, RustCallStatus *_Nonnull out_status
+);
+void uniffi_xmtpv3_fn_free_ffiv2subscription(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
+);
+void uniffi_xmtpv3_fn_method_ffiv2subscription_end(void*_Nonnull ptr, size_t uniffi_executor, UniFfiFutureCallbackUInt8 _Nonnull uniffi_callback, void* _Nonnull uniffi_callback_data, RustCallStatus *_Nonnull out_status
+);
+void uniffi_xmtpv3_fn_method_ffiv2subscription_next(void*_Nonnull ptr, size_t uniffi_executor, UniFfiFutureCallbackRustBuffer _Nonnull uniffi_callback, void* _Nonnull uniffi_callback_data, RustCallStatus *_Nonnull out_status
+);
+void uniffi_xmtpv3_fn_method_ffiv2subscription_update(void*_Nonnull ptr, RustBuffer req, size_t uniffi_executor, UniFfiFutureCallbackUInt8 _Nonnull uniffi_callback, void* _Nonnull uniffi_callback_data, RustCallStatus *_Nonnull out_status
+);
 void uniffi_xmtpv3_fn_free_ffixmtpclient(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
 );
 RustBuffer uniffi_xmtpv3_fn_method_ffixmtpclient_account_address(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
+);
+void uniffi_xmtpv3_fn_method_ffixmtpclient_can_message(void*_Nonnull ptr, RustBuffer account_addresses, size_t uniffi_executor, UniFfiFutureCallbackRustBuffer _Nonnull uniffi_callback, void* _Nonnull uniffi_callback_data, RustCallStatus *_Nonnull out_status
 );
 void*_Nonnull uniffi_xmtpv3_fn_method_ffixmtpclient_conversations(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
 );
@@ -204,6 +220,9 @@ uint16_t uniffi_xmtpv3_checksum_method_fficonversations_list(void
 uint16_t uniffi_xmtpv3_checksum_method_ffigroup_add_members(void
     
 );
+uint16_t uniffi_xmtpv3_checksum_method_ffigroup_created_at_ns(void
+    
+);
 uint16_t uniffi_xmtpv3_checksum_method_ffigroup_find_messages(void
     
 );
@@ -240,7 +259,22 @@ uint16_t uniffi_xmtpv3_checksum_method_ffiv2apiclient_query(void
 uint16_t uniffi_xmtpv3_checksum_method_ffiv2apiclient_set_app_version(void
     
 );
+uint16_t uniffi_xmtpv3_checksum_method_ffiv2apiclient_subscribe(void
+    
+);
+uint16_t uniffi_xmtpv3_checksum_method_ffiv2subscription_end(void
+    
+);
+uint16_t uniffi_xmtpv3_checksum_method_ffiv2subscription_next(void
+    
+);
+uint16_t uniffi_xmtpv3_checksum_method_ffiv2subscription_update(void
+    
+);
 uint16_t uniffi_xmtpv3_checksum_method_ffixmtpclient_account_address(void
+    
+);
+uint16_t uniffi_xmtpv3_checksum_method_ffixmtpclient_can_message(void
     
 );
 uint16_t uniffi_xmtpv3_checksum_method_ffixmtpclient_conversations(void
