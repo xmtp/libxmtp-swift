@@ -12,18 +12,19 @@ let package = Package(
     products: [
         .library(
             name: "LibXMTP",
-            targets: ["LibXMTP", "LibXMTPRust"]
+            targets: ["LibXMTP", "LibXMTPSwiftFFI"]
         ),
     ],
     targets: [
         .target(
             name: "LibXMTP",
-            dependencies: ["LibXMTPRust"],
+            dependencies: ["LibXMTPSwiftFFI"],
             path: "Sources/LibXMTP"
         ),
         .binaryTarget(
-            name: "LibXMTPRust",
-            path: "LibXMTPRust.xcframework"
+            name: "LibXMTPSwiftFFI",
+            url: "https://github.com/xmtp/libxmtp/releases/download/test-swift-bindings-refs%2Fheads%2Fcv%2Frelease-swift-bindings/LibXMTPSwiftFFI.zip",
+            checksum: "fbdf13a861f7fb2618ffd7316c89c3efd71510bd93b21b598adfd11b6116100e"
         ),
         .testTarget(name: "LibXMTPTests", dependencies: ["LibXMTP"]),
     ]
