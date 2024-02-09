@@ -728,6 +728,7 @@ public func FfiConverterTypeFfiGroup_lower(_ value: FfiGroup) -> UnsafeMutableRa
 
 public protocol FfiStreamCloserProtocol {
     func end()
+    func isClosed() -> Bool
 }
 
 public class FfiStreamCloser: FfiStreamCloserProtocol {
@@ -749,6 +750,15 @@ public class FfiStreamCloser: FfiStreamCloserProtocol {
             rustCall {
                 uniffi_xmtpv3_fn_method_ffistreamcloser_end(self.pointer, $0)
             }
+    }
+
+    public func isClosed() -> Bool {
+        return try! FfiConverterBool.lift(
+            try!
+                rustCall {
+                    uniffi_xmtpv3_fn_method_ffistreamcloser_is_closed(self.pointer, $0)
+                }
+        )
     }
 }
 
@@ -3204,6 +3214,9 @@ private var initializationResult: InitializationResult {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_ffistreamcloser_end() != 47211 {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if uniffi_xmtpv3_checksum_method_ffistreamcloser_is_closed() != 37884 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_ffiv2apiclient_batch_query() != 10812 {
