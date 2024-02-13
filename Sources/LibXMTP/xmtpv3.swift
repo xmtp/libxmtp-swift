@@ -552,6 +552,7 @@ public protocol FfiGroupProtocol {
     func createdAtNs() -> Int64
     func findMessages(opts: FfiListMessagesOptions) throws -> [FfiMessage]
     func id() -> Data
+    func isActive() throws -> Bool
     func listMembers() throws -> [FfiGroupMember]
     func removeMembers(accountAddresses: [String]) async throws
     func send(contentBytes: Data) async throws
@@ -613,6 +614,14 @@ public class FfiGroup: FfiGroupProtocol {
                 rustCall {
                     uniffi_xmtpv3_fn_method_ffigroup_id(self.pointer, $0)
                 }
+        )
+    }
+
+    public func isActive() throws -> Bool {
+        return try FfiConverterBool.lift(
+            rustCallWithError(FfiConverterTypeGenericError.lift) {
+                uniffi_xmtpv3_fn_method_ffigroup_is_active(self.pointer, $0)
+            }
         )
     }
 
@@ -3019,6 +3028,14 @@ public func generatePrivatePreferencesTopicIdentifier(privateKey: Data) throws -
     )
 }
 
+public func getVersionInfo() -> String {
+    return try! FfiConverterString.lift(
+        try! rustCall {
+            uniffi_xmtpv3_fn_func_get_version_info($0)
+        }
+    )
+}
+
 public func keccak256(input: Data) -> Data {
     return try! FfiConverterData.lift(
         try! rustCall {
@@ -3147,6 +3164,9 @@ private var initializationResult: InitializationResult {
     if uniffi_xmtpv3_checksum_func_generate_private_preferences_topic_identifier() != 5952 {
         return InitializationResult.apiChecksumMismatch
     }
+    if uniffi_xmtpv3_checksum_func_get_version_info() != 3533 {
+        return InitializationResult.apiChecksumMismatch
+    }
     if uniffi_xmtpv3_checksum_func_keccak256() != 17749 {
         return InitializationResult.apiChecksumMismatch
     }
@@ -3196,6 +3216,9 @@ private var initializationResult: InitializationResult {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_ffigroup_id() != 35243 {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if uniffi_xmtpv3_checksum_method_ffigroup_is_active() != 27808 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_ffigroup_list_members() != 15786 {
