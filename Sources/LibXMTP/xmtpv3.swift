@@ -425,7 +425,7 @@ private struct FfiConverterData: FfiConverterRustBuffer {
 }
 
 public protocol FfiConversationsProtocol {
-    func createGroup(accountAddresses: [String]) async throws -> FfiGroup
+    func createGroup(accountAddresses: [String], permissions: GroupPermissions?) async throws -> FfiGroup
     func list(opts: FfiListConversationsOptions) async throws -> [FfiGroup]
     func stream(callback: FfiConversationCallback) async throws -> FfiStreamCloser
     func sync() async throws
@@ -445,12 +445,13 @@ public class FfiConversations: FfiConversationsProtocol {
         try! rustCall { uniffi_xmtpv3_fn_free_fficonversations(pointer, $0) }
     }
 
-    public func createGroup(accountAddresses: [String]) async throws -> FfiGroup {
+    public func createGroup(accountAddresses: [String], permissions: GroupPermissions?) async throws -> FfiGroup {
         return try await uniffiRustCallAsync(
             rustFutureFunc: {
                 uniffi_xmtpv3_fn_method_fficonversations_create_group(
                     self.pointer,
-                    FfiConverterSequenceString.lower(accountAddresses)
+                    FfiConverterSequenceString.lower(accountAddresses),
+                    FfiConverterOptionTypeGroupPermissions.lower(permissions)
                 )
             },
             pollFunc: ffi_xmtpv3_rust_future_poll_pointer,
@@ -2010,6 +2011,48 @@ extension GenericError: Error {}
 
 // Note that we don't yet support `indirect` for enums.
 // See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
+public enum GroupPermissions {
+    case everyoneIsAdmin
+    case groupCreatorIsAdmin
+}
+
+public struct FfiConverterTypeGroupPermissions: FfiConverterRustBuffer {
+    typealias SwiftType = GroupPermissions
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> GroupPermissions {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        case 1: return .everyoneIsAdmin
+
+        case 2: return .groupCreatorIsAdmin
+
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: GroupPermissions, into buf: inout [UInt8]) {
+        switch value {
+        case .everyoneIsAdmin:
+            writeInt(&buf, Int32(1))
+
+        case .groupCreatorIsAdmin:
+            writeInt(&buf, Int32(2))
+        }
+    }
+}
+
+public func FfiConverterTypeGroupPermissions_lift(_ buf: RustBuffer) throws -> GroupPermissions {
+    return try FfiConverterTypeGroupPermissions.lift(buf)
+}
+
+public func FfiConverterTypeGroupPermissions_lower(_ value: GroupPermissions) -> RustBuffer {
+    return FfiConverterTypeGroupPermissions.lower(value)
+}
+
+extension GroupPermissions: Equatable, Hashable {}
+
+// Note that we don't yet support `indirect` for enums.
+// See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
 public enum LegacyIdentitySource {
     case none
     case `static`
@@ -2708,6 +2751,27 @@ private struct FfiConverterOptionTypeFfiPagingInfo: FfiConverterRustBuffer {
     }
 }
 
+private struct FfiConverterOptionTypeGroupPermissions: FfiConverterRustBuffer {
+    typealias SwiftType = GroupPermissions?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeGroupPermissions.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeGroupPermissions.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
 private struct FfiConverterSequenceBool: FfiConverterRustBuffer {
     typealias SwiftType = [Bool]
 
@@ -3194,7 +3258,7 @@ private var initializationResult: InitializationResult {
     if uniffi_xmtpv3_checksum_func_verify_k256_sha256() != 31332 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_xmtpv3_checksum_method_fficonversations_create_group() != 45500 {
+    if uniffi_xmtpv3_checksum_method_fficonversations_create_group() != 16460 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_fficonversations_list() != 44067 {
