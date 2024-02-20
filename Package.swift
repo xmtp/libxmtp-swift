@@ -19,7 +19,11 @@ let package = Package(
         .target(
             name: "LibXMTP",
             dependencies: ["LibXMTPSwiftFFI"],
-            path: "Sources/LibXMTP"
+            path: "Sources/LibXMTP",
+            linkerSettings: [
+                .linkedFramework("CoreFoundation"),
+                .linkedFramework("SystemConfiguration")
+            ]
         ),
         .binaryTarget(
             name: "LibXMTPSwiftFFI",
