@@ -428,6 +428,7 @@ public protocol FfiConversationsProtocol {
     func createGroup(accountAddresses: [String], permissions: GroupPermissions?) async throws -> FfiGroup
     func list(opts: FfiListConversationsOptions) async throws -> [FfiGroup]
     func stream(callback: FfiConversationCallback) async throws -> FfiStreamCloser
+    func streamAllMessages(messageCallback: FfiMessageCallback) async throws -> FfiStreamCloser
     func sync() async throws
 }
 
@@ -484,6 +485,22 @@ public class FfiConversations: FfiConversationsProtocol {
                 uniffi_xmtpv3_fn_method_fficonversations_stream(
                     self.pointer,
                     FfiConverterCallbackInterfaceFfiConversationCallback.lower(callback)
+                )
+            },
+            pollFunc: ffi_xmtpv3_rust_future_poll_pointer,
+            completeFunc: ffi_xmtpv3_rust_future_complete_pointer,
+            freeFunc: ffi_xmtpv3_rust_future_free_pointer,
+            liftFunc: FfiConverterTypeFfiStreamCloser.lift,
+            errorHandler: FfiConverterTypeGenericError.lift
+        )
+    }
+
+    public func streamAllMessages(messageCallback: FfiMessageCallback) async throws -> FfiStreamCloser {
+        return try await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_xmtpv3_fn_method_fficonversations_stream_all_messages(
+                    self.pointer,
+                    FfiConverterCallbackInterfaceFfiMessageCallback.lower(messageCallback)
                 )
             },
             pollFunc: ffi_xmtpv3_rust_future_poll_pointer,
@@ -3368,6 +3385,9 @@ private var initializationResult: InitializationResult {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_fficonversations_stream() != 60583 {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if uniffi_xmtpv3_checksum_method_fficonversations_stream_all_messages() != 65211 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_fficonversations_sync() != 62598 {
