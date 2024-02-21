@@ -428,6 +428,7 @@ public protocol FfiConversationsProtocol {
     func createGroup(accountAddresses: [String], permissions: GroupPermissions?) async throws -> FfiGroup
     func list(opts: FfiListConversationsOptions) async throws -> [FfiGroup]
     func stream(callback: FfiConversationCallback) async throws -> FfiStreamCloser
+    func streamAllMessages(messageCallback: FfiMessageCallback) async throws -> FfiStreamCloser
     func sync() async throws
 }
 
@@ -484,6 +485,22 @@ public class FfiConversations: FfiConversationsProtocol {
                 uniffi_xmtpv3_fn_method_fficonversations_stream(
                     self.pointer,
                     FfiConverterCallbackInterfaceFfiConversationCallback.lower(callback)
+                )
+            },
+            pollFunc: ffi_xmtpv3_rust_future_poll_pointer,
+            completeFunc: ffi_xmtpv3_rust_future_complete_pointer,
+            freeFunc: ffi_xmtpv3_rust_future_free_pointer,
+            liftFunc: FfiConverterTypeFfiStreamCloser.lift,
+            errorHandler: FfiConverterTypeGenericError.lift
+        )
+    }
+
+    public func streamAllMessages(messageCallback: FfiMessageCallback) async throws -> FfiStreamCloser {
+        return try await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_xmtpv3_fn_method_fficonversations_stream_all_messages(
+                    self.pointer,
+                    FfiConverterCallbackInterfaceFfiMessageCallback.lower(messageCallback)
                 )
             },
             pollFunc: ffi_xmtpv3_rust_future_poll_pointer,
@@ -552,6 +569,7 @@ public protocol FfiGroupProtocol {
     func addMembers(accountAddresses: [String]) async throws
     func createdAtNs() -> Int64
     func findMessages(opts: FfiListMessagesOptions) throws -> [FfiMessage]
+    func groupMetadata() throws -> FfiGroupMetadata
     func id() -> Data
     func isActive() throws -> Bool
     func listMembers() throws -> [FfiGroupMember]
@@ -605,6 +623,14 @@ public class FfiGroup: FfiGroupProtocol {
             rustCallWithError(FfiConverterTypeGenericError.lift) {
                 uniffi_xmtpv3_fn_method_ffigroup_find_messages(self.pointer,
                                                                FfiConverterTypeFfiListMessagesOptions.lower(opts), $0)
+            }
+        )
+    }
+
+    public func groupMetadata() throws -> FfiGroupMetadata {
+        return try FfiConverterTypeFfiGroupMetadata.lift(
+            rustCallWithError(FfiConverterTypeGenericError.lift) {
+                uniffi_xmtpv3_fn_method_ffigroup_group_metadata(self.pointer, $0)
             }
         )
     }
@@ -734,6 +760,91 @@ public func FfiConverterTypeFfiGroup_lift(_ pointer: UnsafeMutableRawPointer) th
 
 public func FfiConverterTypeFfiGroup_lower(_ value: FfiGroup) -> UnsafeMutableRawPointer {
     return FfiConverterTypeFfiGroup.lower(value)
+}
+
+public protocol FfiGroupMetadataProtocol {
+    func conversationType() -> String
+    func creatorAccountAddress() -> String
+    func policyType() throws -> GroupPermissions
+}
+
+public class FfiGroupMetadata: FfiGroupMetadataProtocol {
+    fileprivate let pointer: UnsafeMutableRawPointer
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+    required init(unsafeFromRawPointer pointer: UnsafeMutableRawPointer) {
+        self.pointer = pointer
+    }
+
+    deinit {
+        try! rustCall { uniffi_xmtpv3_fn_free_ffigroupmetadata(pointer, $0) }
+    }
+
+    public func conversationType() -> String {
+        return try! FfiConverterString.lift(
+            try!
+                rustCall {
+                    uniffi_xmtpv3_fn_method_ffigroupmetadata_conversation_type(self.pointer, $0)
+                }
+        )
+    }
+
+    public func creatorAccountAddress() -> String {
+        return try! FfiConverterString.lift(
+            try!
+                rustCall {
+                    uniffi_xmtpv3_fn_method_ffigroupmetadata_creator_account_address(self.pointer, $0)
+                }
+        )
+    }
+
+    public func policyType() throws -> GroupPermissions {
+        return try FfiConverterTypeGroupPermissions.lift(
+            rustCallWithError(FfiConverterTypeGenericError.lift) {
+                uniffi_xmtpv3_fn_method_ffigroupmetadata_policy_type(self.pointer, $0)
+            }
+        )
+    }
+}
+
+public struct FfiConverterTypeFfiGroupMetadata: FfiConverter {
+    typealias FfiType = UnsafeMutableRawPointer
+    typealias SwiftType = FfiGroupMetadata
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiGroupMetadata {
+        let v: UInt64 = try readInt(&buf)
+        // The Rust code won't compile if a pointer won't fit in a UInt64.
+        // We have to go via `UInt` because that's the thing that's the size of a pointer.
+        let ptr = UnsafeMutableRawPointer(bitPattern: UInt(truncatingIfNeeded: v))
+        if ptr == nil {
+            throw UniffiInternalError.unexpectedNullPointer
+        }
+        return try lift(ptr!)
+    }
+
+    public static func write(_ value: FfiGroupMetadata, into buf: inout [UInt8]) {
+        // This fiddling is because `Int` is the thing that's the same size as a pointer.
+        // The Rust code won't compile if a pointer won't fit in a `UInt64`.
+        writeInt(&buf, UInt64(bitPattern: Int64(Int(bitPattern: lower(value)))))
+    }
+
+    public static func lift(_ pointer: UnsafeMutableRawPointer) throws -> FfiGroupMetadata {
+        return FfiGroupMetadata(unsafeFromRawPointer: pointer)
+    }
+
+    public static func lower(_ value: FfiGroupMetadata) -> UnsafeMutableRawPointer {
+        return value.pointer
+    }
+}
+
+public func FfiConverterTypeFfiGroupMetadata_lift(_ pointer: UnsafeMutableRawPointer) throws -> FfiGroupMetadata {
+    return try FfiConverterTypeFfiGroupMetadata.lift(pointer)
+}
+
+public func FfiConverterTypeFfiGroupMetadata_lower(_ value: FfiGroupMetadata) -> UnsafeMutableRawPointer {
+    return FfiConverterTypeFfiGroupMetadata.lower(value)
 }
 
 public protocol FfiStreamCloserProtocol {
@@ -1940,6 +2051,9 @@ public enum GenericError {
     case Signature(message: String)
 
     // Simple error enums only carry a message
+    case GroupMetadata(message: String)
+
+    // Simple error enums only carry a message
     case Generic(message: String)
 
     fileprivate static func uniffiErrorHandler(_ error: RustBuffer) throws -> Error {
@@ -1977,7 +2091,11 @@ public struct FfiConverterTypeGenericError: FfiConverterRustBuffer {
                 message: FfiConverterString.read(from: &buf)
             )
 
-        case 7: return try .Generic(
+        case 7: return try .GroupMetadata(
+                message: FfiConverterString.read(from: &buf)
+            )
+
+        case 8: return try .Generic(
                 message: FfiConverterString.read(from: &buf)
             )
 
@@ -1999,8 +2117,10 @@ public struct FfiConverterTypeGenericError: FfiConverterRustBuffer {
             writeInt(&buf, Int32(5))
         case .Signature(_ /* message is ignored*/ ):
             writeInt(&buf, Int32(6))
-        case .Generic(_ /* message is ignored*/ ):
+        case .GroupMetadata(_ /* message is ignored*/ ):
             writeInt(&buf, Int32(7))
+        case .Generic(_ /* message is ignored*/ ):
+            writeInt(&buf, Int32(8))
         }
     }
 }
@@ -3267,6 +3387,9 @@ private var initializationResult: InitializationResult {
     if uniffi_xmtpv3_checksum_method_fficonversations_stream() != 60583 {
         return InitializationResult.apiChecksumMismatch
     }
+    if uniffi_xmtpv3_checksum_method_fficonversations_stream_all_messages() != 65211 {
+        return InitializationResult.apiChecksumMismatch
+    }
     if uniffi_xmtpv3_checksum_method_fficonversations_sync() != 62598 {
         return InitializationResult.apiChecksumMismatch
     }
@@ -3277,6 +3400,9 @@ private var initializationResult: InitializationResult {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_ffigroup_find_messages() != 61973 {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if uniffi_xmtpv3_checksum_method_ffigroup_group_metadata() != 3690 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_ffigroup_id() != 35243 {
@@ -3298,6 +3424,15 @@ private var initializationResult: InitializationResult {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_ffigroup_sync() != 9422 {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if uniffi_xmtpv3_checksum_method_ffigroupmetadata_conversation_type() != 37015 {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if uniffi_xmtpv3_checksum_method_ffigroupmetadata_creator_account_address() != 1906 {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if uniffi_xmtpv3_checksum_method_ffigroupmetadata_policy_type() != 22845 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_ffistreamcloser_end() != 47211 {
