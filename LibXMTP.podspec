@@ -11,6 +11,6 @@ Pod::Spec.new do |s|
   s.swift_version    = '5.3'
 
   s.source       = { :http => "https://github.com/xmtp/libxmtp/releases/download/swift-bindings-8587efd/LibXMTPSwiftFFI.zip", :type => :zip }
-  s.vendored_frameworks = 'LibXMTPRust.xcframework'
+  s.vendored_frameworks = 'LibXMTPSwiftFFI.xcframework'
   s.source_files = 'Sources/LibXMTP/**/*'
 end
