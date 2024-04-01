@@ -427,6 +427,7 @@ private struct FfiConverterData: FfiConverterRustBuffer {
 public protocol FfiConversationsProtocol {
     func createGroup(accountAddresses: [String], permissions: GroupPermissions?) async throws -> FfiGroup
     func list(opts: FfiListConversationsOptions) async throws -> [FfiGroup]
+    func processStreamedWelcomeMessage(envelopeBytes: Data) throws -> FfiGroup
     func stream(callback: FfiConversationCallback) async throws -> FfiStreamCloser
     func streamAllMessages(messageCallback: FfiMessageCallback) async throws -> FfiStreamCloser
     func sync() async throws
@@ -476,6 +477,15 @@ public class FfiConversations: FfiConversationsProtocol {
             freeFunc: ffi_xmtpv3_rust_future_free_rust_buffer,
             liftFunc: FfiConverterSequenceTypeFfiGroup.lift,
             errorHandler: FfiConverterTypeGenericError.lift
+        )
+    }
+
+    public func processStreamedWelcomeMessage(envelopeBytes: Data) throws -> FfiGroup {
+        return try FfiConverterTypeFfiGroup.lift(
+            rustCallWithError(FfiConverterTypeGenericError.lift) {
+                uniffi_xmtpv3_fn_method_fficonversations_process_streamed_welcome_message(self.pointer,
+                                                                                          FfiConverterData.lower(envelopeBytes), $0)
+            }
         )
     }
 
@@ -573,6 +583,7 @@ public protocol FfiGroupProtocol {
     func id() -> Data
     func isActive() throws -> Bool
     func listMembers() throws -> [FfiGroupMember]
+    func processStreamedGroupMessage(envelopeBytes: Data) async throws -> FfiMessage
     func removeMembers(accountAddresses: [String]) async throws
     func send(contentBytes: Data) async throws
     func stream(messageCallback: FfiMessageCallback) async throws -> FfiStreamCloser
@@ -657,6 +668,22 @@ public class FfiGroup: FfiGroupProtocol {
             rustCallWithError(FfiConverterTypeGenericError.lift) {
                 uniffi_xmtpv3_fn_method_ffigroup_list_members(self.pointer, $0)
             }
+        )
+    }
+
+    public func processStreamedGroupMessage(envelopeBytes: Data) async throws -> FfiMessage {
+        return try await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_xmtpv3_fn_method_ffigroup_process_streamed_group_message(
+                    self.pointer,
+                    FfiConverterData.lower(envelopeBytes)
+                )
+            },
+            pollFunc: ffi_xmtpv3_rust_future_poll_rust_buffer,
+            completeFunc: ffi_xmtpv3_rust_future_complete_rust_buffer,
+            freeFunc: ffi_xmtpv3_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterTypeFfiMessage.lift,
+            errorHandler: FfiConverterTypeGenericError.lift
         )
     }
 
@@ -1164,6 +1191,7 @@ public protocol FfiXmtpClientProtocol {
     func accountAddress() -> String
     func canMessage(accountAddresses: [String]) async throws -> [Bool]
     func conversations() -> FfiConversations
+    func installationId() -> Data
     func registerIdentity(recoverableWalletSignature: Data?) async throws
     func textToSign() -> String?
 }
@@ -1212,6 +1240,15 @@ public class FfiXmtpClient: FfiXmtpClientProtocol {
             try!
                 rustCall {
                     uniffi_xmtpv3_fn_method_ffixmtpclient_conversations(self.pointer, $0)
+                }
+        )
+    }
+
+    public func installationId() -> Data {
+        return try! FfiConverterData.lift(
+            try!
+                rustCall {
+                    uniffi_xmtpv3_fn_method_ffixmtpclient_installation_id(self.pointer, $0)
                 }
         )
     }
@@ -3384,6 +3421,9 @@ private var initializationResult: InitializationResult {
     if uniffi_xmtpv3_checksum_method_fficonversations_list() != 44067 {
         return InitializationResult.apiChecksumMismatch
     }
+    if uniffi_xmtpv3_checksum_method_fficonversations_process_streamed_welcome_message() != 55636 {
+        return InitializationResult.apiChecksumMismatch
+    }
     if uniffi_xmtpv3_checksum_method_fficonversations_stream() != 60583 {
         return InitializationResult.apiChecksumMismatch
     }
@@ -3412,6 +3452,9 @@ private var initializationResult: InitializationResult {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_ffigroup_list_members() != 15786 {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if uniffi_xmtpv3_checksum_method_ffigroup_process_streamed_group_message() != 54382 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_ffigroup_remove_members() != 1645 {
@@ -3472,6 +3515,9 @@ private var initializationResult: InitializationResult {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_ffixmtpclient_conversations() != 31628 {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if uniffi_xmtpv3_checksum_method_ffixmtpclient_installation_id() != 62523 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_ffixmtpclient_register_identity() != 64634 {
