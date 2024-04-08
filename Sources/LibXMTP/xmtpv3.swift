@@ -1602,15 +1602,17 @@ public struct FfiMessage {
     public var convoId: Data
     public var addrFrom: String
     public var content: Data
+    public var kind: FfiGroupMessageKind
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
-    public init(id: Data, sentAtNs: Int64, convoId: Data, addrFrom: String, content: Data) {
+    public init(id: Data, sentAtNs: Int64, convoId: Data, addrFrom: String, content: Data, kind: FfiGroupMessageKind) {
         self.id = id
         self.sentAtNs = sentAtNs
         self.convoId = convoId
         self.addrFrom = addrFrom
         self.content = content
+        self.kind = kind
     }
 }
 
@@ -1631,6 +1633,9 @@ extension FfiMessage: Equatable, Hashable {
         if lhs.content != rhs.content {
             return false
         }
+        if lhs.kind != rhs.kind {
+            return false
+        }
         return true
     }
 
@@ -1640,6 +1645,7 @@ extension FfiMessage: Equatable, Hashable {
         hasher.combine(convoId)
         hasher.combine(addrFrom)
         hasher.combine(content)
+        hasher.combine(kind)
     }
 }
 
@@ -1650,7 +1656,8 @@ public struct FfiConverterTypeFfiMessage: FfiConverterRustBuffer {
             sentAtNs: FfiConverterInt64.read(from: &buf),
             convoId: FfiConverterData.read(from: &buf),
             addrFrom: FfiConverterString.read(from: &buf),
-            content: FfiConverterData.read(from: &buf)
+            content: FfiConverterData.read(from: &buf),
+            kind: FfiConverterTypeFfiGroupMessageKind.read(from: &buf)
         )
     }
 
@@ -1660,6 +1667,7 @@ public struct FfiConverterTypeFfiMessage: FfiConverterRustBuffer {
         FfiConverterData.write(value.convoId, into: &buf)
         FfiConverterString.write(value.addrFrom, into: &buf)
         FfiConverterData.write(value.content, into: &buf)
+        FfiConverterTypeFfiGroupMessageKind.write(value.kind, into: &buf)
     }
 }
 
@@ -2019,6 +2027,48 @@ public func FfiConverterTypeFfiV2SubscribeRequest_lift(_ buf: RustBuffer) throws
 public func FfiConverterTypeFfiV2SubscribeRequest_lower(_ value: FfiV2SubscribeRequest) -> RustBuffer {
     return FfiConverterTypeFfiV2SubscribeRequest.lower(value)
 }
+
+// Note that we don't yet support `indirect` for enums.
+// See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
+public enum FfiGroupMessageKind {
+    case application
+    case membershipChange
+}
+
+public struct FfiConverterTypeFfiGroupMessageKind: FfiConverterRustBuffer {
+    typealias SwiftType = FfiGroupMessageKind
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiGroupMessageKind {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        case 1: return .application
+
+        case 2: return .membershipChange
+
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: FfiGroupMessageKind, into buf: inout [UInt8]) {
+        switch value {
+        case .application:
+            writeInt(&buf, Int32(1))
+
+        case .membershipChange:
+            writeInt(&buf, Int32(2))
+        }
+    }
+}
+
+public func FfiConverterTypeFfiGroupMessageKind_lift(_ buf: RustBuffer) throws -> FfiGroupMessageKind {
+    return try FfiConverterTypeFfiGroupMessageKind.lift(buf)
+}
+
+public func FfiConverterTypeFfiGroupMessageKind_lower(_ value: FfiGroupMessageKind) -> RustBuffer {
+    return FfiConverterTypeFfiGroupMessageKind.lower(value)
+}
+
+extension FfiGroupMessageKind: Equatable, Hashable {}
 
 // Note that we don't yet support `indirect` for enums.
 // See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
