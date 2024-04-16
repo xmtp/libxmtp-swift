@@ -577,6 +577,7 @@ public func FfiConverterTypeFfiConversations_lower(_ value: FfiConversations) ->
 
 public protocol FfiGroupProtocol {
     func addMembers(accountAddresses: [String]) async throws
+    func addedByAddress() throws -> String
     func createdAtNs() -> Int64
     func findMessages(opts: FfiListMessagesOptions) throws -> [FfiMessage]
     func groupMetadata() throws -> FfiGroupMetadata
@@ -617,6 +618,14 @@ public class FfiGroup: FfiGroupProtocol {
             freeFunc: ffi_xmtpv3_rust_future_free_void,
             liftFunc: { $0 },
             errorHandler: FfiConverterTypeGenericError.lift
+        )
+    }
+
+    public func addedByAddress() throws -> String {
+        return try FfiConverterString.lift(
+            rustCallWithError(FfiConverterTypeGenericError.lift) {
+                uniffi_xmtpv3_fn_method_ffigroup_added_by_address(self.pointer, $0)
+            }
         )
     }
 
@@ -3484,6 +3493,9 @@ private var initializationResult: InitializationResult {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_ffigroup_add_members() != 24978 {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if uniffi_xmtpv3_checksum_method_ffigroup_added_by_address() != 5368 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_ffigroup_created_at_ns() != 58515 {
