@@ -586,7 +586,7 @@ public protocol FfiGroupProtocol {
     func listMembers() throws -> [FfiGroupMember]
     func processStreamedGroupMessage(envelopeBytes: Data) async throws -> FfiMessage
     func removeMembers(accountAddresses: [String]) async throws
-    func send(contentBytes: Data) async throws
+    func send(contentBytes: Data) async throws -> Data
     func stream(messageCallback: FfiMessageCallback) async throws -> FfiStreamCloser
     func sync() async throws
 }
@@ -712,7 +712,7 @@ public class FfiGroup: FfiGroupProtocol {
         )
     }
 
-    public func send(contentBytes: Data) async throws {
+    public func send(contentBytes: Data) async throws -> Data {
         return try await uniffiRustCallAsync(
             rustFutureFunc: {
                 uniffi_xmtpv3_fn_method_ffigroup_send(
@@ -720,10 +720,10 @@ public class FfiGroup: FfiGroupProtocol {
                     FfiConverterData.lower(contentBytes)
                 )
             },
-            pollFunc: ffi_xmtpv3_rust_future_poll_void,
-            completeFunc: ffi_xmtpv3_rust_future_complete_void,
-            freeFunc: ffi_xmtpv3_rust_future_free_void,
-            liftFunc: { $0 },
+            pollFunc: ffi_xmtpv3_rust_future_poll_rust_buffer,
+            completeFunc: ffi_xmtpv3_rust_future_complete_rust_buffer,
+            freeFunc: ffi_xmtpv3_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterData.lift,
             errorHandler: FfiConverterTypeGenericError.lift
         )
     }
@@ -1550,13 +1550,15 @@ public struct FfiListMessagesOptions {
     public var sentBeforeNs: Int64?
     public var sentAfterNs: Int64?
     public var limit: Int64?
+    public var deliveryStatus: FfiDeliveryStatus?
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
-    public init(sentBeforeNs: Int64?, sentAfterNs: Int64?, limit: Int64?) {
+    public init(sentBeforeNs: Int64?, sentAfterNs: Int64?, limit: Int64?, deliveryStatus: FfiDeliveryStatus?) {
         self.sentBeforeNs = sentBeforeNs
         self.sentAfterNs = sentAfterNs
         self.limit = limit
+        self.deliveryStatus = deliveryStatus
     }
 }
 
@@ -1571,6 +1573,9 @@ extension FfiListMessagesOptions: Equatable, Hashable {
         if lhs.limit != rhs.limit {
             return false
         }
+        if lhs.deliveryStatus != rhs.deliveryStatus {
+            return false
+        }
         return true
     }
 
@@ -1578,6 +1583,7 @@ extension FfiListMessagesOptions: Equatable, Hashable {
         hasher.combine(sentBeforeNs)
         hasher.combine(sentAfterNs)
         hasher.combine(limit)
+        hasher.combine(deliveryStatus)
     }
 }
 
@@ -1586,7 +1592,8 @@ public struct FfiConverterTypeFfiListMessagesOptions: FfiConverterRustBuffer {
         return try FfiListMessagesOptions(
             sentBeforeNs: FfiConverterOptionInt64.read(from: &buf),
             sentAfterNs: FfiConverterOptionInt64.read(from: &buf),
-            limit: FfiConverterOptionInt64.read(from: &buf)
+            limit: FfiConverterOptionInt64.read(from: &buf),
+            deliveryStatus: FfiConverterOptionTypeFfiDeliveryStatus.read(from: &buf)
         )
     }
 
@@ -1594,6 +1601,7 @@ public struct FfiConverterTypeFfiListMessagesOptions: FfiConverterRustBuffer {
         FfiConverterOptionInt64.write(value.sentBeforeNs, into: &buf)
         FfiConverterOptionInt64.write(value.sentAfterNs, into: &buf)
         FfiConverterOptionInt64.write(value.limit, into: &buf)
+        FfiConverterOptionTypeFfiDeliveryStatus.write(value.deliveryStatus, into: &buf)
     }
 }
 
@@ -1612,16 +1620,18 @@ public struct FfiMessage {
     public var addrFrom: String
     public var content: Data
     public var kind: FfiGroupMessageKind
+    public var deliveryStatus: FfiDeliveryStatus
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
-    public init(id: Data, sentAtNs: Int64, convoId: Data, addrFrom: String, content: Data, kind: FfiGroupMessageKind) {
+    public init(id: Data, sentAtNs: Int64, convoId: Data, addrFrom: String, content: Data, kind: FfiGroupMessageKind, deliveryStatus: FfiDeliveryStatus) {
         self.id = id
         self.sentAtNs = sentAtNs
         self.convoId = convoId
         self.addrFrom = addrFrom
         self.content = content
         self.kind = kind
+        self.deliveryStatus = deliveryStatus
     }
 }
 
@@ -1645,6 +1655,9 @@ extension FfiMessage: Equatable, Hashable {
         if lhs.kind != rhs.kind {
             return false
         }
+        if lhs.deliveryStatus != rhs.deliveryStatus {
+            return false
+        }
         return true
     }
 
@@ -1655,6 +1668,7 @@ extension FfiMessage: Equatable, Hashable {
         hasher.combine(addrFrom)
         hasher.combine(content)
         hasher.combine(kind)
+        hasher.combine(deliveryStatus)
     }
 }
 
@@ -1666,7 +1680,8 @@ public struct FfiConverterTypeFfiMessage: FfiConverterRustBuffer {
             convoId: FfiConverterData.read(from: &buf),
             addrFrom: FfiConverterString.read(from: &buf),
             content: FfiConverterData.read(from: &buf),
-            kind: FfiConverterTypeFfiGroupMessageKind.read(from: &buf)
+            kind: FfiConverterTypeFfiGroupMessageKind.read(from: &buf),
+            deliveryStatus: FfiConverterTypeFfiDeliveryStatus.read(from: &buf)
         )
     }
 
@@ -1677,6 +1692,7 @@ public struct FfiConverterTypeFfiMessage: FfiConverterRustBuffer {
         FfiConverterString.write(value.addrFrom, into: &buf)
         FfiConverterData.write(value.content, into: &buf)
         FfiConverterTypeFfiGroupMessageKind.write(value.kind, into: &buf)
+        FfiConverterTypeFfiDeliveryStatus.write(value.deliveryStatus, into: &buf)
     }
 }
 
@@ -2036,6 +2052,54 @@ public func FfiConverterTypeFfiV2SubscribeRequest_lift(_ buf: RustBuffer) throws
 public func FfiConverterTypeFfiV2SubscribeRequest_lower(_ value: FfiV2SubscribeRequest) -> RustBuffer {
     return FfiConverterTypeFfiV2SubscribeRequest.lower(value)
 }
+
+// Note that we don't yet support `indirect` for enums.
+// See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
+public enum FfiDeliveryStatus {
+    case unpublished
+    case published
+    case failed
+}
+
+public struct FfiConverterTypeFfiDeliveryStatus: FfiConverterRustBuffer {
+    typealias SwiftType = FfiDeliveryStatus
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiDeliveryStatus {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        case 1: return .unpublished
+
+        case 2: return .published
+
+        case 3: return .failed
+
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: FfiDeliveryStatus, into buf: inout [UInt8]) {
+        switch value {
+        case .unpublished:
+            writeInt(&buf, Int32(1))
+
+        case .published:
+            writeInt(&buf, Int32(2))
+
+        case .failed:
+            writeInt(&buf, Int32(3))
+        }
+    }
+}
+
+public func FfiConverterTypeFfiDeliveryStatus_lift(_ buf: RustBuffer) throws -> FfiDeliveryStatus {
+    return try FfiConverterTypeFfiDeliveryStatus.lift(buf)
+}
+
+public func FfiConverterTypeFfiDeliveryStatus_lower(_ value: FfiDeliveryStatus) -> RustBuffer {
+    return FfiConverterTypeFfiDeliveryStatus.lower(value)
+}
+
+extension FfiDeliveryStatus: Equatable, Hashable {}
 
 // Note that we don't yet support `indirect` for enums.
 // See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
@@ -2967,6 +3031,27 @@ private struct FfiConverterOptionTypeFfiPagingInfo: FfiConverterRustBuffer {
     }
 }
 
+private struct FfiConverterOptionTypeFfiDeliveryStatus: FfiConverterRustBuffer {
+    typealias SwiftType = FfiDeliveryStatus?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeFfiDeliveryStatus.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeFfiDeliveryStatus.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
 private struct FfiConverterOptionTypeGroupPermissions: FfiConverterRustBuffer {
     typealias SwiftType = GroupPermissions?
 
@@ -3522,7 +3607,7 @@ private var initializationResult: InitializationResult {
     if uniffi_xmtpv3_checksum_method_ffigroup_remove_members() != 1645 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_xmtpv3_checksum_method_ffigroup_send() != 55957 {
+    if uniffi_xmtpv3_checksum_method_ffigroup_send() != 2523 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_ffigroup_stream() != 7482 {
