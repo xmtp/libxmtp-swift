@@ -581,6 +581,7 @@ public protocol FfiGroupProtocol {
     func createdAtNs() -> Int64
     func findMessages(opts: FfiListMessagesOptions) throws -> [FfiMessage]
     func groupMetadata() throws -> FfiGroupMetadata
+    func groupName() throws -> String
     func id() -> Data
     func isActive() throws -> Bool
     func listMembers() throws -> [FfiGroupMember]
@@ -589,6 +590,7 @@ public protocol FfiGroupProtocol {
     func send(contentBytes: Data) async throws -> Data
     func stream(messageCallback: FfiMessageCallback) async throws -> FfiStreamCloser
     func sync() async throws
+    func updateGroupName(groupName: String) async throws
 }
 
 public class FfiGroup: FfiGroupProtocol {
@@ -651,6 +653,14 @@ public class FfiGroup: FfiGroupProtocol {
         return try FfiConverterTypeFfiGroupMetadata.lift(
             rustCallWithError(FfiConverterTypeGenericError.lift) {
                 uniffi_xmtpv3_fn_method_ffigroup_group_metadata(self.pointer, $0)
+            }
+        )
+    }
+
+    public func groupName() throws -> String {
+        return try FfiConverterString.lift(
+            rustCallWithError(FfiConverterTypeGenericError.lift) {
+                uniffi_xmtpv3_fn_method_ffigroup_group_name(self.pointer, $0)
             }
         )
     }
@@ -749,6 +759,22 @@ public class FfiGroup: FfiGroupProtocol {
             rustFutureFunc: {
                 uniffi_xmtpv3_fn_method_ffigroup_sync(
                     self.pointer
+                )
+            },
+            pollFunc: ffi_xmtpv3_rust_future_poll_void,
+            completeFunc: ffi_xmtpv3_rust_future_complete_void,
+            freeFunc: ffi_xmtpv3_rust_future_free_void,
+            liftFunc: { $0 },
+            errorHandler: FfiConverterTypeGenericError.lift
+        )
+    }
+
+    public func updateGroupName(groupName: String) async throws {
+        return try await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_xmtpv3_fn_method_ffigroup_update_group_name(
+                    self.pointer,
+                    FfiConverterString.lower(groupName)
                 )
             },
             pollFunc: ffi_xmtpv3_rust_future_poll_void,
@@ -3592,6 +3618,9 @@ private var initializationResult: InitializationResult {
     if uniffi_xmtpv3_checksum_method_ffigroup_group_metadata() != 3690 {
         return InitializationResult.apiChecksumMismatch
     }
+    if uniffi_xmtpv3_checksum_method_ffigroup_group_name() != 3391 {
+        return InitializationResult.apiChecksumMismatch
+    }
     if uniffi_xmtpv3_checksum_method_ffigroup_id() != 35243 {
         return InitializationResult.apiChecksumMismatch
     }
@@ -3614,6 +3643,9 @@ private var initializationResult: InitializationResult {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_ffigroup_sync() != 9422 {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if uniffi_xmtpv3_checksum_method_ffigroup_update_group_name() != 29940 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_ffigroupmetadata_conversation_type() != 37015 {
