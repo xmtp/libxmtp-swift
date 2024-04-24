@@ -1224,7 +1224,7 @@ public func FfiConverterTypeFfiV2Subscription_lower(_ value: FfiV2Subscription) 
 
 public protocol FfiXmtpClientProtocol {
     func accountAddress() -> String
-    func canMessage(accountAddresses: [String]) async throws -> [Bool]
+    func canMessage(accountAddresses: [String]) async throws -> [String: Bool]
     func conversations() -> FfiConversations
     func installationId() -> Data
     func registerIdentity(recoverableWalletSignature: Data?) async throws
@@ -1254,7 +1254,7 @@ public class FfiXmtpClient: FfiXmtpClientProtocol {
         )
     }
 
-    public func canMessage(accountAddresses: [String]) async throws -> [Bool] {
+    public func canMessage(accountAddresses: [String]) async throws -> [String: Bool] {
         return try await uniffiRustCallAsync(
             rustFutureFunc: {
                 uniffi_xmtpv3_fn_method_ffixmtpclient_can_message(
@@ -1265,7 +1265,7 @@ public class FfiXmtpClient: FfiXmtpClientProtocol {
             pollFunc: ffi_xmtpv3_rust_future_poll_rust_buffer,
             completeFunc: ffi_xmtpv3_rust_future_complete_rust_buffer,
             freeFunc: ffi_xmtpv3_rust_future_free_rust_buffer,
-            liftFunc: FfiConverterSequenceBool.lift,
+            liftFunc: FfiConverterDictionaryStringBool.lift,
             errorHandler: FfiConverterTypeGenericError.lift
         )
     }
@@ -3099,28 +3099,6 @@ private struct FfiConverterOptionTypeGroupPermissions: FfiConverterRustBuffer {
     }
 }
 
-private struct FfiConverterSequenceBool: FfiConverterRustBuffer {
-    typealias SwiftType = [Bool]
-
-    public static func write(_ value: [Bool], into buf: inout [UInt8]) {
-        let len = Int32(value.count)
-        writeInt(&buf, len)
-        for item in value {
-            FfiConverterBool.write(item, into: &buf)
-        }
-    }
-
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [Bool] {
-        let len: Int32 = try readInt(&buf)
-        var seq = [Bool]()
-        seq.reserveCapacity(Int(len))
-        for _ in 0 ..< len {
-            try seq.append(FfiConverterBool.read(from: &buf))
-        }
-        return seq
-    }
-}
-
 private struct FfiConverterSequenceString: FfiConverterRustBuffer {
     typealias SwiftType = [String]
 
@@ -3294,6 +3272,29 @@ private struct FfiConverterSequenceTypeFfiV2QueryResponse: FfiConverterRustBuffe
             try seq.append(FfiConverterTypeFfiV2QueryResponse.read(from: &buf))
         }
         return seq
+    }
+}
+
+private struct FfiConverterDictionaryStringBool: FfiConverterRustBuffer {
+    public static func write(_ value: [String: Bool], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for (key, value) in value {
+            FfiConverterString.write(key, into: &buf)
+            FfiConverterBool.write(value, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [String: Bool] {
+        let len: Int32 = try readInt(&buf)
+        var dict = [String: Bool]()
+        dict.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            let key = try FfiConverterString.read(from: &buf)
+            let value = try FfiConverterBool.read(from: &buf)
+            dict[key] = value
+        }
+        return dict
     }
 }
 
@@ -3690,7 +3691,7 @@ private var initializationResult: InitializationResult {
     if uniffi_xmtpv3_checksum_method_ffixmtpclient_account_address() != 65151 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_xmtpv3_checksum_method_ffixmtpclient_can_message() != 28819 {
+    if uniffi_xmtpv3_checksum_method_ffixmtpclient_can_message() != 28768 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_ffixmtpclient_conversations() != 31628 {
