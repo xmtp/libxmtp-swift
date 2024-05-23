@@ -827,7 +827,6 @@ public func FfiConverterTypeFfiGroup_lower(_ value: FfiGroup) -> UnsafeMutableRa
 public protocol FfiGroupMetadataProtocol {
     func conversationType() -> String
     func creatorAccountAddress() -> String
-    func policyType() throws -> GroupPermissions
 }
 
 public class FfiGroupMetadata: FfiGroupMetadataProtocol {
@@ -859,14 +858,6 @@ public class FfiGroupMetadata: FfiGroupMetadataProtocol {
                 rustCall {
                     uniffi_xmtpv3_fn_method_ffigroupmetadata_creator_account_address(self.pointer, $0)
                 }
-        )
-    }
-
-    public func policyType() throws -> GroupPermissions {
-        return try FfiConverterTypeGroupPermissions.lift(
-            rustCallWithError(FfiConverterTypeGenericError.lift) {
-                uniffi_xmtpv3_fn_method_ffigroupmetadata_policy_type(self.pointer, $0)
-            }
         )
     }
 }
@@ -907,6 +898,71 @@ public func FfiConverterTypeFfiGroupMetadata_lift(_ pointer: UnsafeMutableRawPoi
 
 public func FfiConverterTypeFfiGroupMetadata_lower(_ value: FfiGroupMetadata) -> UnsafeMutableRawPointer {
     return FfiConverterTypeFfiGroupMetadata.lower(value)
+}
+
+public protocol FfiGroupPermissionsProtocol {
+    func policyType() throws -> GroupPermissions
+}
+
+public class FfiGroupPermissions: FfiGroupPermissionsProtocol {
+    fileprivate let pointer: UnsafeMutableRawPointer
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+    required init(unsafeFromRawPointer pointer: UnsafeMutableRawPointer) {
+        self.pointer = pointer
+    }
+
+    deinit {
+        try! rustCall { uniffi_xmtpv3_fn_free_ffigrouppermissions(pointer, $0) }
+    }
+
+    public func policyType() throws -> GroupPermissions {
+        return try FfiConverterTypeGroupPermissions.lift(
+            rustCallWithError(FfiConverterTypeGenericError.lift) {
+                uniffi_xmtpv3_fn_method_ffigrouppermissions_policy_type(self.pointer, $0)
+            }
+        )
+    }
+}
+
+public struct FfiConverterTypeFfiGroupPermissions: FfiConverter {
+    typealias FfiType = UnsafeMutableRawPointer
+    typealias SwiftType = FfiGroupPermissions
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiGroupPermissions {
+        let v: UInt64 = try readInt(&buf)
+        // The Rust code won't compile if a pointer won't fit in a UInt64.
+        // We have to go via `UInt` because that's the thing that's the size of a pointer.
+        let ptr = UnsafeMutableRawPointer(bitPattern: UInt(truncatingIfNeeded: v))
+        if ptr == nil {
+            throw UniffiInternalError.unexpectedNullPointer
+        }
+        return try lift(ptr!)
+    }
+
+    public static func write(_ value: FfiGroupPermissions, into buf: inout [UInt8]) {
+        // This fiddling is because `Int` is the thing that's the same size as a pointer.
+        // The Rust code won't compile if a pointer won't fit in a `UInt64`.
+        writeInt(&buf, UInt64(bitPattern: Int64(Int(bitPattern: lower(value)))))
+    }
+
+    public static func lift(_ pointer: UnsafeMutableRawPointer) throws -> FfiGroupPermissions {
+        return FfiGroupPermissions(unsafeFromRawPointer: pointer)
+    }
+
+    public static func lower(_ value: FfiGroupPermissions) -> UnsafeMutableRawPointer {
+        return value.pointer
+    }
+}
+
+public func FfiConverterTypeFfiGroupPermissions_lift(_ pointer: UnsafeMutableRawPointer) throws -> FfiGroupPermissions {
+    return try FfiConverterTypeFfiGroupPermissions.lift(pointer)
+}
+
+public func FfiConverterTypeFfiGroupPermissions_lower(_ value: FfiGroupPermissions) -> UnsafeMutableRawPointer {
+    return FfiConverterTypeFfiGroupPermissions.lower(value)
 }
 
 public protocol FfiStreamCloserProtocol {
@@ -1226,8 +1282,10 @@ public protocol FfiXmtpClientProtocol {
     func accountAddress() -> String
     func canMessage(accountAddresses: [String]) async throws -> [String: Bool]
     func conversations() -> FfiConversations
+    func dbReconnect() async throws
     func installationId() -> Data
     func registerIdentity(recoverableWalletSignature: Data?) async throws
+    func releaseDbConnection() throws
     func textToSign() -> String?
 }
 
@@ -1279,6 +1337,21 @@ public class FfiXmtpClient: FfiXmtpClientProtocol {
         )
     }
 
+    public func dbReconnect() async throws {
+        return try await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_xmtpv3_fn_method_ffixmtpclient_db_reconnect(
+                    self.pointer
+                )
+            },
+            pollFunc: ffi_xmtpv3_rust_future_poll_void,
+            completeFunc: ffi_xmtpv3_rust_future_complete_void,
+            freeFunc: ffi_xmtpv3_rust_future_free_void,
+            liftFunc: { $0 },
+            errorHandler: FfiConverterTypeGenericError.lift
+        )
+    }
+
     public func installationId() -> Data {
         return try! FfiConverterData.lift(
             try!
@@ -1302,6 +1375,13 @@ public class FfiXmtpClient: FfiXmtpClientProtocol {
             liftFunc: { $0 },
             errorHandler: FfiConverterTypeGenericError.lift
         )
+    }
+
+    public func releaseDbConnection() throws {
+        try
+            rustCallWithError(FfiConverterTypeGenericError.lift) {
+                uniffi_xmtpv3_fn_method_ffixmtpclient_release_db_connection(self.pointer, $0)
+            }
     }
 
     public func textToSign() -> String? {
@@ -2240,6 +2320,9 @@ public enum GenericError {
     case GroupMetadata(message: String)
 
     // Simple error enums only carry a message
+    case GroupMutablePermissions(message: String)
+
+    // Simple error enums only carry a message
     case Generic(message: String)
 
     fileprivate static func uniffiErrorHandler(_ error: RustBuffer) throws -> Error {
@@ -2281,7 +2364,11 @@ public struct FfiConverterTypeGenericError: FfiConverterRustBuffer {
                 message: FfiConverterString.read(from: &buf)
             )
 
-        case 8: return try .Generic(
+        case 8: return try .GroupMutablePermissions(
+                message: FfiConverterString.read(from: &buf)
+            )
+
+        case 9: return try .Generic(
                 message: FfiConverterString.read(from: &buf)
             )
 
@@ -2305,8 +2392,10 @@ public struct FfiConverterTypeGenericError: FfiConverterRustBuffer {
             writeInt(&buf, Int32(6))
         case .GroupMetadata(_ /* message is ignored*/ ):
             writeInt(&buf, Int32(7))
-        case .Generic(_ /* message is ignored*/ ):
+        case .GroupMutablePermissions(_ /* message is ignored*/ ):
             writeInt(&buf, Int32(8))
+        case .Generic(_ /* message is ignored*/ ):
+            writeInt(&buf, Int32(9))
         }
     }
 }
@@ -3655,7 +3744,7 @@ private var initializationResult: InitializationResult {
     if uniffi_xmtpv3_checksum_method_ffigroupmetadata_creator_account_address() != 1906 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_xmtpv3_checksum_method_ffigroupmetadata_policy_type() != 22845 {
+    if uniffi_xmtpv3_checksum_method_ffigrouppermissions_policy_type() != 43161 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_ffistreamcloser_end() != 47211 {
@@ -3697,10 +3786,16 @@ private var initializationResult: InitializationResult {
     if uniffi_xmtpv3_checksum_method_ffixmtpclient_conversations() != 31628 {
         return InitializationResult.apiChecksumMismatch
     }
+    if uniffi_xmtpv3_checksum_method_ffixmtpclient_db_reconnect() != 33037 {
+        return InitializationResult.apiChecksumMismatch
+    }
     if uniffi_xmtpv3_checksum_method_ffixmtpclient_installation_id() != 62523 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_ffixmtpclient_register_identity() != 64634 {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if uniffi_xmtpv3_checksum_method_ffixmtpclient_release_db_connection() != 12677 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_ffixmtpclient_text_to_sign() != 25727 {
