@@ -2160,13 +2160,15 @@ public struct FfiGroupMember {
     public var inboxId: String
     public var accountAddresses: [String]
     public var installationIds: [Data]
+    public var permissionLevel: FfiPermissionLevel
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
-    public init(inboxId: String, accountAddresses: [String], installationIds: [Data]) {
+    public init(inboxId: String, accountAddresses: [String], installationIds: [Data], permissionLevel: FfiPermissionLevel) {
         self.inboxId = inboxId
         self.accountAddresses = accountAddresses
         self.installationIds = installationIds
+        self.permissionLevel = permissionLevel
     }
 }
 
@@ -2181,6 +2183,9 @@ extension FfiGroupMember: Equatable, Hashable {
         if lhs.installationIds != rhs.installationIds {
             return false
         }
+        if lhs.permissionLevel != rhs.permissionLevel {
+            return false
+        }
         return true
     }
 
@@ -2188,6 +2193,7 @@ extension FfiGroupMember: Equatable, Hashable {
         hasher.combine(inboxId)
         hasher.combine(accountAddresses)
         hasher.combine(installationIds)
+        hasher.combine(permissionLevel)
     }
 }
 
@@ -2197,7 +2203,8 @@ public struct FfiConverterTypeFfiGroupMember: FfiConverterRustBuffer {
             try FfiGroupMember(
                 inboxId: FfiConverterString.read(from: &buf),
                 accountAddresses: FfiConverterSequenceString.read(from: &buf),
-                installationIds: FfiConverterSequenceData.read(from: &buf)
+                installationIds: FfiConverterSequenceData.read(from: &buf),
+                permissionLevel: FfiConverterTypeFfiPermissionLevel.read(from: &buf)
             )
     }
 
@@ -2205,6 +2212,7 @@ public struct FfiConverterTypeFfiGroupMember: FfiConverterRustBuffer {
         FfiConverterString.write(value.inboxId, into: &buf)
         FfiConverterSequenceString.write(value.accountAddresses, into: &buf)
         FfiConverterSequenceData.write(value.installationIds, into: &buf)
+        FfiConverterTypeFfiPermissionLevel.write(value.permissionLevel, into: &buf)
     }
 }
 
@@ -2883,6 +2891,55 @@ public func FfiConverterTypeFfiGroupMessageKind_lower(_ value: FfiGroupMessageKi
 }
 
 extension FfiGroupMessageKind: Equatable, Hashable {}
+
+// Note that we don't yet support `indirect` for enums.
+// See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
+
+public enum FfiPermissionLevel {
+    case member
+    case admin
+    case superAdmin
+}
+
+public struct FfiConverterTypeFfiPermissionLevel: FfiConverterRustBuffer {
+    typealias SwiftType = FfiPermissionLevel
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiPermissionLevel {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        case 1: return .member
+
+        case 2: return .admin
+
+        case 3: return .superAdmin
+
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: FfiPermissionLevel, into buf: inout [UInt8]) {
+        switch value {
+        case .member:
+            writeInt(&buf, Int32(1))
+
+        case .admin:
+            writeInt(&buf, Int32(2))
+
+        case .superAdmin:
+            writeInt(&buf, Int32(3))
+        }
+    }
+}
+
+public func FfiConverterTypeFfiPermissionLevel_lift(_ buf: RustBuffer) throws -> FfiPermissionLevel {
+    return try FfiConverterTypeFfiPermissionLevel.lift(buf)
+}
+
+public func FfiConverterTypeFfiPermissionLevel_lower(_ value: FfiPermissionLevel) -> RustBuffer {
+    return FfiConverterTypeFfiPermissionLevel.lower(value)
+}
+
+extension FfiPermissionLevel: Equatable, Hashable {}
 
 // Note that we don't yet support `indirect` for enums.
 // See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
