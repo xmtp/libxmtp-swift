@@ -691,11 +691,17 @@ public func FfiConverterTypeFfiConversations_lower(_ value: FfiConversations) ->
 }
 
 public protocol FfiGroupProtocol: AnyObject {
+    func addAdmin(inboxId: String) async throws
+
     func addMembers(accountAddresses: [String]) async throws
 
     func addMembersByInboxId(inboxIds: [String]) async throws
 
+    func addSuperAdmin(inboxId: String) async throws
+
     func addedByInboxId() throws -> String
+
+    func adminList() throws -> [String]
 
     func createdAtNs() -> Int64
 
@@ -705,21 +711,33 @@ public protocol FfiGroupProtocol: AnyObject {
 
     func groupName() throws -> String
 
+    func groupPermissions() throws -> FfiGroupPermissions
+
     func id() -> Data
 
     func isActive() throws -> Bool
+
+    func isAdmin(inboxId: String) throws -> Bool
+
+    func isSuperAdmin(inboxId: String) throws -> Bool
 
     func listMembers() throws -> [FfiGroupMember]
 
     func processStreamedGroupMessage(envelopeBytes: Data) async throws -> FfiMessage
 
+    func removeAdmin(inboxId: String) async throws
+
     func removeMembers(accountAddresses: [String]) async throws
 
     func removeMembersByInboxId(inboxIds: [String]) async throws
 
+    func removeSuperAdmin(inboxId: String) async throws
+
     func send(contentBytes: Data) async throws -> Data
 
     func stream(messageCallback: FfiMessageCallback) async throws -> FfiStreamCloser
+
+    func superAdminList() throws -> [String]
 
     func sync() async throws
 
@@ -766,6 +784,23 @@ open class FfiGroup:
         try! rustCall { uniffi_xmtpv3_fn_free_ffigroup(pointer, $0) }
     }
 
+    open func addAdmin(inboxId: String) async throws {
+        return
+            try await uniffiRustCallAsync(
+                rustFutureFunc: {
+                    uniffi_xmtpv3_fn_method_ffigroup_add_admin(
+                        self.uniffiClonePointer(),
+                        FfiConverterString.lower(inboxId)
+                    )
+                },
+                pollFunc: ffi_xmtpv3_rust_future_poll_void,
+                completeFunc: ffi_xmtpv3_rust_future_complete_void,
+                freeFunc: ffi_xmtpv3_rust_future_free_void,
+                liftFunc: { $0 },
+                errorHandler: FfiConverterTypeGenericError.lift
+            )
+    }
+
     open func addMembers(accountAddresses: [String]) async throws {
         return
             try await uniffiRustCallAsync(
@@ -800,9 +835,32 @@ open class FfiGroup:
             )
     }
 
+    open func addSuperAdmin(inboxId: String) async throws {
+        return
+            try await uniffiRustCallAsync(
+                rustFutureFunc: {
+                    uniffi_xmtpv3_fn_method_ffigroup_add_super_admin(
+                        self.uniffiClonePointer(),
+                        FfiConverterString.lower(inboxId)
+                    )
+                },
+                pollFunc: ffi_xmtpv3_rust_future_poll_void,
+                completeFunc: ffi_xmtpv3_rust_future_complete_void,
+                freeFunc: ffi_xmtpv3_rust_future_free_void,
+                liftFunc: { $0 },
+                errorHandler: FfiConverterTypeGenericError.lift
+            )
+    }
+
     open func addedByInboxId() throws -> String {
         return try FfiConverterString.lift(rustCallWithError(FfiConverterTypeGenericError.lift) {
             uniffi_xmtpv3_fn_method_ffigroup_added_by_inbox_id(self.uniffiClonePointer(), $0)
+        })
+    }
+
+    open func adminList() throws -> [String] {
+        return try FfiConverterSequenceString.lift(rustCallWithError(FfiConverterTypeGenericError.lift) {
+            uniffi_xmtpv3_fn_method_ffigroup_admin_list(self.uniffiClonePointer(), $0)
         })
     }
 
@@ -831,6 +889,12 @@ open class FfiGroup:
         })
     }
 
+    open func groupPermissions() throws -> FfiGroupPermissions {
+        return try FfiConverterTypeFfiGroupPermissions.lift(rustCallWithError(FfiConverterTypeGenericError.lift) {
+            uniffi_xmtpv3_fn_method_ffigroup_group_permissions(self.uniffiClonePointer(), $0)
+        })
+    }
+
     open func id() -> Data {
         return try! FfiConverterData.lift(try! rustCall {
             uniffi_xmtpv3_fn_method_ffigroup_id(self.uniffiClonePointer(), $0)
@@ -840,6 +904,20 @@ open class FfiGroup:
     open func isActive() throws -> Bool {
         return try FfiConverterBool.lift(rustCallWithError(FfiConverterTypeGenericError.lift) {
             uniffi_xmtpv3_fn_method_ffigroup_is_active(self.uniffiClonePointer(), $0)
+        })
+    }
+
+    open func isAdmin(inboxId: String) throws -> Bool {
+        return try FfiConverterBool.lift(rustCallWithError(FfiConverterTypeGenericError.lift) {
+            uniffi_xmtpv3_fn_method_ffigroup_is_admin(self.uniffiClonePointer(),
+                                                      FfiConverterString.lower(inboxId), $0)
+        })
+    }
+
+    open func isSuperAdmin(inboxId: String) throws -> Bool {
+        return try FfiConverterBool.lift(rustCallWithError(FfiConverterTypeGenericError.lift) {
+            uniffi_xmtpv3_fn_method_ffigroup_is_super_admin(self.uniffiClonePointer(),
+                                                            FfiConverterString.lower(inboxId), $0)
         })
     }
 
@@ -862,6 +940,23 @@ open class FfiGroup:
                 completeFunc: ffi_xmtpv3_rust_future_complete_rust_buffer,
                 freeFunc: ffi_xmtpv3_rust_future_free_rust_buffer,
                 liftFunc: FfiConverterTypeFfiMessage.lift,
+                errorHandler: FfiConverterTypeGenericError.lift
+            )
+    }
+
+    open func removeAdmin(inboxId: String) async throws {
+        return
+            try await uniffiRustCallAsync(
+                rustFutureFunc: {
+                    uniffi_xmtpv3_fn_method_ffigroup_remove_admin(
+                        self.uniffiClonePointer(),
+                        FfiConverterString.lower(inboxId)
+                    )
+                },
+                pollFunc: ffi_xmtpv3_rust_future_poll_void,
+                completeFunc: ffi_xmtpv3_rust_future_complete_void,
+                freeFunc: ffi_xmtpv3_rust_future_free_void,
+                liftFunc: { $0 },
                 errorHandler: FfiConverterTypeGenericError.lift
             )
     }
@@ -890,6 +985,23 @@ open class FfiGroup:
                     uniffi_xmtpv3_fn_method_ffigroup_remove_members_by_inbox_id(
                         self.uniffiClonePointer(),
                         FfiConverterSequenceString.lower(inboxIds)
+                    )
+                },
+                pollFunc: ffi_xmtpv3_rust_future_poll_void,
+                completeFunc: ffi_xmtpv3_rust_future_complete_void,
+                freeFunc: ffi_xmtpv3_rust_future_free_void,
+                liftFunc: { $0 },
+                errorHandler: FfiConverterTypeGenericError.lift
+            )
+    }
+
+    open func removeSuperAdmin(inboxId: String) async throws {
+        return
+            try await uniffiRustCallAsync(
+                rustFutureFunc: {
+                    uniffi_xmtpv3_fn_method_ffigroup_remove_super_admin(
+                        self.uniffiClonePointer(),
+                        FfiConverterString.lower(inboxId)
                     )
                 },
                 pollFunc: ffi_xmtpv3_rust_future_poll_void,
@@ -932,6 +1044,12 @@ open class FfiGroup:
                 liftFunc: FfiConverterTypeFfiStreamCloser.lift,
                 errorHandler: FfiConverterTypeGenericError.lift
             )
+    }
+
+    open func superAdminList() throws -> [String] {
+        return try FfiConverterSequenceString.lift(rustCallWithError(FfiConverterTypeGenericError.lift) {
+            uniffi_xmtpv3_fn_method_ffigroup_super_admin_list(self.uniffiClonePointer(), $0)
+        })
     }
 
     open func sync() async throws {
@@ -2929,8 +3047,8 @@ extension GenericError: Error {}
 // See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
 
 public enum GroupPermissions {
-    case everyoneIsAdmin
-    case groupCreatorIsAdmin
+    case allMembers
+    case adminOnly
 }
 
 public struct FfiConverterTypeGroupPermissions: FfiConverterRustBuffer {
@@ -2939,9 +3057,9 @@ public struct FfiConverterTypeGroupPermissions: FfiConverterRustBuffer {
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> GroupPermissions {
         let variant: Int32 = try readInt(&buf)
         switch variant {
-        case 1: return .everyoneIsAdmin
+        case 1: return .allMembers
 
-        case 2: return .groupCreatorIsAdmin
+        case 2: return .adminOnly
 
         default: throw UniffiInternalError.unexpectedEnumCase
         }
@@ -2949,10 +3067,10 @@ public struct FfiConverterTypeGroupPermissions: FfiConverterRustBuffer {
 
     public static func write(_ value: GroupPermissions, into buf: inout [UInt8]) {
         switch value {
-        case .everyoneIsAdmin:
+        case .allMembers:
             writeInt(&buf, Int32(1))
 
-        case .groupCreatorIsAdmin:
+        case .adminOnly:
             writeInt(&buf, Int32(2))
         }
     }
@@ -4037,13 +4155,22 @@ private var initializationResult: InitializationResult {
     if uniffi_xmtpv3_checksum_method_fficonversations_sync() != 9054 {
         return InitializationResult.apiChecksumMismatch
     }
+    if uniffi_xmtpv3_checksum_method_ffigroup_add_admin() != 4600 {
+        return InitializationResult.apiChecksumMismatch
+    }
     if uniffi_xmtpv3_checksum_method_ffigroup_add_members() != 27666 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_ffigroup_add_members_by_inbox_id() != 23290 {
         return InitializationResult.apiChecksumMismatch
     }
+    if uniffi_xmtpv3_checksum_method_ffigroup_add_super_admin() != 40681 {
+        return InitializationResult.apiChecksumMismatch
+    }
     if uniffi_xmtpv3_checksum_method_ffigroup_added_by_inbox_id() != 37220 {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if uniffi_xmtpv3_checksum_method_ffigroup_admin_list() != 51010 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_ffigroup_created_at_ns() != 4894 {
@@ -4058,10 +4185,19 @@ private var initializationResult: InitializationResult {
     if uniffi_xmtpv3_checksum_method_ffigroup_group_name() != 61525 {
         return InitializationResult.apiChecksumMismatch
     }
+    if uniffi_xmtpv3_checksum_method_ffigroup_group_permissions() != 15980 {
+        return InitializationResult.apiChecksumMismatch
+    }
     if uniffi_xmtpv3_checksum_method_ffigroup_id() != 36764 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_ffigroup_is_active() != 33848 {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if uniffi_xmtpv3_checksum_method_ffigroup_is_admin() != 26672 {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if uniffi_xmtpv3_checksum_method_ffigroup_is_super_admin() != 61614 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_ffigroup_list_members() != 61034 {
@@ -4070,16 +4206,25 @@ private var initializationResult: InitializationResult {
     if uniffi_xmtpv3_checksum_method_ffigroup_process_streamed_group_message() != 19069 {
         return InitializationResult.apiChecksumMismatch
     }
+    if uniffi_xmtpv3_checksum_method_ffigroup_remove_admin() != 57094 {
+        return InitializationResult.apiChecksumMismatch
+    }
     if uniffi_xmtpv3_checksum_method_ffigroup_remove_members() != 24336 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_ffigroup_remove_members_by_inbox_id() != 45424 {
         return InitializationResult.apiChecksumMismatch
     }
+    if uniffi_xmtpv3_checksum_method_ffigroup_remove_super_admin() != 35336 {
+        return InitializationResult.apiChecksumMismatch
+    }
     if uniffi_xmtpv3_checksum_method_ffigroup_send() != 37701 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_ffigroup_stream() != 45558 {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if uniffi_xmtpv3_checksum_method_ffigroup_super_admin_list() != 5323 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_ffigroup_sync() != 24219 {
