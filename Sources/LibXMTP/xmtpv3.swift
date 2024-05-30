@@ -511,7 +511,7 @@ public protocol FfiConversationsProtocol: AnyObject {
 
     func list(opts: FfiListConversationsOptions) async throws -> [FfiGroup]
 
-    func processStreamedWelcomeMessage(envelopeBytes: Data) throws -> FfiGroup
+    func processStreamedWelcomeMessage(envelopeBytes: Data) async throws -> FfiGroup
 
     func stream(callback: FfiConversationCallback) async throws -> FfiStreamCloser
 
@@ -594,11 +594,21 @@ open class FfiConversations:
             )
     }
 
-    open func processStreamedWelcomeMessage(envelopeBytes: Data) throws -> FfiGroup {
-        return try FfiConverterTypeFfiGroup.lift(rustCallWithError(FfiConverterTypeGenericError.lift) {
-            uniffi_xmtpv3_fn_method_fficonversations_process_streamed_welcome_message(self.uniffiClonePointer(),
-                                                                                      FfiConverterData.lower(envelopeBytes), $0)
-        })
+    open func processStreamedWelcomeMessage(envelopeBytes: Data) async throws -> FfiGroup {
+        return
+            try await uniffiRustCallAsync(
+                rustFutureFunc: {
+                    uniffi_xmtpv3_fn_method_fficonversations_process_streamed_welcome_message(
+                        self.uniffiClonePointer(),
+                        FfiConverterData.lower(envelopeBytes)
+                    )
+                },
+                pollFunc: ffi_xmtpv3_rust_future_poll_pointer,
+                completeFunc: ffi_xmtpv3_rust_future_complete_pointer,
+                freeFunc: ffi_xmtpv3_rust_future_free_pointer,
+                liftFunc: FfiConverterTypeFfiGroup.lift,
+                errorHandler: FfiConverterTypeGenericError.lift
+            )
     }
 
     open func stream(callback: FfiConversationCallback) async throws -> FfiStreamCloser {
@@ -4200,7 +4210,7 @@ private var initializationResult: InitializationResult {
     if uniffi_xmtpv3_checksum_method_fficonversations_list() != 10804 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_xmtpv3_checksum_method_fficonversations_process_streamed_welcome_message() != 38198 {
+    if uniffi_xmtpv3_checksum_method_fficonversations_process_streamed_welcome_message() != 15283 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_fficonversations_stream() != 42948 {
