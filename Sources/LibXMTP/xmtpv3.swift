@@ -1325,6 +1325,8 @@ public protocol FfiSignatureRequestProtocol: AnyObject {
 
     func addErc1271Signature(signatureBytes: Data, address: String, chainRpcUrl: String) async throws
 
+    func isReady() async -> Bool
+
     /**
      * missing signatures that are from [MemberKind::Address]
      */
@@ -1404,6 +1406,22 @@ open class FfiSignatureRequest:
                 freeFunc: ffi_xmtpv3_rust_future_free_void,
                 liftFunc: { $0 },
                 errorHandler: FfiConverterTypeGenericError.lift
+            )
+    }
+
+    open func isReady() async -> Bool {
+        return
+            try! await uniffiRustCallAsync(
+                rustFutureFunc: {
+                    uniffi_xmtpv3_fn_method_ffisignaturerequest_is_ready(
+                        self.uniffiClonePointer()
+                    )
+                },
+                pollFunc: ffi_xmtpv3_rust_future_poll_i8,
+                completeFunc: ffi_xmtpv3_rust_future_complete_i8,
+                freeFunc: ffi_xmtpv3_rust_future_free_i8,
+                liftFunc: FfiConverterBool.lift,
+                errorHandler: nil
             )
     }
 
@@ -3153,68 +3171,6 @@ public func FfiConverterTypeGroupPermissions_lower(_ value: GroupPermissions) ->
 
 extension GroupPermissions: Equatable, Hashable {}
 
-// Note that we don't yet support `indirect` for enums.
-// See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
-/**
- * XMTP SDK's may embed libxmtp (v3) alongside existing v2 protocol logic
- * for backwards-compatibility purposes. In this case, the client may already
- * have a wallet-signed v2 key. Depending on the source of this key,
- * libxmtp may choose to bootstrap v3 installation keys using the existing
- * legacy key.
- */
-
-public enum LegacyIdentitySource {
-    case none
-    case `static`
-    case network
-    case keyGenerator
-}
-
-public struct FfiConverterTypeLegacyIdentitySource: FfiConverterRustBuffer {
-    typealias SwiftType = LegacyIdentitySource
-
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> LegacyIdentitySource {
-        let variant: Int32 = try readInt(&buf)
-        switch variant {
-        case 1: return .none
-
-        case 2: return .static
-
-        case 3: return .network
-
-        case 4: return .keyGenerator
-
-        default: throw UniffiInternalError.unexpectedEnumCase
-        }
-    }
-
-    public static func write(_ value: LegacyIdentitySource, into buf: inout [UInt8]) {
-        switch value {
-        case .none:
-            writeInt(&buf, Int32(1))
-
-        case .static:
-            writeInt(&buf, Int32(2))
-
-        case .network:
-            writeInt(&buf, Int32(3))
-
-        case .keyGenerator:
-            writeInt(&buf, Int32(4))
-        }
-    }
-}
-
-public func FfiConverterTypeLegacyIdentitySource_lift(_ buf: RustBuffer) throws -> LegacyIdentitySource {
-    return try FfiConverterTypeLegacyIdentitySource.lift(buf)
-}
-
-public func FfiConverterTypeLegacyIdentitySource_lower(_ value: LegacyIdentitySource) -> RustBuffer {
-    return FfiConverterTypeLegacyIdentitySource.lower(value)
-}
-
-extension LegacyIdentitySource: Equatable, Hashable {}
-
 public enum SigningError {
     case Generic(message: String)
 }
@@ -3983,11 +3939,32 @@ private func uniffiFutureContinuationCallback(handle: UInt64, pollResult: Int8) 
     }
 }
 
-public func createClient(logger: FfiLogger, host: String, isSecure: Bool, db: String?, encryptionKey: Data?, accountAddress: String, legacyIdentitySource: LegacyIdentitySource, legacySignedPrivateKeyProto: Data?) async throws -> FfiXmtpClient {
+/**
+ * It returns a new client of the specified `inbox_id`.
+ * Note that the `inbox_id` must be either brand new or already associated with the `account_address`.
+ * i.e. `inbox_id` cannot be associated with another account address.
+ *
+ * Prior to calling this function, it's suggested to form `inbox_id`, `account_address`, and `nonce` like below.
+ *
+ * ```text
+ * inbox_id = get_inbox_id_for_address(account_address)
+ * nonce = 0
+ *
+ * // if inbox_id is not associated, we will create new one.
+ * if !inbox_id {
+ * if !legacy_key { nonce = random_u64() }
+ * inbox_id = generate_inbox_id(account_address, nonce)
+ * } // Otherwise, we will just use the inbox and ignore the nonce.
+ * db_path = $inbox_id-$env
+ *
+ * xmtp.create_client(account_address, nonce, inbox_id, Option<legacy_signed_private_key_proto>)
+ * ```
+ */
+public func createClient(logger: FfiLogger, host: String, isSecure: Bool, db: String?, encryptionKey: Data?, inboxId: String, accountAddress: String, nonce: UInt64, legacySignedPrivateKeyProto: Data?) async throws -> FfiXmtpClient {
     return
         try await uniffiRustCallAsync(
             rustFutureFunc: {
-                uniffi_xmtpv3_fn_func_create_client(FfiConverterCallbackInterfaceFfiLogger.lower(logger), FfiConverterString.lower(host), FfiConverterBool.lower(isSecure), FfiConverterOptionString.lower(db), FfiConverterOptionData.lower(encryptionKey), FfiConverterString.lower(accountAddress), FfiConverterTypeLegacyIdentitySource.lower(legacyIdentitySource), FfiConverterOptionData.lower(legacySignedPrivateKeyProto))
+                uniffi_xmtpv3_fn_func_create_client(FfiConverterCallbackInterfaceFfiLogger.lower(logger), FfiConverterString.lower(host), FfiConverterBool.lower(isSecure), FfiConverterOptionString.lower(db), FfiConverterOptionData.lower(encryptionKey), FfiConverterString.lower(inboxId), FfiConverterString.lower(accountAddress), FfiConverterUInt64.lower(nonce), FfiConverterOptionData.lower(legacySignedPrivateKeyProto))
             },
             pollFunc: ffi_xmtpv3_rust_future_poll_pointer,
             completeFunc: ffi_xmtpv3_rust_future_complete_pointer,
@@ -4156,7 +4133,7 @@ private var initializationResult: InitializationResult {
     if bindings_contract_version != scaffolding_contract_version {
         return InitializationResult.contractVersionMismatch
     }
-    if uniffi_xmtpv3_checksum_func_create_client() != 30339 {
+    if uniffi_xmtpv3_checksum_func_create_client() != 51078 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_func_create_v2_client() != 48060 {
@@ -4313,6 +4290,9 @@ private var initializationResult: InitializationResult {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_ffisignaturerequest_add_erc1271_signature() != 27040 {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if uniffi_xmtpv3_checksum_method_ffisignaturerequest_is_ready() != 65051 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_ffisignaturerequest_missing_address_signatures() != 34688 {
