@@ -507,7 +507,7 @@ private struct FfiConverterData: FfiConverterRustBuffer {
 }
 
 public protocol FfiConversationsProtocol: AnyObject {
-    func createGroup(accountAddresses: [String], permissions: GroupPermissions?) async throws -> FfiGroup
+    func createGroup(accountAddresses: [String], opts: FfiCreateGroupOptions) async throws -> FfiGroup
 
     func list(opts: FfiListConversationsOptions) async throws -> [FfiGroup]
 
@@ -560,13 +560,13 @@ open class FfiConversations:
         try! rustCall { uniffi_xmtpv3_fn_free_fficonversations(pointer, $0) }
     }
 
-    open func createGroup(accountAddresses: [String], permissions: GroupPermissions?) async throws -> FfiGroup {
+    open func createGroup(accountAddresses: [String], opts: FfiCreateGroupOptions) async throws -> FfiGroup {
         return
             try await uniffiRustCallAsync(
                 rustFutureFunc: {
                     uniffi_xmtpv3_fn_method_fficonversations_create_group(
                         self.uniffiClonePointer(),
-                        FfiConverterSequenceString.lower(accountAddresses), FfiConverterOptionTypeGroupPermissions.lower(permissions)
+                        FfiConverterSequenceString.lower(accountAddresses), FfiConverterTypeFfiCreateGroupOptions.lower(opts)
                     )
                 },
                 pollFunc: ffi_xmtpv3_rust_future_poll_pointer,
@@ -717,6 +717,8 @@ public protocol FfiGroupProtocol: AnyObject {
 
     func findMessages(opts: FfiListMessagesOptions) throws -> [FfiMessage]
 
+    func groupImageUrlSquare() throws -> String
+
     func groupMetadata() throws -> FfiGroupMetadata
 
     func groupName() throws -> String
@@ -750,6 +752,8 @@ public protocol FfiGroupProtocol: AnyObject {
     func superAdminList() throws -> [String]
 
     func sync() async throws
+
+    func updateGroupImageUrlSquare(groupImageUrlSquare: String) async throws
 
     func updateGroupName(groupName: String) async throws
 }
@@ -884,6 +888,12 @@ open class FfiGroup:
         return try FfiConverterSequenceTypeFfiMessage.lift(rustCallWithError(FfiConverterTypeGenericError.lift) {
             uniffi_xmtpv3_fn_method_ffigroup_find_messages(self.uniffiClonePointer(),
                                                            FfiConverterTypeFfiListMessagesOptions.lower(opts), $0)
+        })
+    }
+
+    open func groupImageUrlSquare() throws -> String {
+        return try FfiConverterString.lift(rustCallWithError(FfiConverterTypeGenericError.lift) {
+            uniffi_xmtpv3_fn_method_ffigroup_group_image_url_square(self.uniffiClonePointer(), $0)
         })
     }
 
@@ -1068,6 +1078,23 @@ open class FfiGroup:
                 rustFutureFunc: {
                     uniffi_xmtpv3_fn_method_ffigroup_sync(
                         self.uniffiClonePointer()
+                    )
+                },
+                pollFunc: ffi_xmtpv3_rust_future_poll_void,
+                completeFunc: ffi_xmtpv3_rust_future_complete_void,
+                freeFunc: ffi_xmtpv3_rust_future_free_void,
+                liftFunc: { $0 },
+                errorHandler: FfiConverterTypeGenericError.lift
+            )
+    }
+
+    open func updateGroupImageUrlSquare(groupImageUrlSquare: String) async throws {
+        return
+            try await uniffiRustCallAsync(
+                rustFutureFunc: {
+                    uniffi_xmtpv3_fn_method_ffigroup_update_group_image_url_square(
+                        self.uniffiClonePointer(),
+                        FfiConverterString.lower(groupImageUrlSquare)
                     )
                 },
                 pollFunc: ffi_xmtpv3_rust_future_poll_void,
@@ -1323,7 +1350,7 @@ public func FfiConverterTypeFfiGroupPermissions_lower(_ value: FfiGroupPermissio
 public protocol FfiSignatureRequestProtocol: AnyObject {
     func addEcdsaSignature(signatureBytes: Data) async throws
 
-    func addErc1271Signature(signatureBytes: Data, address: String, chainRpcUrl: String) async throws
+    func addScwSignature(signatureBytes: Data, address: String, chainRpcUrl: String) async throws
 
     func isReady() async -> Bool
 
@@ -1392,11 +1419,11 @@ open class FfiSignatureRequest:
             )
     }
 
-    open func addErc1271Signature(signatureBytes: Data, address: String, chainRpcUrl: String) async throws {
+    open func addScwSignature(signatureBytes: Data, address: String, chainRpcUrl: String) async throws {
         return
             try await uniffiRustCallAsync(
                 rustFutureFunc: {
-                    uniffi_xmtpv3_fn_method_ffisignaturerequest_add_erc1271_signature(
+                    uniffi_xmtpv3_fn_method_ffisignaturerequest_add_scw_signature(
                         self.uniffiClonePointer(),
                         FfiConverterData.lower(signatureBytes), FfiConverterString.lower(address), FfiConverterString.lower(chainRpcUrl)
                     )
@@ -2070,6 +2097,66 @@ public func FfiConverterTypeFfiXmtpClient_lift(_ pointer: UnsafeMutableRawPointe
 
 public func FfiConverterTypeFfiXmtpClient_lower(_ value: FfiXmtpClient) -> UnsafeMutableRawPointer {
     return FfiConverterTypeFfiXmtpClient.lower(value)
+}
+
+public struct FfiCreateGroupOptions {
+    public var permissions: GroupPermissions?
+    public var groupName: String?
+    public var groupImageUrlSquare: String?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(permissions: GroupPermissions?, groupName: String?, groupImageUrlSquare: String?) {
+        self.permissions = permissions
+        self.groupName = groupName
+        self.groupImageUrlSquare = groupImageUrlSquare
+    }
+}
+
+extension FfiCreateGroupOptions: Equatable, Hashable {
+    public static func == (lhs: FfiCreateGroupOptions, rhs: FfiCreateGroupOptions) -> Bool {
+        if lhs.permissions != rhs.permissions {
+            return false
+        }
+        if lhs.groupName != rhs.groupName {
+            return false
+        }
+        if lhs.groupImageUrlSquare != rhs.groupImageUrlSquare {
+            return false
+        }
+        return true
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(permissions)
+        hasher.combine(groupName)
+        hasher.combine(groupImageUrlSquare)
+    }
+}
+
+public struct FfiConverterTypeFfiCreateGroupOptions: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiCreateGroupOptions {
+        return
+            try FfiCreateGroupOptions(
+                permissions: FfiConverterOptionTypeGroupPermissions.read(from: &buf),
+                groupName: FfiConverterOptionString.read(from: &buf),
+                groupImageUrlSquare: FfiConverterOptionString.read(from: &buf)
+            )
+    }
+
+    public static func write(_ value: FfiCreateGroupOptions, into buf: inout [UInt8]) {
+        FfiConverterOptionTypeGroupPermissions.write(value.permissions, into: &buf)
+        FfiConverterOptionString.write(value.groupName, into: &buf)
+        FfiConverterOptionString.write(value.groupImageUrlSquare, into: &buf)
+    }
+}
+
+public func FfiConverterTypeFfiCreateGroupOptions_lift(_ buf: RustBuffer) throws -> FfiCreateGroupOptions {
+    return try FfiConverterTypeFfiCreateGroupOptions.lift(buf)
+}
+
+public func FfiConverterTypeFfiCreateGroupOptions_lower(_ value: FfiCreateGroupOptions) -> RustBuffer {
+    return FfiConverterTypeFfiCreateGroupOptions.lower(value)
 }
 
 public struct FfiCursor {
@@ -4181,7 +4268,7 @@ private var initializationResult: InitializationResult {
     if uniffi_xmtpv3_checksum_func_verify_k256_sha256() != 25521 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_xmtpv3_checksum_method_fficonversations_create_group() != 1475 {
+    if uniffi_xmtpv3_checksum_method_fficonversations_create_group() != 62996 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_fficonversations_list() != 10804 {
@@ -4221,6 +4308,9 @@ private var initializationResult: InitializationResult {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_ffigroup_find_messages() != 14930 {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if uniffi_xmtpv3_checksum_method_ffigroup_group_image_url_square() != 16754 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_ffigroup_group_metadata() != 13139 {
@@ -4274,6 +4364,9 @@ private var initializationResult: InitializationResult {
     if uniffi_xmtpv3_checksum_method_ffigroup_sync() != 24219 {
         return InitializationResult.apiChecksumMismatch
     }
+    if uniffi_xmtpv3_checksum_method_ffigroup_update_group_image_url_square() != 18878 {
+        return InitializationResult.apiChecksumMismatch
+    }
     if uniffi_xmtpv3_checksum_method_ffigroup_update_group_name() != 550 {
         return InitializationResult.apiChecksumMismatch
     }
@@ -4289,7 +4382,7 @@ private var initializationResult: InitializationResult {
     if uniffi_xmtpv3_checksum_method_ffisignaturerequest_add_ecdsa_signature() != 8706 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_xmtpv3_checksum_method_ffisignaturerequest_add_erc1271_signature() != 27040 {
+    if uniffi_xmtpv3_checksum_method_ffisignaturerequest_add_scw_signature() != 59425 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_ffisignaturerequest_is_ready() != 65051 {
