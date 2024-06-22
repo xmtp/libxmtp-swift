@@ -1,16 +1,16 @@
 Pod::Spec.new do |s|
   s.name             = 'LibXMTP'
-  s.version          = '0.5.2-beta0'
+  s.version          = '0.5.3-beta0'
   s.summary          = 'XMTP shared Rust code that powers cross-platform SDKs'
 
   s.homepage         = 'https://github.com/xmtp/libxmtp-swift'
   s.license          = { :type => 'MIT', :file => 'LICENSE' }
   s.author           = { 'XMTP Labs' => 'eng@xmtp.com' }
 
-  s.platform         = :ios, '13.0', :macos, '11.0'
+  s.platform         = :ios, '14.0', :macos, '11.0'
   s.swift_version    = '5.3'
 
-  s.source       = { :http => "https://github.com/xmtp/libxmtp/releases/download/swift-bindings-68ac19c/LibXMTPSwiftFFI.zip", :type => :zip }
+  s.source       = { :http => "https://github.com/xmtp/libxmtp/releases/download/swift-bindings-03b1a89/LibXMTPSwiftFFI.zip", :type => :zip }
   s.vendored_frameworks = 'LibXMTPSwiftFFI.xcframework'
   s.source_files = 'Sources/LibXMTP/**/*'
 end

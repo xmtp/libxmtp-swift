@@ -1938,6 +1938,8 @@ public protocol FfiXmtpClientProtocol: AnyObject {
 
     func releaseDbConnection() throws
 
+    func requestHistorySync() async throws
+
     func signatureRequest() -> FfiSignatureRequest?
 }
 
@@ -2052,6 +2054,22 @@ open class FfiXmtpClient:
     open func releaseDbConnection() throws { try rustCallWithError(FfiConverterTypeGenericError.lift) {
         uniffi_xmtpv3_fn_method_ffixmtpclient_release_db_connection(self.uniffiClonePointer(), $0)
     }
+    }
+
+    open func requestHistorySync() async throws {
+        return
+            try await uniffiRustCallAsync(
+                rustFutureFunc: {
+                    uniffi_xmtpv3_fn_method_ffixmtpclient_request_history_sync(
+                        self.uniffiClonePointer()
+                    )
+                },
+                pollFunc: ffi_xmtpv3_rust_future_poll_void,
+                completeFunc: ffi_xmtpv3_rust_future_complete_void,
+                freeFunc: ffi_xmtpv3_rust_future_free_void,
+                liftFunc: { $0 },
+                errorHandler: FfiConverterTypeGenericError.lift
+            )
     }
 
     open func signatureRequest() -> FfiSignatureRequest? {
@@ -4047,11 +4065,11 @@ private func uniffiFutureContinuationCallback(handle: UInt64, pollResult: Int8) 
  * xmtp.create_client(account_address, nonce, inbox_id, Option<legacy_signed_private_key_proto>)
  * ```
  */
-public func createClient(logger: FfiLogger, host: String, isSecure: Bool, db: String?, encryptionKey: Data?, inboxId: String, accountAddress: String, nonce: UInt64, legacySignedPrivateKeyProto: Data?) async throws -> FfiXmtpClient {
+public func createClient(logger: FfiLogger, host: String, isSecure: Bool, db: String?, encryptionKey: Data?, inboxId: String, accountAddress: String, nonce: UInt64, legacySignedPrivateKeyProto: Data?, historySyncUrl: String?) async throws -> FfiXmtpClient {
     return
         try await uniffiRustCallAsync(
             rustFutureFunc: {
-                uniffi_xmtpv3_fn_func_create_client(FfiConverterCallbackInterfaceFfiLogger.lower(logger), FfiConverterString.lower(host), FfiConverterBool.lower(isSecure), FfiConverterOptionString.lower(db), FfiConverterOptionData.lower(encryptionKey), FfiConverterString.lower(inboxId), FfiConverterString.lower(accountAddress), FfiConverterUInt64.lower(nonce), FfiConverterOptionData.lower(legacySignedPrivateKeyProto))
+                uniffi_xmtpv3_fn_func_create_client(FfiConverterCallbackInterfaceFfiLogger.lower(logger), FfiConverterString.lower(host), FfiConverterBool.lower(isSecure), FfiConverterOptionString.lower(db), FfiConverterOptionData.lower(encryptionKey), FfiConverterString.lower(inboxId), FfiConverterString.lower(accountAddress), FfiConverterUInt64.lower(nonce), FfiConverterOptionData.lower(legacySignedPrivateKeyProto), FfiConverterOptionString.lower(historySyncUrl))
             },
             pollFunc: ffi_xmtpv3_rust_future_poll_pointer,
             completeFunc: ffi_xmtpv3_rust_future_complete_pointer,
@@ -4220,7 +4238,7 @@ private var initializationResult: InitializationResult {
     if bindings_contract_version != scaffolding_contract_version {
         return InitializationResult.contractVersionMismatch
     }
-    if uniffi_xmtpv3_checksum_func_create_client() != 51078 {
+    if uniffi_xmtpv3_checksum_func_create_client() != 6255 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_func_create_v2_client() != 48060 {
@@ -4443,6 +4461,9 @@ private var initializationResult: InitializationResult {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_ffixmtpclient_release_db_connection() != 11067 {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if uniffi_xmtpv3_checksum_method_ffixmtpclient_request_history_sync() != 22295 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_ffixmtpclient_signature_request() != 18270 {
