@@ -1930,9 +1930,15 @@ public protocol FfiXmtpClientProtocol: AnyObject {
 
     func dbReconnect() async throws
 
+    func findInboxId(address: String) async throws -> String?
+
+    func group(groupId: Data) throws -> FfiGroup
+
     func inboxId() -> String
 
     func installationId() -> Data
+
+    func message(messageId: Data) throws -> FfiMessage
 
     func registerIdentity(signatureRequest: FfiSignatureRequest) async throws
 
@@ -2022,6 +2028,30 @@ open class FfiXmtpClient:
             )
     }
 
+    open func findInboxId(address: String) async throws -> String? {
+        return
+            try await uniffiRustCallAsync(
+                rustFutureFunc: {
+                    uniffi_xmtpv3_fn_method_ffixmtpclient_find_inbox_id(
+                        self.uniffiClonePointer(),
+                        FfiConverterString.lower(address)
+                    )
+                },
+                pollFunc: ffi_xmtpv3_rust_future_poll_rust_buffer,
+                completeFunc: ffi_xmtpv3_rust_future_complete_rust_buffer,
+                freeFunc: ffi_xmtpv3_rust_future_free_rust_buffer,
+                liftFunc: FfiConverterOptionString.lift,
+                errorHandler: FfiConverterTypeGenericError.lift
+            )
+    }
+
+    open func group(groupId: Data) throws -> FfiGroup {
+        return try FfiConverterTypeFfiGroup.lift(rustCallWithError(FfiConverterTypeGenericError.lift) {
+            uniffi_xmtpv3_fn_method_ffixmtpclient_group(self.uniffiClonePointer(),
+                                                        FfiConverterData.lower(groupId), $0)
+        })
+    }
+
     open func inboxId() -> String {
         return try! FfiConverterString.lift(try! rustCall {
             uniffi_xmtpv3_fn_method_ffixmtpclient_inbox_id(self.uniffiClonePointer(), $0)
@@ -2031,6 +2061,13 @@ open class FfiXmtpClient:
     open func installationId() -> Data {
         return try! FfiConverterData.lift(try! rustCall {
             uniffi_xmtpv3_fn_method_ffixmtpclient_installation_id(self.uniffiClonePointer(), $0)
+        })
+    }
+
+    open func message(messageId: Data) throws -> FfiMessage {
+        return try FfiConverterTypeFfiMessage.lift(rustCallWithError(FfiConverterTypeGenericError.lift) {
+            uniffi_xmtpv3_fn_method_ffixmtpclient_message(self.uniffiClonePointer(),
+                                                          FfiConverterData.lower(messageId), $0)
         })
     }
 
@@ -4451,10 +4488,19 @@ private var initializationResult: InitializationResult {
     if uniffi_xmtpv3_checksum_method_ffixmtpclient_db_reconnect() != 6707 {
         return InitializationResult.apiChecksumMismatch
     }
+    if uniffi_xmtpv3_checksum_method_ffixmtpclient_find_inbox_id() != 59020 {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if uniffi_xmtpv3_checksum_method_ffixmtpclient_group() != 64533 {
+        return InitializationResult.apiChecksumMismatch
+    }
     if uniffi_xmtpv3_checksum_method_ffixmtpclient_inbox_id() != 25128 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_ffixmtpclient_installation_id() != 37173 {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if uniffi_xmtpv3_checksum_method_ffixmtpclient_message() != 26932 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_ffixmtpclient_register_identity() != 42003 {
