@@ -3276,6 +3276,7 @@ extension GenericError: Error {}
 public enum GroupPermissions {
     case allMembers
     case adminOnly
+    case customPolicy
 }
 
 public struct FfiConverterTypeGroupPermissions: FfiConverterRustBuffer {
@@ -3288,6 +3289,8 @@ public struct FfiConverterTypeGroupPermissions: FfiConverterRustBuffer {
 
         case 2: return .adminOnly
 
+        case 3: return .customPolicy
+
         default: throw UniffiInternalError.unexpectedEnumCase
         }
     }
@@ -3299,6 +3302,9 @@ public struct FfiConverterTypeGroupPermissions: FfiConverterRustBuffer {
 
         case .adminOnly:
             writeInt(&buf, Int32(2))
+
+        case .customPolicy:
+            writeInt(&buf, Int32(3))
         }
     }
 }
