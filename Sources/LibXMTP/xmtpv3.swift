@@ -1631,7 +1631,7 @@ public protocol FfiV2ApiClientProtocol: AnyObject {
 
     func setAppVersion(version: String)
 
-    func subscribe(request: FfiV2SubscribeRequest) async throws -> FfiV2Subscription
+    func subscribe(request: FfiV2SubscribeRequest, callback: FfiV2SubscriptionCallback) async throws -> FfiV2Subscription
 }
 
 open class FfiV2ApiClient:
@@ -1731,13 +1731,13 @@ open class FfiV2ApiClient:
     }
     }
 
-    open func subscribe(request: FfiV2SubscribeRequest) async throws -> FfiV2Subscription {
+    open func subscribe(request: FfiV2SubscribeRequest, callback: FfiV2SubscriptionCallback) async throws -> FfiV2Subscription {
         return
             try await uniffiRustCallAsync(
                 rustFutureFunc: {
                     uniffi_xmtpv3_fn_method_ffiv2apiclient_subscribe(
                         self.uniffiClonePointer(),
-                        FfiConverterTypeFfiV2SubscribeRequest.lower(request)
+                        FfiConverterTypeFfiV2SubscribeRequest.lower(request), FfiConverterCallbackInterfaceFfiV2SubscriptionCallback.lower(callback)
                     )
                 },
                 pollFunc: ffi_xmtpv3_rust_future_poll_pointer,
@@ -1787,14 +1787,31 @@ public func FfiConverterTypeFfiV2ApiClient_lower(_ value: FfiV2ApiClient) -> Uns
     return FfiConverterTypeFfiV2ApiClient.lower(value)
 }
 
+/**
+ * Subscription to a stream of V2 Messages
+ */
 public protocol FfiV2SubscriptionProtocol: AnyObject {
-    func end() async
+    /**
+     * End the subscription, waiting for the subscription to close entirely.
+     * # Errors
+     * * Errors if subscription event task encounters join error
+     */
+    func end() async throws
 
-    func next() async throws -> FfiEnvelope
+    /**
+     * Check if the subscription is closed
+     */
+    func isClosed() -> Bool
 
+    /**
+     * Update subscription with new topics
+     */
     func update(req: FfiV2SubscribeRequest) async throws
 }
 
+/**
+ * Subscription to a stream of V2 Messages
+ */
 open class FfiV2Subscription:
     FfiV2SubscriptionProtocol
 {
@@ -1835,9 +1852,14 @@ open class FfiV2Subscription:
         try! rustCall { uniffi_xmtpv3_fn_free_ffiv2subscription(pointer, $0) }
     }
 
-    open func end() async {
+    /**
+     * End the subscription, waiting for the subscription to close entirely.
+     * # Errors
+     * * Errors if subscription event task encounters join error
+     */
+    open func end() async throws {
         return
-            try! await uniffiRustCallAsync(
+            try await uniffiRustCallAsync(
                 rustFutureFunc: {
                     uniffi_xmtpv3_fn_method_ffiv2subscription_end(
                         self.uniffiClonePointer()
@@ -1847,26 +1869,22 @@ open class FfiV2Subscription:
                 completeFunc: ffi_xmtpv3_rust_future_complete_void,
                 freeFunc: ffi_xmtpv3_rust_future_free_void,
                 liftFunc: { $0 },
-                errorHandler: nil
-            )
-    }
-
-    open func next() async throws -> FfiEnvelope {
-        return
-            try await uniffiRustCallAsync(
-                rustFutureFunc: {
-                    uniffi_xmtpv3_fn_method_ffiv2subscription_next(
-                        self.uniffiClonePointer()
-                    )
-                },
-                pollFunc: ffi_xmtpv3_rust_future_poll_rust_buffer,
-                completeFunc: ffi_xmtpv3_rust_future_complete_rust_buffer,
-                freeFunc: ffi_xmtpv3_rust_future_free_rust_buffer,
-                liftFunc: FfiConverterTypeFfiEnvelope.lift,
                 errorHandler: FfiConverterTypeGenericError.lift
             )
     }
 
+    /**
+     * Check if the subscription is closed
+     */
+    open func isClosed() -> Bool {
+        return try! FfiConverterBool.lift(try! rustCall {
+            uniffi_xmtpv3_fn_method_ffiv2subscription_is_closed(self.uniffiClonePointer(), $0)
+        })
+    }
+
+    /**
+     * Update subscription with new topics
+     */
     open func update(req: FfiV2SubscribeRequest) async throws {
         return
             try await uniffiRustCallAsync(
@@ -3673,6 +3691,78 @@ extension FfiConverterCallbackInterfaceFfiMessageCallback: FfiConverter {
     }
 }
 
+public protocol FfiV2SubscriptionCallback: AnyObject {
+    func onMessage(message: FfiEnvelope)
+}
+
+// Put the implementation in a struct so we don't pollute the top-level namespace
+private enum UniffiCallbackInterfaceFfiV2SubscriptionCallback {
+    // Create the VTable using a series of closures.
+    // Swift automatically converts these into C callback functions.
+    static var vtable: UniffiVTableCallbackInterfaceFfiV2SubscriptionCallback = .init(
+        onMessage: { (
+            uniffiHandle: UInt64,
+            message: RustBuffer,
+            _: UnsafeMutableRawPointer,
+            uniffiCallStatus: UnsafeMutablePointer<RustCallStatus>
+        ) in
+            let makeCall = {
+                () throws in
+                guard let uniffiObj = try? FfiConverterCallbackInterfaceFfiV2SubscriptionCallback.handleMap.get(handle: uniffiHandle) else {
+                    throw UniffiInternalError.unexpectedStaleHandle
+                }
+                return try uniffiObj.onMessage(
+                    message: FfiConverterTypeFfiEnvelope.lift(message)
+                )
+            }
+
+            let writeReturn = { () }
+            uniffiTraitInterfaceCall(
+                callStatus: uniffiCallStatus,
+                makeCall: makeCall,
+                writeReturn: writeReturn
+            )
+        },
+        uniffiFree: { (uniffiHandle: UInt64) in
+            let result = try? FfiConverterCallbackInterfaceFfiV2SubscriptionCallback.handleMap.remove(handle: uniffiHandle)
+            if result == nil {
+                print("Uniffi callback interface FfiV2SubscriptionCallback: handle missing in uniffiFree")
+            }
+        }
+    )
+}
+
+private func uniffiCallbackInitFfiV2SubscriptionCallback() {
+    uniffi_xmtpv3_fn_init_callback_vtable_ffiv2subscriptioncallback(&UniffiCallbackInterfaceFfiV2SubscriptionCallback.vtable)
+}
+
+// FfiConverter protocol for callback interfaces
+private enum FfiConverterCallbackInterfaceFfiV2SubscriptionCallback {
+    fileprivate static var handleMap = UniffiHandleMap<FfiV2SubscriptionCallback>()
+}
+
+extension FfiConverterCallbackInterfaceFfiV2SubscriptionCallback: FfiConverter {
+    typealias SwiftType = FfiV2SubscriptionCallback
+    typealias FfiType = UInt64
+
+    public static func lift(_ handle: UInt64) throws -> SwiftType {
+        try handleMap.get(handle: handle)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        let handle: UInt64 = try readInt(&buf)
+        return try lift(handle)
+    }
+
+    public static func lower(_ v: SwiftType) -> UInt64 {
+        return handleMap.insert(obj: v)
+    }
+
+    public static func write(_ v: SwiftType, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(v))
+    }
+}
+
 private struct FfiConverterOptionInt64: FfiConverterRustBuffer {
     typealias SwiftType = Int64?
 
@@ -4473,16 +4563,16 @@ private var initializationResult: InitializationResult {
     if uniffi_xmtpv3_checksum_method_ffiv2apiclient_set_app_version() != 28472 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_xmtpv3_checksum_method_ffiv2apiclient_subscribe() != 31004 {
+    if uniffi_xmtpv3_checksum_method_ffiv2apiclient_subscribe() != 48530 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_xmtpv3_checksum_method_ffiv2subscription_end() != 54394 {
+    if uniffi_xmtpv3_checksum_method_ffiv2subscription_end() != 38721 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_xmtpv3_checksum_method_ffiv2subscription_next() != 27536 {
+    if uniffi_xmtpv3_checksum_method_ffiv2subscription_is_closed() != 4358 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_xmtpv3_checksum_method_ffiv2subscription_update() != 16562 {
+    if uniffi_xmtpv3_checksum_method_ffiv2subscription_update() != 24211 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_ffixmtpclient_can_message() != 53502 {
@@ -4536,11 +4626,15 @@ private var initializationResult: InitializationResult {
     if uniffi_xmtpv3_checksum_method_ffimessagecallback_on_message() != 5286 {
         return InitializationResult.apiChecksumMismatch
     }
+    if uniffi_xmtpv3_checksum_method_ffiv2subscriptioncallback_on_message() != 30049 {
+        return InitializationResult.apiChecksumMismatch
+    }
 
     uniffiCallbackInitFfiConversationCallback()
     uniffiCallbackInitFfiInboxOwner()
     uniffiCallbackInitFfiLogger()
     uniffiCallbackInitFfiMessageCallback()
+    uniffiCallbackInitFfiV2SubscriptionCallback()
     return InitializationResult.ok
 }
 
