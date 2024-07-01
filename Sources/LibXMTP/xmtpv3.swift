@@ -717,6 +717,8 @@ public protocol FfiGroupProtocol: AnyObject {
 
     func findMessages(opts: FfiListMessagesOptions) throws -> [FfiMessage]
 
+    func groupDescription() throws -> String
+
     func groupImageUrlSquare() throws -> String
 
     func groupMetadata() throws -> FfiGroupMetadata
@@ -753,9 +755,13 @@ public protocol FfiGroupProtocol: AnyObject {
 
     func sync() async throws
 
+    func updateGroupDescription(groupDescription: String) async throws
+
     func updateGroupImageUrlSquare(groupImageUrlSquare: String) async throws
 
     func updateGroupName(groupName: String) async throws
+
+    func updatePermissionPolicy(permissionUpdateType: FfiPermissionUpdateType, permissionPolicyOption: FfiPermissionPolicy, metadataField: FfiMetadataField?) async throws
 }
 
 open class FfiGroup:
@@ -888,6 +894,12 @@ open class FfiGroup:
         return try FfiConverterSequenceTypeFfiMessage.lift(rustCallWithError(FfiConverterTypeGenericError.lift) {
             uniffi_xmtpv3_fn_method_ffigroup_find_messages(self.uniffiClonePointer(),
                                                            FfiConverterTypeFfiListMessagesOptions.lower(opts), $0)
+        })
+    }
+
+    open func groupDescription() throws -> String {
+        return try FfiConverterString.lift(rustCallWithError(FfiConverterTypeGenericError.lift) {
+            uniffi_xmtpv3_fn_method_ffigroup_group_description(self.uniffiClonePointer(), $0)
         })
     }
 
@@ -1088,6 +1100,23 @@ open class FfiGroup:
             )
     }
 
+    open func updateGroupDescription(groupDescription: String) async throws {
+        return
+            try await uniffiRustCallAsync(
+                rustFutureFunc: {
+                    uniffi_xmtpv3_fn_method_ffigroup_update_group_description(
+                        self.uniffiClonePointer(),
+                        FfiConverterString.lower(groupDescription)
+                    )
+                },
+                pollFunc: ffi_xmtpv3_rust_future_poll_void,
+                completeFunc: ffi_xmtpv3_rust_future_complete_void,
+                freeFunc: ffi_xmtpv3_rust_future_free_void,
+                liftFunc: { $0 },
+                errorHandler: FfiConverterTypeGenericError.lift
+            )
+    }
+
     open func updateGroupImageUrlSquare(groupImageUrlSquare: String) async throws {
         return
             try await uniffiRustCallAsync(
@@ -1112,6 +1141,23 @@ open class FfiGroup:
                     uniffi_xmtpv3_fn_method_ffigroup_update_group_name(
                         self.uniffiClonePointer(),
                         FfiConverterString.lower(groupName)
+                    )
+                },
+                pollFunc: ffi_xmtpv3_rust_future_poll_void,
+                completeFunc: ffi_xmtpv3_rust_future_complete_void,
+                freeFunc: ffi_xmtpv3_rust_future_free_void,
+                liftFunc: { $0 },
+                errorHandler: FfiConverterTypeGenericError.lift
+            )
+    }
+
+    open func updatePermissionPolicy(permissionUpdateType: FfiPermissionUpdateType, permissionPolicyOption: FfiPermissionPolicy, metadataField: FfiMetadataField?) async throws {
+        return
+            try await uniffiRustCallAsync(
+                rustFutureFunc: {
+                    uniffi_xmtpv3_fn_method_ffigroup_update_permission_policy(
+                        self.uniffiClonePointer(),
+                        FfiConverterTypeFfiPermissionUpdateType.lower(permissionUpdateType), FfiConverterTypeFfiPermissionPolicy.lower(permissionPolicyOption), FfiConverterOptionTypeFfiMetadataField.lower(metadataField)
                     )
                 },
                 pollFunc: ffi_xmtpv3_rust_future_poll_void,
@@ -1259,7 +1305,9 @@ public func FfiConverterTypeFfiGroupMetadata_lower(_ value: FfiGroupMetadata) ->
 }
 
 public protocol FfiGroupPermissionsProtocol: AnyObject {
-    func policyType() throws -> GroupPermissions
+    func policySet() throws -> FfiPermissionPolicySet
+
+    func policyType() throws -> FfiGroupPermissionsOptions
 }
 
 open class FfiGroupPermissions:
@@ -1302,8 +1350,14 @@ open class FfiGroupPermissions:
         try! rustCall { uniffi_xmtpv3_fn_free_ffigrouppermissions(pointer, $0) }
     }
 
-    open func policyType() throws -> GroupPermissions {
-        return try FfiConverterTypeGroupPermissions.lift(rustCallWithError(FfiConverterTypeGenericError.lift) {
+    open func policySet() throws -> FfiPermissionPolicySet {
+        return try FfiConverterTypeFfiPermissionPolicySet.lift(rustCallWithError(FfiConverterTypeGenericError.lift) {
+            uniffi_xmtpv3_fn_method_ffigrouppermissions_policy_set(self.uniffiClonePointer(), $0)
+        })
+    }
+
+    open func policyType() throws -> FfiGroupPermissionsOptions {
+        return try FfiConverterTypeFfiGroupPermissionsOptions.lift(rustCallWithError(FfiConverterTypeGenericError.lift) {
             uniffi_xmtpv3_fn_method_ffigrouppermissions_policy_type(self.uniffiClonePointer(), $0)
         })
     }
@@ -2173,16 +2227,18 @@ public func FfiConverterTypeFfiXmtpClient_lower(_ value: FfiXmtpClient) -> Unsaf
 }
 
 public struct FfiCreateGroupOptions {
-    public var permissions: GroupPermissions?
+    public var permissions: FfiGroupPermissionsOptions?
     public var groupName: String?
     public var groupImageUrlSquare: String?
+    public var groupDescription: String?
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
-    public init(permissions: GroupPermissions?, groupName: String?, groupImageUrlSquare: String?) {
+    public init(permissions: FfiGroupPermissionsOptions?, groupName: String?, groupImageUrlSquare: String?, groupDescription: String?) {
         self.permissions = permissions
         self.groupName = groupName
         self.groupImageUrlSquare = groupImageUrlSquare
+        self.groupDescription = groupDescription
     }
 }
 
@@ -2197,6 +2253,9 @@ extension FfiCreateGroupOptions: Equatable, Hashable {
         if lhs.groupImageUrlSquare != rhs.groupImageUrlSquare {
             return false
         }
+        if lhs.groupDescription != rhs.groupDescription {
+            return false
+        }
         return true
     }
 
@@ -2204,6 +2263,7 @@ extension FfiCreateGroupOptions: Equatable, Hashable {
         hasher.combine(permissions)
         hasher.combine(groupName)
         hasher.combine(groupImageUrlSquare)
+        hasher.combine(groupDescription)
     }
 }
 
@@ -2211,16 +2271,18 @@ public struct FfiConverterTypeFfiCreateGroupOptions: FfiConverterRustBuffer {
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiCreateGroupOptions {
         return
             try FfiCreateGroupOptions(
-                permissions: FfiConverterOptionTypeGroupPermissions.read(from: &buf),
+                permissions: FfiConverterOptionTypeFfiGroupPermissionsOptions.read(from: &buf),
                 groupName: FfiConverterOptionString.read(from: &buf),
-                groupImageUrlSquare: FfiConverterOptionString.read(from: &buf)
+                groupImageUrlSquare: FfiConverterOptionString.read(from: &buf),
+                groupDescription: FfiConverterOptionString.read(from: &buf)
             )
     }
 
     public static func write(_ value: FfiCreateGroupOptions, into buf: inout [UInt8]) {
-        FfiConverterOptionTypeGroupPermissions.write(value.permissions, into: &buf)
+        FfiConverterOptionTypeFfiGroupPermissionsOptions.write(value.permissions, into: &buf)
         FfiConverterOptionString.write(value.groupName, into: &buf)
         FfiConverterOptionString.write(value.groupImageUrlSquare, into: &buf)
+        FfiConverterOptionString.write(value.groupDescription, into: &buf)
     }
 }
 
@@ -2692,6 +2754,98 @@ public func FfiConverterTypeFfiPagingInfo_lower(_ value: FfiPagingInfo) -> RustB
     return FfiConverterTypeFfiPagingInfo.lower(value)
 }
 
+public struct FfiPermissionPolicySet {
+    public var addMemberPolicy: FfiPermissionPolicy
+    public var removeMemberPolicy: FfiPermissionPolicy
+    public var addAdminPolicy: FfiPermissionPolicy
+    public var removeAdminPolicy: FfiPermissionPolicy
+    public var updateGroupNamePolicy: FfiPermissionPolicy
+    public var updateGroupDescriptionPolicy: FfiPermissionPolicy
+    public var updateGroupImageUrlSquarePolicy: FfiPermissionPolicy
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(addMemberPolicy: FfiPermissionPolicy, removeMemberPolicy: FfiPermissionPolicy, addAdminPolicy: FfiPermissionPolicy, removeAdminPolicy: FfiPermissionPolicy, updateGroupNamePolicy: FfiPermissionPolicy, updateGroupDescriptionPolicy: FfiPermissionPolicy, updateGroupImageUrlSquarePolicy: FfiPermissionPolicy) {
+        self.addMemberPolicy = addMemberPolicy
+        self.removeMemberPolicy = removeMemberPolicy
+        self.addAdminPolicy = addAdminPolicy
+        self.removeAdminPolicy = removeAdminPolicy
+        self.updateGroupNamePolicy = updateGroupNamePolicy
+        self.updateGroupDescriptionPolicy = updateGroupDescriptionPolicy
+        self.updateGroupImageUrlSquarePolicy = updateGroupImageUrlSquarePolicy
+    }
+}
+
+extension FfiPermissionPolicySet: Equatable, Hashable {
+    public static func == (lhs: FfiPermissionPolicySet, rhs: FfiPermissionPolicySet) -> Bool {
+        if lhs.addMemberPolicy != rhs.addMemberPolicy {
+            return false
+        }
+        if lhs.removeMemberPolicy != rhs.removeMemberPolicy {
+            return false
+        }
+        if lhs.addAdminPolicy != rhs.addAdminPolicy {
+            return false
+        }
+        if lhs.removeAdminPolicy != rhs.removeAdminPolicy {
+            return false
+        }
+        if lhs.updateGroupNamePolicy != rhs.updateGroupNamePolicy {
+            return false
+        }
+        if lhs.updateGroupDescriptionPolicy != rhs.updateGroupDescriptionPolicy {
+            return false
+        }
+        if lhs.updateGroupImageUrlSquarePolicy != rhs.updateGroupImageUrlSquarePolicy {
+            return false
+        }
+        return true
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(addMemberPolicy)
+        hasher.combine(removeMemberPolicy)
+        hasher.combine(addAdminPolicy)
+        hasher.combine(removeAdminPolicy)
+        hasher.combine(updateGroupNamePolicy)
+        hasher.combine(updateGroupDescriptionPolicy)
+        hasher.combine(updateGroupImageUrlSquarePolicy)
+    }
+}
+
+public struct FfiConverterTypeFfiPermissionPolicySet: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiPermissionPolicySet {
+        return
+            try FfiPermissionPolicySet(
+                addMemberPolicy: FfiConverterTypeFfiPermissionPolicy.read(from: &buf),
+                removeMemberPolicy: FfiConverterTypeFfiPermissionPolicy.read(from: &buf),
+                addAdminPolicy: FfiConverterTypeFfiPermissionPolicy.read(from: &buf),
+                removeAdminPolicy: FfiConverterTypeFfiPermissionPolicy.read(from: &buf),
+                updateGroupNamePolicy: FfiConverterTypeFfiPermissionPolicy.read(from: &buf),
+                updateGroupDescriptionPolicy: FfiConverterTypeFfiPermissionPolicy.read(from: &buf),
+                updateGroupImageUrlSquarePolicy: FfiConverterTypeFfiPermissionPolicy.read(from: &buf)
+            )
+    }
+
+    public static func write(_ value: FfiPermissionPolicySet, into buf: inout [UInt8]) {
+        FfiConverterTypeFfiPermissionPolicy.write(value.addMemberPolicy, into: &buf)
+        FfiConverterTypeFfiPermissionPolicy.write(value.removeMemberPolicy, into: &buf)
+        FfiConverterTypeFfiPermissionPolicy.write(value.addAdminPolicy, into: &buf)
+        FfiConverterTypeFfiPermissionPolicy.write(value.removeAdminPolicy, into: &buf)
+        FfiConverterTypeFfiPermissionPolicy.write(value.updateGroupNamePolicy, into: &buf)
+        FfiConverterTypeFfiPermissionPolicy.write(value.updateGroupDescriptionPolicy, into: &buf)
+        FfiConverterTypeFfiPermissionPolicy.write(value.updateGroupImageUrlSquarePolicy, into: &buf)
+    }
+}
+
+public func FfiConverterTypeFfiPermissionPolicySet_lift(_ buf: RustBuffer) throws -> FfiPermissionPolicySet {
+    return try FfiConverterTypeFfiPermissionPolicySet.lift(buf)
+}
+
+public func FfiConverterTypeFfiPermissionPolicySet_lower(_ value: FfiPermissionPolicySet) -> RustBuffer {
+    return FfiConverterTypeFfiPermissionPolicySet.lower(value)
+}
+
 public struct FfiPublishRequest {
     public var envelopes: [FfiEnvelope]
 
@@ -3083,6 +3237,104 @@ extension FfiGroupMessageKind: Equatable, Hashable {}
 // Note that we don't yet support `indirect` for enums.
 // See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
 
+public enum FfiGroupPermissionsOptions {
+    case allMembers
+    case adminOnly
+    case customPolicy
+}
+
+public struct FfiConverterTypeFfiGroupPermissionsOptions: FfiConverterRustBuffer {
+    typealias SwiftType = FfiGroupPermissionsOptions
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiGroupPermissionsOptions {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        case 1: return .allMembers
+
+        case 2: return .adminOnly
+
+        case 3: return .customPolicy
+
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: FfiGroupPermissionsOptions, into buf: inout [UInt8]) {
+        switch value {
+        case .allMembers:
+            writeInt(&buf, Int32(1))
+
+        case .adminOnly:
+            writeInt(&buf, Int32(2))
+
+        case .customPolicy:
+            writeInt(&buf, Int32(3))
+        }
+    }
+}
+
+public func FfiConverterTypeFfiGroupPermissionsOptions_lift(_ buf: RustBuffer) throws -> FfiGroupPermissionsOptions {
+    return try FfiConverterTypeFfiGroupPermissionsOptions.lift(buf)
+}
+
+public func FfiConverterTypeFfiGroupPermissionsOptions_lower(_ value: FfiGroupPermissionsOptions) -> RustBuffer {
+    return FfiConverterTypeFfiGroupPermissionsOptions.lower(value)
+}
+
+extension FfiGroupPermissionsOptions: Equatable, Hashable {}
+
+// Note that we don't yet support `indirect` for enums.
+// See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
+
+public enum FfiMetadataField {
+    case groupName
+    case description
+    case imageUrlSquare
+}
+
+public struct FfiConverterTypeFfiMetadataField: FfiConverterRustBuffer {
+    typealias SwiftType = FfiMetadataField
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiMetadataField {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        case 1: return .groupName
+
+        case 2: return .description
+
+        case 3: return .imageUrlSquare
+
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: FfiMetadataField, into buf: inout [UInt8]) {
+        switch value {
+        case .groupName:
+            writeInt(&buf, Int32(1))
+
+        case .description:
+            writeInt(&buf, Int32(2))
+
+        case .imageUrlSquare:
+            writeInt(&buf, Int32(3))
+        }
+    }
+}
+
+public func FfiConverterTypeFfiMetadataField_lift(_ buf: RustBuffer) throws -> FfiMetadataField {
+    return try FfiConverterTypeFfiMetadataField.lift(buf)
+}
+
+public func FfiConverterTypeFfiMetadataField_lower(_ value: FfiMetadataField) -> RustBuffer {
+    return FfiConverterTypeFfiMetadataField.lower(value)
+}
+
+extension FfiMetadataField: Equatable, Hashable {}
+
+// Note that we don't yet support `indirect` for enums.
+// See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
+
 public enum FfiPermissionLevel {
     case member
     case admin
@@ -3128,6 +3380,134 @@ public func FfiConverterTypeFfiPermissionLevel_lower(_ value: FfiPermissionLevel
 }
 
 extension FfiPermissionLevel: Equatable, Hashable {}
+
+// Note that we don't yet support `indirect` for enums.
+// See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
+
+public enum FfiPermissionPolicy {
+    case allow
+    case deny
+    case admin
+    case superAdmin
+    case doesNotExist
+    case other
+}
+
+public struct FfiConverterTypeFfiPermissionPolicy: FfiConverterRustBuffer {
+    typealias SwiftType = FfiPermissionPolicy
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiPermissionPolicy {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        case 1: return .allow
+
+        case 2: return .deny
+
+        case 3: return .admin
+
+        case 4: return .superAdmin
+
+        case 5: return .doesNotExist
+
+        case 6: return .other
+
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: FfiPermissionPolicy, into buf: inout [UInt8]) {
+        switch value {
+        case .allow:
+            writeInt(&buf, Int32(1))
+
+        case .deny:
+            writeInt(&buf, Int32(2))
+
+        case .admin:
+            writeInt(&buf, Int32(3))
+
+        case .superAdmin:
+            writeInt(&buf, Int32(4))
+
+        case .doesNotExist:
+            writeInt(&buf, Int32(5))
+
+        case .other:
+            writeInt(&buf, Int32(6))
+        }
+    }
+}
+
+public func FfiConverterTypeFfiPermissionPolicy_lift(_ buf: RustBuffer) throws -> FfiPermissionPolicy {
+    return try FfiConverterTypeFfiPermissionPolicy.lift(buf)
+}
+
+public func FfiConverterTypeFfiPermissionPolicy_lower(_ value: FfiPermissionPolicy) -> RustBuffer {
+    return FfiConverterTypeFfiPermissionPolicy.lower(value)
+}
+
+extension FfiPermissionPolicy: Equatable, Hashable {}
+
+// Note that we don't yet support `indirect` for enums.
+// See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
+
+public enum FfiPermissionUpdateType {
+    case addMember
+    case removeMember
+    case addAdmin
+    case removeAdmin
+    case updateMetadata
+}
+
+public struct FfiConverterTypeFfiPermissionUpdateType: FfiConverterRustBuffer {
+    typealias SwiftType = FfiPermissionUpdateType
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiPermissionUpdateType {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        case 1: return .addMember
+
+        case 2: return .removeMember
+
+        case 3: return .addAdmin
+
+        case 4: return .removeAdmin
+
+        case 5: return .updateMetadata
+
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: FfiPermissionUpdateType, into buf: inout [UInt8]) {
+        switch value {
+        case .addMember:
+            writeInt(&buf, Int32(1))
+
+        case .removeMember:
+            writeInt(&buf, Int32(2))
+
+        case .addAdmin:
+            writeInt(&buf, Int32(3))
+
+        case .removeAdmin:
+            writeInt(&buf, Int32(4))
+
+        case .updateMetadata:
+            writeInt(&buf, Int32(5))
+        }
+    }
+}
+
+public func FfiConverterTypeFfiPermissionUpdateType_lift(_ buf: RustBuffer) throws -> FfiPermissionUpdateType {
+    return try FfiConverterTypeFfiPermissionUpdateType.lift(buf)
+}
+
+public func FfiConverterTypeFfiPermissionUpdateType_lower(_ value: FfiPermissionUpdateType) -> RustBuffer {
+    return FfiConverterTypeFfiPermissionUpdateType.lower(value)
+}
+
+extension FfiPermissionUpdateType: Equatable, Hashable {}
 
 // Note that we don't yet support `indirect` for enums.
 // See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
@@ -3287,55 +3667,6 @@ public struct FfiConverterTypeGenericError: FfiConverterRustBuffer {
 extension GenericError: Equatable, Hashable {}
 
 extension GenericError: Error {}
-
-// Note that we don't yet support `indirect` for enums.
-// See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
-
-public enum GroupPermissions {
-    case allMembers
-    case adminOnly
-    case customPolicy
-}
-
-public struct FfiConverterTypeGroupPermissions: FfiConverterRustBuffer {
-    typealias SwiftType = GroupPermissions
-
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> GroupPermissions {
-        let variant: Int32 = try readInt(&buf)
-        switch variant {
-        case 1: return .allMembers
-
-        case 2: return .adminOnly
-
-        case 3: return .customPolicy
-
-        default: throw UniffiInternalError.unexpectedEnumCase
-        }
-    }
-
-    public static func write(_ value: GroupPermissions, into buf: inout [UInt8]) {
-        switch value {
-        case .allMembers:
-            writeInt(&buf, Int32(1))
-
-        case .adminOnly:
-            writeInt(&buf, Int32(2))
-
-        case .customPolicy:
-            writeInt(&buf, Int32(3))
-        }
-    }
-}
-
-public func FfiConverterTypeGroupPermissions_lift(_ buf: RustBuffer) throws -> GroupPermissions {
-    return try FfiConverterTypeGroupPermissions.lift(buf)
-}
-
-public func FfiConverterTypeGroupPermissions_lower(_ value: GroupPermissions) -> RustBuffer {
-    return FfiConverterTypeGroupPermissions.lower(value)
-}
-
-extension GroupPermissions: Equatable, Hashable {}
 
 public enum SigningError {
     case Generic(message: String)
@@ -3910,8 +4241,8 @@ private struct FfiConverterOptionTypeFfiDeliveryStatus: FfiConverterRustBuffer {
     }
 }
 
-private struct FfiConverterOptionTypeGroupPermissions: FfiConverterRustBuffer {
-    typealias SwiftType = GroupPermissions?
+private struct FfiConverterOptionTypeFfiGroupPermissionsOptions: FfiConverterRustBuffer {
+    typealias SwiftType = FfiGroupPermissionsOptions?
 
     public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
         guard let value = value else {
@@ -3919,13 +4250,34 @@ private struct FfiConverterOptionTypeGroupPermissions: FfiConverterRustBuffer {
             return
         }
         writeInt(&buf, Int8(1))
-        FfiConverterTypeGroupPermissions.write(value, into: &buf)
+        FfiConverterTypeFfiGroupPermissionsOptions.write(value, into: &buf)
     }
 
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
         switch try readInt(&buf) as Int8 {
         case 0: return nil
-        case 1: return try FfiConverterTypeGroupPermissions.read(from: &buf)
+        case 1: return try FfiConverterTypeFfiGroupPermissionsOptions.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+private struct FfiConverterOptionTypeFfiMetadataField: FfiConverterRustBuffer {
+    typealias SwiftType = FfiMetadataField?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeFfiMetadataField.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeFfiMetadataField.read(from: &buf)
         default: throw UniffiInternalError.unexpectedOptionalTag
         }
     }
@@ -4461,6 +4813,9 @@ private var initializationResult: InitializationResult {
     if uniffi_xmtpv3_checksum_method_ffigroup_find_messages() != 14930 {
         return InitializationResult.apiChecksumMismatch
     }
+    if uniffi_xmtpv3_checksum_method_ffigroup_group_description() != 37045 {
+        return InitializationResult.apiChecksumMismatch
+    }
     if uniffi_xmtpv3_checksum_method_ffigroup_group_image_url_square() != 16754 {
         return InitializationResult.apiChecksumMismatch
     }
@@ -4515,10 +4870,16 @@ private var initializationResult: InitializationResult {
     if uniffi_xmtpv3_checksum_method_ffigroup_sync() != 24219 {
         return InitializationResult.apiChecksumMismatch
     }
+    if uniffi_xmtpv3_checksum_method_ffigroup_update_group_description() != 34006 {
+        return InitializationResult.apiChecksumMismatch
+    }
     if uniffi_xmtpv3_checksum_method_ffigroup_update_group_image_url_square() != 18878 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_ffigroup_update_group_name() != 550 {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if uniffi_xmtpv3_checksum_method_ffigroup_update_permission_policy() != 51936 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_ffigroupmetadata_conversation_type() != 30827 {
@@ -4527,7 +4888,10 @@ private var initializationResult: InitializationResult {
     if uniffi_xmtpv3_checksum_method_ffigroupmetadata_creator_inbox_id() != 26872 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_xmtpv3_checksum_method_ffigrouppermissions_policy_type() != 12694 {
+    if uniffi_xmtpv3_checksum_method_ffigrouppermissions_policy_set() != 24928 {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if uniffi_xmtpv3_checksum_method_ffigrouppermissions_policy_type() != 56975 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_ffisignaturerequest_add_ecdsa_signature() != 8706 {
