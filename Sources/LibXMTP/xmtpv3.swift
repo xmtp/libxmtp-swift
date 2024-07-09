@@ -741,6 +741,11 @@ public protocol FfiGroupProtocol: AnyObject {
 
     func processStreamedGroupMessage(envelopeBytes: Data) async throws -> FfiMessage
 
+    /**
+     * Publish all unpublished messages
+     */
+    func publishMessages() async throws
+
     func removeAdmin(inboxId: String) async throws
 
     func removeMembers(accountAddresses: [String]) async throws
@@ -754,7 +759,7 @@ public protocol FfiGroupProtocol: AnyObject {
     /**
      * send a message without immediately publishing to the delivery service.
      */
-    func sendOptimistic(contentBytes: Data) throws -> FfiUnpublishedMessage
+    func sendOptimistic(contentBytes: Data) throws -> Data
 
     func stream(messageCallback: FfiMessageCallback) async throws -> FfiStreamCloser
 
@@ -991,6 +996,25 @@ open class FfiGroup:
             )
     }
 
+    /**
+     * Publish all unpublished messages
+     */
+    open func publishMessages() async throws {
+        return
+            try await uniffiRustCallAsync(
+                rustFutureFunc: {
+                    uniffi_xmtpv3_fn_method_ffigroup_publish_messages(
+                        self.uniffiClonePointer()
+                    )
+                },
+                pollFunc: ffi_xmtpv3_rust_future_poll_void,
+                completeFunc: ffi_xmtpv3_rust_future_complete_void,
+                freeFunc: ffi_xmtpv3_rust_future_free_void,
+                liftFunc: { $0 },
+                errorHandler: FfiConverterTypeGenericError.lift
+            )
+    }
+
     open func removeAdmin(inboxId: String) async throws {
         return
             try await uniffiRustCallAsync(
@@ -1079,8 +1103,8 @@ open class FfiGroup:
     /**
      * send a message without immediately publishing to the delivery service.
      */
-    open func sendOptimistic(contentBytes: Data) throws -> FfiUnpublishedMessage {
-        return try FfiConverterTypeFfiUnpublishedMessage.lift(rustCallWithError(FfiConverterTypeGenericError.lift) {
+    open func sendOptimistic(contentBytes: Data) throws -> Data {
+        return try FfiConverterData.lift(rustCallWithError(FfiConverterTypeGenericError.lift) {
             uniffi_xmtpv3_fn_method_ffigroup_send_optimistic(self.uniffiClonePointer(),
                                                              FfiConverterData.lower(contentBytes), $0)
         })
@@ -1716,113 +1740,6 @@ public func FfiConverterTypeFfiStreamCloser_lift(_ pointer: UnsafeMutableRawPoin
 
 public func FfiConverterTypeFfiStreamCloser_lower(_ value: FfiStreamCloser) -> UnsafeMutableRawPointer {
     return FfiConverterTypeFfiStreamCloser.lower(value)
-}
-
-public protocol FfiUnpublishedMessageProtocol: AnyObject {
-    func id() -> Data
-
-    func publish() async throws
-}
-
-open class FfiUnpublishedMessage:
-    FfiUnpublishedMessageProtocol
-{
-    fileprivate let pointer: UnsafeMutableRawPointer!
-
-    /// Used to instantiate a [FFIObject] without an actual pointer, for fakes in tests, mostly.
-    public struct NoPointer {
-        public init() {}
-    }
-
-    // TODO: We'd like this to be `private` but for Swifty reasons,
-    // we can't implement `FfiConverter` without making this `required` and we can't
-    // make it `required` without making it `public`.
-    public required init(unsafeFromRawPointer pointer: UnsafeMutableRawPointer) {
-        self.pointer = pointer
-    }
-
-    /// This constructor can be used to instantiate a fake object.
-    /// - Parameter noPointer: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
-    ///
-    /// - Warning:
-    ///     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing [Pointer] the FFI lower functions will crash.
-    public init(noPointer _: NoPointer) {
-        pointer = nil
-    }
-
-    public func uniffiClonePointer() -> UnsafeMutableRawPointer {
-        return try! rustCall { uniffi_xmtpv3_fn_clone_ffiunpublishedmessage(self.pointer, $0) }
-    }
-
-    // No primary constructor declared for this class.
-
-    deinit {
-        guard let pointer = pointer else {
-            return
-        }
-
-        try! rustCall { uniffi_xmtpv3_fn_free_ffiunpublishedmessage(pointer, $0) }
-    }
-
-    open func id() -> Data {
-        return try! FfiConverterData.lift(try! rustCall {
-            uniffi_xmtpv3_fn_method_ffiunpublishedmessage_id(self.uniffiClonePointer(), $0)
-        })
-    }
-
-    open func publish() async throws {
-        return
-            try await uniffiRustCallAsync(
-                rustFutureFunc: {
-                    uniffi_xmtpv3_fn_method_ffiunpublishedmessage_publish(
-                        self.uniffiClonePointer()
-                    )
-                },
-                pollFunc: ffi_xmtpv3_rust_future_poll_void,
-                completeFunc: ffi_xmtpv3_rust_future_complete_void,
-                freeFunc: ffi_xmtpv3_rust_future_free_void,
-                liftFunc: { $0 },
-                errorHandler: FfiConverterTypeGenericError.lift
-            )
-    }
-}
-
-public struct FfiConverterTypeFfiUnpublishedMessage: FfiConverter {
-    typealias FfiType = UnsafeMutableRawPointer
-    typealias SwiftType = FfiUnpublishedMessage
-
-    public static func lift(_ pointer: UnsafeMutableRawPointer) throws -> FfiUnpublishedMessage {
-        return FfiUnpublishedMessage(unsafeFromRawPointer: pointer)
-    }
-
-    public static func lower(_ value: FfiUnpublishedMessage) -> UnsafeMutableRawPointer {
-        return value.uniffiClonePointer()
-    }
-
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiUnpublishedMessage {
-        let v: UInt64 = try readInt(&buf)
-        // The Rust code won't compile if a pointer won't fit in a UInt64.
-        // We have to go via `UInt` because that's the thing that's the size of a pointer.
-        let ptr = UnsafeMutableRawPointer(bitPattern: UInt(truncatingIfNeeded: v))
-        if ptr == nil {
-            throw UniffiInternalError.unexpectedNullPointer
-        }
-        return try lift(ptr!)
-    }
-
-    public static func write(_ value: FfiUnpublishedMessage, into buf: inout [UInt8]) {
-        // This fiddling is because `Int` is the thing that's the same size as a pointer.
-        // The Rust code won't compile if a pointer won't fit in a `UInt64`.
-        writeInt(&buf, UInt64(bitPattern: Int64(Int(bitPattern: lower(value)))))
-    }
-}
-
-public func FfiConverterTypeFfiUnpublishedMessage_lift(_ pointer: UnsafeMutableRawPointer) throws -> FfiUnpublishedMessage {
-    return try FfiConverterTypeFfiUnpublishedMessage.lift(pointer)
-}
-
-public func FfiConverterTypeFfiUnpublishedMessage_lower(_ value: FfiUnpublishedMessage) -> UnsafeMutableRawPointer {
-    return FfiConverterTypeFfiUnpublishedMessage.lower(value)
 }
 
 public protocol FfiV2ApiClientProtocol: AnyObject {
@@ -5020,6 +4937,9 @@ private var initializationResult: InitializationResult {
     if uniffi_xmtpv3_checksum_method_ffigroup_process_streamed_group_message() != 19069 {
         return InitializationResult.apiChecksumMismatch
     }
+    if uniffi_xmtpv3_checksum_method_ffigroup_publish_messages() != 52808 {
+        return InitializationResult.apiChecksumMismatch
+    }
     if uniffi_xmtpv3_checksum_method_ffigroup_remove_admin() != 57094 {
         return InitializationResult.apiChecksumMismatch
     }
@@ -5035,7 +4955,7 @@ private var initializationResult: InitializationResult {
     if uniffi_xmtpv3_checksum_method_ffigroup_send() != 37701 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_xmtpv3_checksum_method_ffigroup_send_optimistic() != 22919 {
+    if uniffi_xmtpv3_checksum_method_ffigroup_send_optimistic() != 13872 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_ffigroup_stream() != 45558 {
@@ -5093,12 +5013,6 @@ private var initializationResult: InitializationResult {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_ffistreamcloser_is_closed() != 62423 {
-        return InitializationResult.apiChecksumMismatch
-    }
-    if uniffi_xmtpv3_checksum_method_ffiunpublishedmessage_id() != 4148 {
-        return InitializationResult.apiChecksumMismatch
-    }
-    if uniffi_xmtpv3_checksum_method_ffiunpublishedmessage_publish() != 47708 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_ffiv2apiclient_batch_query() != 26551 {
