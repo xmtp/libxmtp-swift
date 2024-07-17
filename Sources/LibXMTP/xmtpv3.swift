@@ -513,9 +513,9 @@ public protocol FfiConversationsProtocol: AnyObject {
 
     func processStreamedWelcomeMessage(envelopeBytes: Data) async throws -> FfiGroup
 
-    func stream(callback: FfiConversationCallback) async throws -> FfiStreamCloser
+    func stream(callback: FfiConversationCallback) -> FfiStreamCloser
 
-    func streamAllMessages(messageCallback: FfiMessageCallback) async throws -> FfiStreamCloser
+    func streamAllMessages(messageCallback: FfiMessageCallback) -> FfiStreamCloser
 
     func sync() async throws
 }
@@ -611,38 +611,18 @@ open class FfiConversations:
             )
     }
 
-    open func stream(callback: FfiConversationCallback) async throws -> FfiStreamCloser {
-        return
-            try await uniffiRustCallAsync(
-                rustFutureFunc: {
-                    uniffi_xmtpv3_fn_method_fficonversations_stream(
-                        self.uniffiClonePointer(),
-                        FfiConverterCallbackInterfaceFfiConversationCallback.lower(callback)
-                    )
-                },
-                pollFunc: ffi_xmtpv3_rust_future_poll_pointer,
-                completeFunc: ffi_xmtpv3_rust_future_complete_pointer,
-                freeFunc: ffi_xmtpv3_rust_future_free_pointer,
-                liftFunc: FfiConverterTypeFfiStreamCloser.lift,
-                errorHandler: FfiConverterTypeGenericError.lift
-            )
+    open func stream(callback: FfiConversationCallback) -> FfiStreamCloser {
+        return try! FfiConverterTypeFfiStreamCloser.lift(try! rustCall {
+            uniffi_xmtpv3_fn_method_fficonversations_stream(self.uniffiClonePointer(),
+                                                            FfiConverterCallbackInterfaceFfiConversationCallback.lower(callback), $0)
+        })
     }
 
-    open func streamAllMessages(messageCallback: FfiMessageCallback) async throws -> FfiStreamCloser {
-        return
-            try await uniffiRustCallAsync(
-                rustFutureFunc: {
-                    uniffi_xmtpv3_fn_method_fficonversations_stream_all_messages(
-                        self.uniffiClonePointer(),
-                        FfiConverterCallbackInterfaceFfiMessageCallback.lower(messageCallback)
-                    )
-                },
-                pollFunc: ffi_xmtpv3_rust_future_poll_pointer,
-                completeFunc: ffi_xmtpv3_rust_future_complete_pointer,
-                freeFunc: ffi_xmtpv3_rust_future_free_pointer,
-                liftFunc: FfiConverterTypeFfiStreamCloser.lift,
-                errorHandler: FfiConverterTypeGenericError.lift
-            )
+    open func streamAllMessages(messageCallback: FfiMessageCallback) -> FfiStreamCloser {
+        return try! FfiConverterTypeFfiStreamCloser.lift(try! rustCall {
+            uniffi_xmtpv3_fn_method_fficonversations_stream_all_messages(self.uniffiClonePointer(),
+                                                                         FfiConverterCallbackInterfaceFfiMessageCallback.lower(messageCallback), $0)
+        })
     }
 
     open func sync() async throws {
@@ -761,7 +741,7 @@ public protocol FfiGroupProtocol: AnyObject {
      */
     func sendOptimistic(contentBytes: Data) throws -> Data
 
-    func stream(messageCallback: FfiMessageCallback) async throws -> FfiStreamCloser
+    func stream(messageCallback: FfiMessageCallback) -> FfiStreamCloser
 
     func superAdminList() throws -> [String]
 
@@ -1110,21 +1090,11 @@ open class FfiGroup:
         })
     }
 
-    open func stream(messageCallback: FfiMessageCallback) async throws -> FfiStreamCloser {
-        return
-            try await uniffiRustCallAsync(
-                rustFutureFunc: {
-                    uniffi_xmtpv3_fn_method_ffigroup_stream(
-                        self.uniffiClonePointer(),
-                        FfiConverterCallbackInterfaceFfiMessageCallback.lower(messageCallback)
-                    )
-                },
-                pollFunc: ffi_xmtpv3_rust_future_poll_pointer,
-                completeFunc: ffi_xmtpv3_rust_future_complete_pointer,
-                freeFunc: ffi_xmtpv3_rust_future_free_pointer,
-                liftFunc: FfiConverterTypeFfiStreamCloser.lift,
-                errorHandler: FfiConverterTypeGenericError.lift
-            )
+    open func stream(messageCallback: FfiMessageCallback) -> FfiStreamCloser {
+        return try! FfiConverterTypeFfiStreamCloser.lift(try! rustCall {
+            uniffi_xmtpv3_fn_method_ffigroup_stream(self.uniffiClonePointer(),
+                                                    FfiConverterCallbackInterfaceFfiMessageCallback.lower(messageCallback), $0)
+        })
     }
 
     open func superAdminList() throws -> [String] {
@@ -1647,7 +1617,16 @@ public func FfiConverterTypeFfiSignatureRequest_lower(_ value: FfiSignatureReque
 }
 
 public protocol FfiStreamCloserProtocol: AnyObject {
+    /**
+     * Signal the stream to end
+     * Does not wait for the stream to end.
+     */
     func end()
+
+    /**
+     * End the stream and asyncronously wait for it to shutdown
+     */
+    func endAndWait() async throws
 
     func isClosed() -> Bool
 }
@@ -1692,9 +1671,32 @@ open class FfiStreamCloser:
         try! rustCall { uniffi_xmtpv3_fn_free_ffistreamcloser(pointer, $0) }
     }
 
+    /**
+     * Signal the stream to end
+     * Does not wait for the stream to end.
+     */
     open func end() { try! rustCall {
         uniffi_xmtpv3_fn_method_ffistreamcloser_end(self.uniffiClonePointer(), $0)
     }
+    }
+
+    /**
+     * End the stream and asyncronously wait for it to shutdown
+     */
+    open func endAndWait() async throws {
+        return
+            try await uniffiRustCallAsync(
+                rustFutureFunc: {
+                    uniffi_xmtpv3_fn_method_ffistreamcloser_end_and_wait(
+                        self.uniffiClonePointer()
+                    )
+                },
+                pollFunc: ffi_xmtpv3_rust_future_poll_void,
+                completeFunc: ffi_xmtpv3_rust_future_complete_void,
+                freeFunc: ffi_xmtpv3_rust_future_free_void,
+                liftFunc: { $0 },
+                errorHandler: FfiConverterTypeGenericError.lift
+            )
     }
 
     open func isClosed() -> Bool {
@@ -2062,6 +2064,13 @@ public func FfiConverterTypeFfiV2Subscription_lower(_ value: FfiV2Subscription) 
 }
 
 public protocol FfiXmtpClientProtocol: AnyObject {
+    /**
+     * Adds an identity - really a wallet address - to the existing client
+     */
+    func addWallet(existingWalletAddress: String, newWalletAddress: String) async throws -> FfiSignatureRequest
+
+    func applySignatureRequest(signatureRequest: FfiSignatureRequest) async throws
+
     func canMessage(accountAddresses: [String]) async throws -> [String: Bool]
 
     func conversations() -> FfiConversations
@@ -2083,6 +2092,11 @@ public protocol FfiXmtpClientProtocol: AnyObject {
     func releaseDbConnection() throws
 
     func requestHistorySync() async throws
+
+    /**
+     * Revokes or removes an identity - really a wallet address - from the existing client
+     */
+    func revokeWallet(walletAddress: String) async throws -> FfiSignatureRequest
 
     func signatureRequest() -> FfiSignatureRequest?
 }
@@ -2125,6 +2139,43 @@ open class FfiXmtpClient:
         }
 
         try! rustCall { uniffi_xmtpv3_fn_free_ffixmtpclient(pointer, $0) }
+    }
+
+    /**
+     * Adds an identity - really a wallet address - to the existing client
+     */
+    open func addWallet(existingWalletAddress: String, newWalletAddress: String) async throws -> FfiSignatureRequest {
+        return
+            try await uniffiRustCallAsync(
+                rustFutureFunc: {
+                    uniffi_xmtpv3_fn_method_ffixmtpclient_add_wallet(
+                        self.uniffiClonePointer(),
+                        FfiConverterString.lower(existingWalletAddress), FfiConverterString.lower(newWalletAddress)
+                    )
+                },
+                pollFunc: ffi_xmtpv3_rust_future_poll_pointer,
+                completeFunc: ffi_xmtpv3_rust_future_complete_pointer,
+                freeFunc: ffi_xmtpv3_rust_future_free_pointer,
+                liftFunc: FfiConverterTypeFfiSignatureRequest.lift,
+                errorHandler: FfiConverterTypeGenericError.lift
+            )
+    }
+
+    open func applySignatureRequest(signatureRequest: FfiSignatureRequest) async throws {
+        return
+            try await uniffiRustCallAsync(
+                rustFutureFunc: {
+                    uniffi_xmtpv3_fn_method_ffixmtpclient_apply_signature_request(
+                        self.uniffiClonePointer(),
+                        FfiConverterTypeFfiSignatureRequest.lower(signatureRequest)
+                    )
+                },
+                pollFunc: ffi_xmtpv3_rust_future_poll_void,
+                completeFunc: ffi_xmtpv3_rust_future_complete_void,
+                freeFunc: ffi_xmtpv3_rust_future_free_void,
+                liftFunc: { $0 },
+                errorHandler: FfiConverterTypeGenericError.lift
+            )
     }
 
     open func canMessage(accountAddresses: [String]) async throws -> [String: Bool] {
@@ -2243,6 +2294,26 @@ open class FfiXmtpClient:
                 completeFunc: ffi_xmtpv3_rust_future_complete_void,
                 freeFunc: ffi_xmtpv3_rust_future_free_void,
                 liftFunc: { $0 },
+                errorHandler: FfiConverterTypeGenericError.lift
+            )
+    }
+
+    /**
+     * Revokes or removes an identity - really a wallet address - from the existing client
+     */
+    open func revokeWallet(walletAddress: String) async throws -> FfiSignatureRequest {
+        return
+            try await uniffiRustCallAsync(
+                rustFutureFunc: {
+                    uniffi_xmtpv3_fn_method_ffixmtpclient_revoke_wallet(
+                        self.uniffiClonePointer(),
+                        FfiConverterString.lower(walletAddress)
+                    )
+                },
+                pollFunc: ffi_xmtpv3_rust_future_poll_pointer,
+                completeFunc: ffi_xmtpv3_rust_future_complete_pointer,
+                freeFunc: ffi_xmtpv3_rust_future_free_pointer,
+                liftFunc: FfiConverterTypeFfiSignatureRequest.lift,
                 errorHandler: FfiConverterTypeGenericError.lift
             )
     }
@@ -4868,10 +4939,10 @@ private var initializationResult: InitializationResult {
     if uniffi_xmtpv3_checksum_method_fficonversations_process_streamed_welcome_message() != 15283 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_xmtpv3_checksum_method_fficonversations_stream() != 42948 {
+    if uniffi_xmtpv3_checksum_method_fficonversations_stream() != 873 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_xmtpv3_checksum_method_fficonversations_stream_all_messages() != 8742 {
+    if uniffi_xmtpv3_checksum_method_fficonversations_stream_all_messages() != 48407 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_fficonversations_sync() != 9054 {
@@ -4958,7 +5029,7 @@ private var initializationResult: InitializationResult {
     if uniffi_xmtpv3_checksum_method_ffigroup_send_optimistic() != 13872 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_xmtpv3_checksum_method_ffigroup_stream() != 45558 {
+    if uniffi_xmtpv3_checksum_method_ffigroup_stream() != 44144 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_ffigroup_super_admin_list() != 5323 {
@@ -5009,7 +5080,10 @@ private var initializationResult: InitializationResult {
     if uniffi_xmtpv3_checksum_method_ffisignaturerequest_signature_text() != 60472 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_xmtpv3_checksum_method_ffistreamcloser_end() != 57139 {
+    if uniffi_xmtpv3_checksum_method_ffistreamcloser_end() != 11040 {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if uniffi_xmtpv3_checksum_method_ffistreamcloser_end_and_wait() != 1181 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_ffistreamcloser_is_closed() != 62423 {
@@ -5037,6 +5111,12 @@ private var initializationResult: InitializationResult {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_ffiv2subscription_update() != 24211 {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if uniffi_xmtpv3_checksum_method_ffixmtpclient_add_wallet() != 23786 {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if uniffi_xmtpv3_checksum_method_ffixmtpclient_apply_signature_request() != 32172 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_ffixmtpclient_can_message() != 53502 {
@@ -5070,6 +5150,9 @@ private var initializationResult: InitializationResult {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_ffixmtpclient_request_history_sync() != 22295 {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if uniffi_xmtpv3_checksum_method_ffixmtpclient_revoke_wallet() != 12211 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_ffixmtpclient_signature_request() != 18270 {
