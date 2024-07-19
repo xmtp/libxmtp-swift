@@ -513,9 +513,9 @@ public protocol FfiConversationsProtocol: AnyObject {
 
     func processStreamedWelcomeMessage(envelopeBytes: Data) async throws -> FfiGroup
 
-    func stream(callback: FfiConversationCallback) -> FfiStreamCloser
+    func stream(callback: FfiConversationCallback) async -> FfiStreamCloser
 
-    func streamAllMessages(messageCallback: FfiMessageCallback) -> FfiStreamCloser
+    func streamAllMessages(messageCallback: FfiMessageCallback) async -> FfiStreamCloser
 
     func sync() async throws
 }
@@ -611,18 +611,38 @@ open class FfiConversations:
             )
     }
 
-    open func stream(callback: FfiConversationCallback) -> FfiStreamCloser {
-        return try! FfiConverterTypeFfiStreamCloser.lift(try! rustCall {
-            uniffi_xmtpv3_fn_method_fficonversations_stream(self.uniffiClonePointer(),
-                                                            FfiConverterCallbackInterfaceFfiConversationCallback.lower(callback), $0)
-        })
+    open func stream(callback: FfiConversationCallback) async -> FfiStreamCloser {
+        return
+            try! await uniffiRustCallAsync(
+                rustFutureFunc: {
+                    uniffi_xmtpv3_fn_method_fficonversations_stream(
+                        self.uniffiClonePointer(),
+                        FfiConverterCallbackInterfaceFfiConversationCallback.lower(callback)
+                    )
+                },
+                pollFunc: ffi_xmtpv3_rust_future_poll_pointer,
+                completeFunc: ffi_xmtpv3_rust_future_complete_pointer,
+                freeFunc: ffi_xmtpv3_rust_future_free_pointer,
+                liftFunc: FfiConverterTypeFfiStreamCloser.lift,
+                errorHandler: nil
+            )
     }
 
-    open func streamAllMessages(messageCallback: FfiMessageCallback) -> FfiStreamCloser {
-        return try! FfiConverterTypeFfiStreamCloser.lift(try! rustCall {
-            uniffi_xmtpv3_fn_method_fficonversations_stream_all_messages(self.uniffiClonePointer(),
-                                                                         FfiConverterCallbackInterfaceFfiMessageCallback.lower(messageCallback), $0)
-        })
+    open func streamAllMessages(messageCallback: FfiMessageCallback) async -> FfiStreamCloser {
+        return
+            try! await uniffiRustCallAsync(
+                rustFutureFunc: {
+                    uniffi_xmtpv3_fn_method_fficonversations_stream_all_messages(
+                        self.uniffiClonePointer(),
+                        FfiConverterCallbackInterfaceFfiMessageCallback.lower(messageCallback)
+                    )
+                },
+                pollFunc: ffi_xmtpv3_rust_future_poll_pointer,
+                completeFunc: ffi_xmtpv3_rust_future_complete_pointer,
+                freeFunc: ffi_xmtpv3_rust_future_free_pointer,
+                liftFunc: FfiConverterTypeFfiStreamCloser.lift,
+                errorHandler: nil
+            )
     }
 
     open func sync() async throws {
@@ -741,7 +761,7 @@ public protocol FfiGroupProtocol: AnyObject {
      */
     func sendOptimistic(contentBytes: Data) throws -> Data
 
-    func stream(messageCallback: FfiMessageCallback) -> FfiStreamCloser
+    func stream(messageCallback: FfiMessageCallback) async -> FfiStreamCloser
 
     func superAdminList() throws -> [String]
 
@@ -1090,11 +1110,21 @@ open class FfiGroup:
         })
     }
 
-    open func stream(messageCallback: FfiMessageCallback) -> FfiStreamCloser {
-        return try! FfiConverterTypeFfiStreamCloser.lift(try! rustCall {
-            uniffi_xmtpv3_fn_method_ffigroup_stream(self.uniffiClonePointer(),
-                                                    FfiConverterCallbackInterfaceFfiMessageCallback.lower(messageCallback), $0)
-        })
+    open func stream(messageCallback: FfiMessageCallback) async -> FfiStreamCloser {
+        return
+            try! await uniffiRustCallAsync(
+                rustFutureFunc: {
+                    uniffi_xmtpv3_fn_method_ffigroup_stream(
+                        self.uniffiClonePointer(),
+                        FfiConverterCallbackInterfaceFfiMessageCallback.lower(messageCallback)
+                    )
+                },
+                pollFunc: ffi_xmtpv3_rust_future_poll_pointer,
+                completeFunc: ffi_xmtpv3_rust_future_complete_pointer,
+                freeFunc: ffi_xmtpv3_rust_future_free_pointer,
+                liftFunc: FfiConverterTypeFfiStreamCloser.lift,
+                errorHandler: nil
+            )
     }
 
     open func superAdminList() throws -> [String] {
@@ -4939,10 +4969,10 @@ private var initializationResult: InitializationResult {
     if uniffi_xmtpv3_checksum_method_fficonversations_process_streamed_welcome_message() != 15283 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_xmtpv3_checksum_method_fficonversations_stream() != 873 {
+    if uniffi_xmtpv3_checksum_method_fficonversations_stream() != 3079 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_xmtpv3_checksum_method_fficonversations_stream_all_messages() != 48407 {
+    if uniffi_xmtpv3_checksum_method_fficonversations_stream_all_messages() != 13204 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_fficonversations_sync() != 9054 {
@@ -5029,7 +5059,7 @@ private var initializationResult: InitializationResult {
     if uniffi_xmtpv3_checksum_method_ffigroup_send_optimistic() != 13872 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_xmtpv3_checksum_method_ffigroup_stream() != 44144 {
+    if uniffi_xmtpv3_checksum_method_ffigroup_stream() != 34669 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_ffigroup_super_admin_list() != 5323 {
