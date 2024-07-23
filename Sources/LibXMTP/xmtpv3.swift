@@ -2399,15 +2399,17 @@ public struct FfiCreateGroupOptions {
     public var groupImageUrlSquare: String?
     public var groupDescription: String?
     public var groupPinnedFrameUrl: String?
+    public var customPermissionPolicySet: FfiPermissionPolicySet?
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
-    public init(permissions: FfiGroupPermissionsOptions?, groupName: String?, groupImageUrlSquare: String?, groupDescription: String?, groupPinnedFrameUrl: String?) {
+    public init(permissions: FfiGroupPermissionsOptions?, groupName: String?, groupImageUrlSquare: String?, groupDescription: String?, groupPinnedFrameUrl: String?, customPermissionPolicySet: FfiPermissionPolicySet?) {
         self.permissions = permissions
         self.groupName = groupName
         self.groupImageUrlSquare = groupImageUrlSquare
         self.groupDescription = groupDescription
         self.groupPinnedFrameUrl = groupPinnedFrameUrl
+        self.customPermissionPolicySet = customPermissionPolicySet
     }
 }
 
@@ -2428,6 +2430,9 @@ extension FfiCreateGroupOptions: Equatable, Hashable {
         if lhs.groupPinnedFrameUrl != rhs.groupPinnedFrameUrl {
             return false
         }
+        if lhs.customPermissionPolicySet != rhs.customPermissionPolicySet {
+            return false
+        }
         return true
     }
 
@@ -2437,6 +2442,7 @@ extension FfiCreateGroupOptions: Equatable, Hashable {
         hasher.combine(groupImageUrlSquare)
         hasher.combine(groupDescription)
         hasher.combine(groupPinnedFrameUrl)
+        hasher.combine(customPermissionPolicySet)
     }
 }
 
@@ -2448,7 +2454,8 @@ public struct FfiConverterTypeFfiCreateGroupOptions: FfiConverterRustBuffer {
                 groupName: FfiConverterOptionString.read(from: &buf),
                 groupImageUrlSquare: FfiConverterOptionString.read(from: &buf),
                 groupDescription: FfiConverterOptionString.read(from: &buf),
-                groupPinnedFrameUrl: FfiConverterOptionString.read(from: &buf)
+                groupPinnedFrameUrl: FfiConverterOptionString.read(from: &buf),
+                customPermissionPolicySet: FfiConverterOptionTypeFfiPermissionPolicySet.read(from: &buf)
             )
     }
 
@@ -2458,6 +2465,7 @@ public struct FfiConverterTypeFfiCreateGroupOptions: FfiConverterRustBuffer {
         FfiConverterOptionString.write(value.groupImageUrlSquare, into: &buf)
         FfiConverterOptionString.write(value.groupDescription, into: &buf)
         FfiConverterOptionString.write(value.groupPinnedFrameUrl, into: &buf)
+        FfiConverterOptionTypeFfiPermissionPolicySet.write(value.customPermissionPolicySet, into: &buf)
     }
 }
 
@@ -4404,6 +4412,27 @@ private struct FfiConverterOptionTypeFfiPagingInfo: FfiConverterRustBuffer {
         switch try readInt(&buf) as Int8 {
         case 0: return nil
         case 1: return try FfiConverterTypeFfiPagingInfo.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+private struct FfiConverterOptionTypeFfiPermissionPolicySet: FfiConverterRustBuffer {
+    typealias SwiftType = FfiPermissionPolicySet?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeFfiPermissionPolicySet.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeFfiPermissionPolicySet.read(from: &buf)
         default: throw UniffiInternalError.unexpectedOptionalTag
         }
     }
