@@ -738,7 +738,7 @@ public protocol FfiGroupProtocol: AnyObject {
 
     func isSuperAdmin(inboxId: String) throws -> Bool
 
-    func listMembers() throws -> [FfiGroupMember]
+    func listMembers() async throws -> [FfiGroupMember]
 
     func processStreamedGroupMessage(envelopeBytes: Data) async throws -> FfiMessage
 
@@ -974,10 +974,20 @@ open class FfiGroup:
         })
     }
 
-    open func listMembers() throws -> [FfiGroupMember] {
-        return try FfiConverterSequenceTypeFfiGroupMember.lift(rustCallWithError(FfiConverterTypeGenericError.lift) {
-            uniffi_xmtpv3_fn_method_ffigroup_list_members(self.uniffiClonePointer(), $0)
-        })
+    open func listMembers() async throws -> [FfiGroupMember] {
+        return
+            try await uniffiRustCallAsync(
+                rustFutureFunc: {
+                    uniffi_xmtpv3_fn_method_ffigroup_list_members(
+                        self.uniffiClonePointer()
+                    )
+                },
+                pollFunc: ffi_xmtpv3_rust_future_poll_rust_buffer,
+                completeFunc: ffi_xmtpv3_rust_future_complete_rust_buffer,
+                freeFunc: ffi_xmtpv3_rust_future_free_rust_buffer,
+                liftFunc: FfiConverterSequenceTypeFfiGroupMember.lift,
+                errorHandler: FfiConverterTypeGenericError.lift
+            )
     }
 
     open func processStreamedGroupMessage(envelopeBytes: Data) async throws -> FfiMessage {
@@ -3778,6 +3788,8 @@ public enum GenericError {
     case SignatureRequestError(message: String)
 
     case Erc1271SignatureError(message: String)
+
+    case JoinError(message: String)
 }
 
 public struct FfiConverterTypeGenericError: FfiConverterRustBuffer {
@@ -3830,6 +3842,10 @@ public struct FfiConverterTypeGenericError: FfiConverterRustBuffer {
                 message: FfiConverterString.read(from: &buf)
             )
 
+        case 12: return try .JoinError(
+                message: FfiConverterString.read(from: &buf)
+            )
+
         default: throw UniffiInternalError.unexpectedEnumCase
         }
     }
@@ -3858,6 +3874,8 @@ public struct FfiConverterTypeGenericError: FfiConverterRustBuffer {
             writeInt(&buf, Int32(10))
         case .Erc1271SignatureError(_ /* message is ignored*/ ):
             writeInt(&buf, Int32(11))
+        case .JoinError(_ /* message is ignored*/ ):
+            writeInt(&buf, Int32(12))
         }
     }
 }
@@ -5070,7 +5088,7 @@ private var initializationResult: InitializationResult = {
     if uniffi_xmtpv3_checksum_method_ffigroup_is_super_admin() != 61614 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_xmtpv3_checksum_method_ffigroup_list_members() != 61034 {
+    if uniffi_xmtpv3_checksum_method_ffigroup_list_members() != 3945 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_ffigroup_process_streamed_group_message() != 19069 {
