@@ -738,7 +738,7 @@ public protocol FfiGroupProtocol: AnyObject {
 
     func isSuperAdmin(inboxId: String) throws -> Bool
 
-    func listMembers() async throws -> [FfiGroupMember]
+    func listMembers() throws -> [FfiGroupMember]
 
     func processStreamedGroupMessage(envelopeBytes: Data) async throws -> FfiMessage
 
@@ -974,20 +974,10 @@ open class FfiGroup:
         })
     }
 
-    open func listMembers() async throws -> [FfiGroupMember] {
-        return
-            try await uniffiRustCallAsync(
-                rustFutureFunc: {
-                    uniffi_xmtpv3_fn_method_ffigroup_list_members(
-                        self.uniffiClonePointer()
-                    )
-                },
-                pollFunc: ffi_xmtpv3_rust_future_poll_rust_buffer,
-                completeFunc: ffi_xmtpv3_rust_future_complete_rust_buffer,
-                freeFunc: ffi_xmtpv3_rust_future_free_rust_buffer,
-                liftFunc: FfiConverterSequenceTypeFfiGroupMember.lift,
-                errorHandler: FfiConverterTypeGenericError.lift
-            )
+    open func listMembers() throws -> [FfiGroupMember] {
+        return try FfiConverterSequenceTypeFfiGroupMember.lift(rustCallWithError(FfiConverterTypeGenericError.lift) {
+            uniffi_xmtpv3_fn_method_ffigroup_list_members(self.uniffiClonePointer(), $0)
+        })
     }
 
     open func processStreamedGroupMessage(envelopeBytes: Data) async throws -> FfiMessage {
@@ -5088,7 +5078,7 @@ private var initializationResult: InitializationResult = {
     if uniffi_xmtpv3_checksum_method_ffigroup_is_super_admin() != 61614 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_xmtpv3_checksum_method_ffigroup_list_members() != 3945 {
+    if uniffi_xmtpv3_checksum_method_ffigroup_list_members() != 61034 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_ffigroup_process_streamed_group_message() != 19069 {
