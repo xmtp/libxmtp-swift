@@ -3778,8 +3778,6 @@ public enum GenericError {
     case SignatureRequestError(message: String)
 
     case Erc1271SignatureError(message: String)
-
-    case JoinError(message: String)
 }
 
 public struct FfiConverterTypeGenericError: FfiConverterRustBuffer {
@@ -3832,10 +3830,6 @@ public struct FfiConverterTypeGenericError: FfiConverterRustBuffer {
                 message: FfiConverterString.read(from: &buf)
             )
 
-        case 12: return try .JoinError(
-                message: FfiConverterString.read(from: &buf)
-            )
-
         default: throw UniffiInternalError.unexpectedEnumCase
         }
     }
@@ -3864,8 +3858,6 @@ public struct FfiConverterTypeGenericError: FfiConverterRustBuffer {
             writeInt(&buf, Int32(10))
         case .Erc1271SignatureError(_ /* message is ignored*/ ):
             writeInt(&buf, Int32(11))
-        case .JoinError(_ /* message is ignored*/ ):
-            writeInt(&buf, Int32(12))
         }
     }
 }
