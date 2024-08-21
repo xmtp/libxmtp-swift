@@ -519,6 +519,8 @@ public protocol FfiConversationsProtocol: AnyObject {
     func streamAllMessages(messageCallback: FfiMessageCallback) async -> FfiStreamCloser
 
     func sync() async throws
+
+    func syncAllGroups() async throws
 }
 
 open class FfiConversations:
@@ -651,6 +653,22 @@ open class FfiConversations:
             try await uniffiRustCallAsync(
                 rustFutureFunc: {
                     uniffi_xmtpv3_fn_method_fficonversations_sync(
+                        self.uniffiClonePointer()
+                    )
+                },
+                pollFunc: ffi_xmtpv3_rust_future_poll_void,
+                completeFunc: ffi_xmtpv3_rust_future_complete_void,
+                freeFunc: ffi_xmtpv3_rust_future_free_void,
+                liftFunc: { $0 },
+                errorHandler: FfiConverterTypeGenericError.lift
+            )
+    }
+
+    open func syncAllGroups() async throws {
+        return
+            try await uniffiRustCallAsync(
+                rustFutureFunc: {
+                    uniffi_xmtpv3_fn_method_fficonversations_sync_all_groups(
                         self.uniffiClonePointer()
                     )
                 },
@@ -2110,9 +2128,19 @@ public protocol FfiXmtpClientProtocol: AnyObject {
 
     func findInboxId(address: String) async throws -> String?
 
+    func getLatestInboxState(inboxId: String) async throws -> FfiInboxState
+
     func group(groupId: Data) throws -> FfiGroup
 
     func inboxId() -> String
+
+    /**
+     * * Get the client's inbox state.
+     *      *
+     *      * If `refresh_from_network` is true, the client will go to the network first to refresh the state.
+     *      * Otherwise, the state will be read from the local database.
+     */
+    func inboxState(refreshFromNetwork: Bool) async throws -> FfiInboxState
 
     func installationId() -> Data
 
@@ -2123,6 +2151,11 @@ public protocol FfiXmtpClientProtocol: AnyObject {
     func releaseDbConnection() throws
 
     func requestHistorySync() async throws
+
+    /**
+     * * Revokes all installations except the one the client is currently using
+     */
+    func revokeAllOtherInstallations() async throws -> FfiSignatureRequest
 
     /**
      * Revokes or removes an identity - really a wallet address - from the existing client
@@ -2265,6 +2298,23 @@ open class FfiXmtpClient:
             )
     }
 
+    open func getLatestInboxState(inboxId: String) async throws -> FfiInboxState {
+        return
+            try await uniffiRustCallAsync(
+                rustFutureFunc: {
+                    uniffi_xmtpv3_fn_method_ffixmtpclient_get_latest_inbox_state(
+                        self.uniffiClonePointer(),
+                        FfiConverterString.lower(inboxId)
+                    )
+                },
+                pollFunc: ffi_xmtpv3_rust_future_poll_rust_buffer,
+                completeFunc: ffi_xmtpv3_rust_future_complete_rust_buffer,
+                freeFunc: ffi_xmtpv3_rust_future_free_rust_buffer,
+                liftFunc: FfiConverterTypeFfiInboxState.lift,
+                errorHandler: FfiConverterTypeGenericError.lift
+            )
+    }
+
     open func group(groupId: Data) throws -> FfiGroup {
         return try FfiConverterTypeFfiGroup.lift(rustCallWithError(FfiConverterTypeGenericError.lift) {
             uniffi_xmtpv3_fn_method_ffixmtpclient_group(self.uniffiClonePointer(),
@@ -2276,6 +2326,29 @@ open class FfiXmtpClient:
         return try! FfiConverterString.lift(try! rustCall {
             uniffi_xmtpv3_fn_method_ffixmtpclient_inbox_id(self.uniffiClonePointer(), $0)
         })
+    }
+
+    /**
+     * * Get the client's inbox state.
+     *      *
+     *      * If `refresh_from_network` is true, the client will go to the network first to refresh the state.
+     *      * Otherwise, the state will be read from the local database.
+     */
+    open func inboxState(refreshFromNetwork: Bool) async throws -> FfiInboxState {
+        return
+            try await uniffiRustCallAsync(
+                rustFutureFunc: {
+                    uniffi_xmtpv3_fn_method_ffixmtpclient_inbox_state(
+                        self.uniffiClonePointer(),
+                        FfiConverterBool.lower(refreshFromNetwork)
+                    )
+                },
+                pollFunc: ffi_xmtpv3_rust_future_poll_rust_buffer,
+                completeFunc: ffi_xmtpv3_rust_future_complete_rust_buffer,
+                freeFunc: ffi_xmtpv3_rust_future_free_rust_buffer,
+                liftFunc: FfiConverterTypeFfiInboxState.lift,
+                errorHandler: FfiConverterTypeGenericError.lift
+            )
     }
 
     open func installationId() -> Data {
@@ -2325,6 +2398,25 @@ open class FfiXmtpClient:
                 completeFunc: ffi_xmtpv3_rust_future_complete_void,
                 freeFunc: ffi_xmtpv3_rust_future_free_void,
                 liftFunc: { $0 },
+                errorHandler: FfiConverterTypeGenericError.lift
+            )
+    }
+
+    /**
+     * * Revokes all installations except the one the client is currently using
+     */
+    open func revokeAllOtherInstallations() async throws -> FfiSignatureRequest {
+        return
+            try await uniffiRustCallAsync(
+                rustFutureFunc: {
+                    uniffi_xmtpv3_fn_method_ffixmtpclient_revoke_all_other_installations(
+                        self.uniffiClonePointer()
+                    )
+                },
+                pollFunc: ffi_xmtpv3_rust_future_poll_pointer,
+                completeFunc: ffi_xmtpv3_rust_future_complete_pointer,
+                freeFunc: ffi_xmtpv3_rust_future_free_pointer,
+                liftFunc: FfiConverterTypeFfiSignatureRequest.lift,
                 errorHandler: FfiConverterTypeGenericError.lift
             )
     }
@@ -2656,6 +2748,74 @@ public func FfiConverterTypeFfiGroupMember_lift(_ buf: RustBuffer) throws -> Ffi
 
 public func FfiConverterTypeFfiGroupMember_lower(_ value: FfiGroupMember) -> RustBuffer {
     return FfiConverterTypeFfiGroupMember.lower(value)
+}
+
+public struct FfiInboxState {
+    public var inboxId: String
+    public var recoveryAddress: String
+    public var installationIds: [Data]
+    public var accountAddresses: [String]
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(inboxId: String, recoveryAddress: String, installationIds: [Data], accountAddresses: [String]) {
+        self.inboxId = inboxId
+        self.recoveryAddress = recoveryAddress
+        self.installationIds = installationIds
+        self.accountAddresses = accountAddresses
+    }
+}
+
+extension FfiInboxState: Equatable, Hashable {
+    public static func == (lhs: FfiInboxState, rhs: FfiInboxState) -> Bool {
+        if lhs.inboxId != rhs.inboxId {
+            return false
+        }
+        if lhs.recoveryAddress != rhs.recoveryAddress {
+            return false
+        }
+        if lhs.installationIds != rhs.installationIds {
+            return false
+        }
+        if lhs.accountAddresses != rhs.accountAddresses {
+            return false
+        }
+        return true
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(inboxId)
+        hasher.combine(recoveryAddress)
+        hasher.combine(installationIds)
+        hasher.combine(accountAddresses)
+    }
+}
+
+public struct FfiConverterTypeFfiInboxState: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiInboxState {
+        return
+            try FfiInboxState(
+                inboxId: FfiConverterString.read(from: &buf),
+                recoveryAddress: FfiConverterString.read(from: &buf),
+                installationIds: FfiConverterSequenceData.read(from: &buf),
+                accountAddresses: FfiConverterSequenceString.read(from: &buf)
+            )
+    }
+
+    public static func write(_ value: FfiInboxState, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.inboxId, into: &buf)
+        FfiConverterString.write(value.recoveryAddress, into: &buf)
+        FfiConverterSequenceData.write(value.installationIds, into: &buf)
+        FfiConverterSequenceString.write(value.accountAddresses, into: &buf)
+    }
+}
+
+public func FfiConverterTypeFfiInboxState_lift(_ buf: RustBuffer) throws -> FfiInboxState {
+    return try FfiConverterTypeFfiInboxState.lift(buf)
+}
+
+public func FfiConverterTypeFfiInboxState_lower(_ value: FfiInboxState) -> RustBuffer {
+    return FfiConverterTypeFfiInboxState.lower(value)
 }
 
 public struct FfiListConversationsOptions {
@@ -5016,6 +5176,9 @@ private var initializationResult: InitializationResult = {
     if uniffi_xmtpv3_checksum_method_fficonversations_sync() != 9054 {
         return InitializationResult.apiChecksumMismatch
     }
+    if uniffi_xmtpv3_checksum_method_fficonversations_sync_all_groups() != 62850 {
+        return InitializationResult.apiChecksumMismatch
+    }
     if uniffi_xmtpv3_checksum_method_ffigroup_add_admin() != 4600 {
         return InitializationResult.apiChecksumMismatch
     }
@@ -5199,10 +5362,16 @@ private var initializationResult: InitializationResult = {
     if uniffi_xmtpv3_checksum_method_ffixmtpclient_find_inbox_id() != 59020 {
         return InitializationResult.apiChecksumMismatch
     }
+    if uniffi_xmtpv3_checksum_method_ffixmtpclient_get_latest_inbox_state() != 3165 {
+        return InitializationResult.apiChecksumMismatch
+    }
     if uniffi_xmtpv3_checksum_method_ffixmtpclient_group() != 64533 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_ffixmtpclient_inbox_id() != 25128 {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if uniffi_xmtpv3_checksum_method_ffixmtpclient_inbox_state() != 7826 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_ffixmtpclient_installation_id() != 37173 {
@@ -5218,6 +5387,9 @@ private var initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_ffixmtpclient_request_history_sync() != 22295 {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if uniffi_xmtpv3_checksum_method_ffixmtpclient_revoke_all_other_installations() != 36450 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_ffixmtpclient_revoke_wallet() != 12211 {
