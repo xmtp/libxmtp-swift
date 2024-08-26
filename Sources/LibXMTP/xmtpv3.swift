@@ -520,7 +520,7 @@ public protocol FfiConversationsProtocol: AnyObject {
 
     func sync() async throws
 
-    func syncAllGroups() async throws
+    func syncAllGroups() async throws -> UInt32
 }
 
 open class FfiConversations:
@@ -664,7 +664,7 @@ open class FfiConversations:
             )
     }
 
-    open func syncAllGroups() async throws {
+    open func syncAllGroups() async throws -> UInt32 {
         return
             try await uniffiRustCallAsync(
                 rustFutureFunc: {
@@ -672,10 +672,10 @@ open class FfiConversations:
                         self.uniffiClonePointer()
                     )
                 },
-                pollFunc: ffi_xmtpv3_rust_future_poll_void,
-                completeFunc: ffi_xmtpv3_rust_future_complete_void,
-                freeFunc: ffi_xmtpv3_rust_future_free_void,
-                liftFunc: { $0 },
+                pollFunc: ffi_xmtpv3_rust_future_poll_u32,
+                completeFunc: ffi_xmtpv3_rust_future_complete_u32,
+                freeFunc: ffi_xmtpv3_rust_future_free_u32,
+                liftFunc: FfiConverterUInt32.lift,
                 errorHandler: FfiConverterTypeGenericError.lift
             )
     }
@@ -5176,7 +5176,7 @@ private var initializationResult: InitializationResult = {
     if uniffi_xmtpv3_checksum_method_fficonversations_sync() != 9054 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_xmtpv3_checksum_method_fficonversations_sync_all_groups() != 62850 {
+    if uniffi_xmtpv3_checksum_method_fficonversations_sync_all_groups() != 3433 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_ffigroup_add_admin() != 4600 {
