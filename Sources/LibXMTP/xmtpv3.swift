@@ -732,6 +732,8 @@ public protocol FfiGroupProtocol: AnyObject {
 
     func adminList() throws -> [String]
 
+    func consentState() throws -> FfiConsentState
+
     func createdAtNs() -> Int64
 
     func findMessages(opts: FfiListMessagesOptions) throws -> [FfiMessage]
@@ -785,6 +787,8 @@ public protocol FfiGroupProtocol: AnyObject {
     func superAdminList() throws -> [String]
 
     func sync() async throws
+
+    func updateConsentState(state: FfiConsentState) throws
 
     func updateGroupDescription(groupDescription: String) async throws
 
@@ -914,6 +918,12 @@ open class FfiGroup:
     open func adminList() throws -> [String] {
         return try FfiConverterSequenceString.lift(rustCallWithError(FfiConverterTypeGenericError.lift) {
             uniffi_xmtpv3_fn_method_ffigroup_admin_list(self.uniffiClonePointer(), $0)
+        })
+    }
+
+    open func consentState() throws -> FfiConsentState {
+        return try FfiConverterTypeFfiConsentState.lift(rustCallWithError(FfiConverterTypeGenericError.lift) {
+            uniffi_xmtpv3_fn_method_ffigroup_consent_state(self.uniffiClonePointer(), $0)
         })
     }
 
@@ -1166,6 +1176,12 @@ open class FfiGroup:
                 liftFunc: { $0 },
                 errorHandler: FfiConverterTypeGenericError.lift
             )
+    }
+
+    open func updateConsentState(state: FfiConsentState) throws { try rustCallWithError(FfiConverterTypeGenericError.lift) {
+        uniffi_xmtpv3_fn_method_ffigroup_update_consent_state(self.uniffiClonePointer(),
+                                                              FfiConverterTypeFfiConsentState.lower(state), $0)
+    }
     }
 
     open func updateGroupDescription(groupDescription: String) async throws {
@@ -1489,7 +1505,7 @@ public func FfiConverterTypeFfiGroupPermissions_lower(_ value: FfiGroupPermissio
 public protocol FfiSignatureRequestProtocol: AnyObject {
     func addEcdsaSignature(signatureBytes: Data) async throws
 
-    func addScwSignature(signatureBytes: Data, address: String, chainRpcUrl: String) async throws
+    func addScwSignature(signatureBytes: Data, address: String, chainId: UInt64, blockNumber: UInt64) async throws
 
     func isReady() async -> Bool
 
@@ -1558,13 +1574,13 @@ open class FfiSignatureRequest:
             )
     }
 
-    open func addScwSignature(signatureBytes: Data, address: String, chainRpcUrl: String) async throws {
+    open func addScwSignature(signatureBytes: Data, address: String, chainId: UInt64, blockNumber: UInt64) async throws {
         return
             try await uniffiRustCallAsync(
                 rustFutureFunc: {
                     uniffi_xmtpv3_fn_method_ffisignaturerequest_add_scw_signature(
                         self.uniffiClonePointer(),
-                        FfiConverterData.lower(signatureBytes), FfiConverterString.lower(address), FfiConverterString.lower(chainRpcUrl)
+                        FfiConverterData.lower(signatureBytes), FfiConverterString.lower(address), FfiConverterUInt64.lower(chainId), FfiConverterUInt64.lower(blockNumber)
                     )
                 },
                 pollFunc: ffi_xmtpv3_rust_future_poll_void,
@@ -2128,6 +2144,8 @@ public protocol FfiXmtpClientProtocol: AnyObject {
 
     func findInboxId(address: String) async throws -> String?
 
+    func getConsentState(entityType: FfiConsentEntityType, entity: String) async throws -> FfiConsentState
+
     func getLatestInboxState(inboxId: String) async throws -> FfiInboxState
 
     func group(groupId: Data) throws -> FfiGroup
@@ -2161,6 +2179,8 @@ public protocol FfiXmtpClientProtocol: AnyObject {
      * Revokes or removes an identity - really a wallet address - from the existing client
      */
     func revokeWallet(walletAddress: String) async throws -> FfiSignatureRequest
+
+    func setConsentState(state: FfiConsentState, entityType: FfiConsentEntityType, entity: String) async throws
 
     func signatureRequest() -> FfiSignatureRequest?
 }
@@ -2294,6 +2314,23 @@ open class FfiXmtpClient:
                 completeFunc: ffi_xmtpv3_rust_future_complete_rust_buffer,
                 freeFunc: ffi_xmtpv3_rust_future_free_rust_buffer,
                 liftFunc: FfiConverterOptionString.lift,
+                errorHandler: FfiConverterTypeGenericError.lift
+            )
+    }
+
+    open func getConsentState(entityType: FfiConsentEntityType, entity: String) async throws -> FfiConsentState {
+        return
+            try await uniffiRustCallAsync(
+                rustFutureFunc: {
+                    uniffi_xmtpv3_fn_method_ffixmtpclient_get_consent_state(
+                        self.uniffiClonePointer(),
+                        FfiConverterTypeFfiConsentEntityType.lower(entityType), FfiConverterString.lower(entity)
+                    )
+                },
+                pollFunc: ffi_xmtpv3_rust_future_poll_rust_buffer,
+                completeFunc: ffi_xmtpv3_rust_future_complete_rust_buffer,
+                freeFunc: ffi_xmtpv3_rust_future_free_rust_buffer,
+                liftFunc: FfiConverterTypeFfiConsentState.lift,
                 errorHandler: FfiConverterTypeGenericError.lift
             )
     }
@@ -2437,6 +2474,23 @@ open class FfiXmtpClient:
                 completeFunc: ffi_xmtpv3_rust_future_complete_pointer,
                 freeFunc: ffi_xmtpv3_rust_future_free_pointer,
                 liftFunc: FfiConverterTypeFfiSignatureRequest.lift,
+                errorHandler: FfiConverterTypeGenericError.lift
+            )
+    }
+
+    open func setConsentState(state: FfiConsentState, entityType: FfiConsentEntityType, entity: String) async throws {
+        return
+            try await uniffiRustCallAsync(
+                rustFutureFunc: {
+                    uniffi_xmtpv3_fn_method_ffixmtpclient_set_consent_state(
+                        self.uniffiClonePointer(),
+                        FfiConverterTypeFfiConsentState.lower(state), FfiConverterTypeFfiConsentEntityType.lower(entityType), FfiConverterString.lower(entity)
+                    )
+                },
+                pollFunc: ffi_xmtpv3_rust_future_poll_void,
+                completeFunc: ffi_xmtpv3_rust_future_complete_void,
+                freeFunc: ffi_xmtpv3_rust_future_free_void,
+                liftFunc: { $0 },
                 errorHandler: FfiConverterTypeGenericError.lift
             )
     }
@@ -2687,14 +2741,16 @@ public struct FfiGroupMember {
     public var accountAddresses: [String]
     public var installationIds: [Data]
     public var permissionLevel: FfiPermissionLevel
+    public var consentState: FfiConsentState
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
-    public init(inboxId: String, accountAddresses: [String], installationIds: [Data], permissionLevel: FfiPermissionLevel) {
+    public init(inboxId: String, accountAddresses: [String], installationIds: [Data], permissionLevel: FfiPermissionLevel, consentState: FfiConsentState) {
         self.inboxId = inboxId
         self.accountAddresses = accountAddresses
         self.installationIds = installationIds
         self.permissionLevel = permissionLevel
+        self.consentState = consentState
     }
 }
 
@@ -2712,6 +2768,9 @@ extension FfiGroupMember: Equatable, Hashable {
         if lhs.permissionLevel != rhs.permissionLevel {
             return false
         }
+        if lhs.consentState != rhs.consentState {
+            return false
+        }
         return true
     }
 
@@ -2720,6 +2779,7 @@ extension FfiGroupMember: Equatable, Hashable {
         hasher.combine(accountAddresses)
         hasher.combine(installationIds)
         hasher.combine(permissionLevel)
+        hasher.combine(consentState)
     }
 }
 
@@ -2730,7 +2790,8 @@ public struct FfiConverterTypeFfiGroupMember: FfiConverterRustBuffer {
                 inboxId: FfiConverterString.read(from: &buf),
                 accountAddresses: FfiConverterSequenceString.read(from: &buf),
                 installationIds: FfiConverterSequenceData.read(from: &buf),
-                permissionLevel: FfiConverterTypeFfiPermissionLevel.read(from: &buf)
+                permissionLevel: FfiConverterTypeFfiPermissionLevel.read(from: &buf),
+                consentState: FfiConverterTypeFfiConsentState.read(from: &buf)
             )
     }
 
@@ -2739,6 +2800,7 @@ public struct FfiConverterTypeFfiGroupMember: FfiConverterRustBuffer {
         FfiConverterSequenceString.write(value.accountAddresses, into: &buf)
         FfiConverterSequenceData.write(value.installationIds, into: &buf)
         FfiConverterTypeFfiPermissionLevel.write(value.permissionLevel, into: &buf)
+        FfiConverterTypeFfiConsentState.write(value.consentState, into: &buf)
     }
 }
 
@@ -3493,6 +3555,104 @@ public func FfiConverterTypeFfiV2SubscribeRequest_lift(_ buf: RustBuffer) throws
 public func FfiConverterTypeFfiV2SubscribeRequest_lower(_ value: FfiV2SubscribeRequest) -> RustBuffer {
     return FfiConverterTypeFfiV2SubscribeRequest.lower(value)
 }
+
+// Note that we don't yet support `indirect` for enums.
+// See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
+
+public enum FfiConsentEntityType {
+    case groupId
+    case inboxId
+    case address
+}
+
+public struct FfiConverterTypeFfiConsentEntityType: FfiConverterRustBuffer {
+    typealias SwiftType = FfiConsentEntityType
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiConsentEntityType {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        case 1: return .groupId
+
+        case 2: return .inboxId
+
+        case 3: return .address
+
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: FfiConsentEntityType, into buf: inout [UInt8]) {
+        switch value {
+        case .groupId:
+            writeInt(&buf, Int32(1))
+
+        case .inboxId:
+            writeInt(&buf, Int32(2))
+
+        case .address:
+            writeInt(&buf, Int32(3))
+        }
+    }
+}
+
+public func FfiConverterTypeFfiConsentEntityType_lift(_ buf: RustBuffer) throws -> FfiConsentEntityType {
+    return try FfiConverterTypeFfiConsentEntityType.lift(buf)
+}
+
+public func FfiConverterTypeFfiConsentEntityType_lower(_ value: FfiConsentEntityType) -> RustBuffer {
+    return FfiConverterTypeFfiConsentEntityType.lower(value)
+}
+
+extension FfiConsentEntityType: Equatable, Hashable {}
+
+// Note that we don't yet support `indirect` for enums.
+// See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
+
+public enum FfiConsentState {
+    case unknown
+    case allowed
+    case denied
+}
+
+public struct FfiConverterTypeFfiConsentState: FfiConverterRustBuffer {
+    typealias SwiftType = FfiConsentState
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiConsentState {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        case 1: return .unknown
+
+        case 2: return .allowed
+
+        case 3: return .denied
+
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: FfiConsentState, into buf: inout [UInt8]) {
+        switch value {
+        case .unknown:
+            writeInt(&buf, Int32(1))
+
+        case .allowed:
+            writeInt(&buf, Int32(2))
+
+        case .denied:
+            writeInt(&buf, Int32(3))
+        }
+    }
+}
+
+public func FfiConverterTypeFfiConsentState_lift(_ buf: RustBuffer) throws -> FfiConsentState {
+    return try FfiConverterTypeFfiConsentState.lift(buf)
+}
+
+public func FfiConverterTypeFfiConsentState_lower(_ value: FfiConsentState) -> RustBuffer {
+    return FfiConverterTypeFfiConsentState.lower(value)
+}
+
+extension FfiConsentState: Equatable, Hashable {}
 
 // Note that we don't yet support `indirect` for enums.
 // See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
@@ -5197,6 +5357,9 @@ private var initializationResult: InitializationResult = {
     if uniffi_xmtpv3_checksum_method_ffigroup_admin_list() != 51010 {
         return InitializationResult.apiChecksumMismatch
     }
+    if uniffi_xmtpv3_checksum_method_ffigroup_consent_state() != 11630 {
+        return InitializationResult.apiChecksumMismatch
+    }
     if uniffi_xmtpv3_checksum_method_ffigroup_created_at_ns() != 4894 {
         return InitializationResult.apiChecksumMismatch
     }
@@ -5269,6 +5432,9 @@ private var initializationResult: InitializationResult = {
     if uniffi_xmtpv3_checksum_method_ffigroup_sync() != 24219 {
         return InitializationResult.apiChecksumMismatch
     }
+    if uniffi_xmtpv3_checksum_method_ffigroup_update_consent_state() != 48124 {
+        return InitializationResult.apiChecksumMismatch
+    }
     if uniffi_xmtpv3_checksum_method_ffigroup_update_group_description() != 34006 {
         return InitializationResult.apiChecksumMismatch
     }
@@ -5299,7 +5465,7 @@ private var initializationResult: InitializationResult = {
     if uniffi_xmtpv3_checksum_method_ffisignaturerequest_add_ecdsa_signature() != 8706 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_xmtpv3_checksum_method_ffisignaturerequest_add_scw_signature() != 59425 {
+    if uniffi_xmtpv3_checksum_method_ffisignaturerequest_add_scw_signature() != 23994 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_ffisignaturerequest_is_ready() != 65051 {
@@ -5362,6 +5528,9 @@ private var initializationResult: InitializationResult = {
     if uniffi_xmtpv3_checksum_method_ffixmtpclient_find_inbox_id() != 59020 {
         return InitializationResult.apiChecksumMismatch
     }
+    if uniffi_xmtpv3_checksum_method_ffixmtpclient_get_consent_state() != 58208 {
+        return InitializationResult.apiChecksumMismatch
+    }
     if uniffi_xmtpv3_checksum_method_ffixmtpclient_get_latest_inbox_state() != 3165 {
         return InitializationResult.apiChecksumMismatch
     }
@@ -5393,6 +5562,9 @@ private var initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_ffixmtpclient_revoke_wallet() != 12211 {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if uniffi_xmtpv3_checksum_method_ffixmtpclient_set_consent_state() != 36178 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_ffixmtpclient_signature_request() != 18270 {
