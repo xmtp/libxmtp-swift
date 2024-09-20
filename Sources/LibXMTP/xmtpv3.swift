@@ -2180,7 +2180,7 @@ public protocol FfiXmtpClientProtocol: AnyObject {
      */
     func revokeWallet(walletAddress: String) async throws -> FfiSignatureRequest
 
-    func setConsentState(state: FfiConsentState, entityType: FfiConsentEntityType, entity: String) async throws
+    func setConsentStates(records: [FfiConsent]) async throws
 
     func signatureRequest() -> FfiSignatureRequest?
 }
@@ -2478,13 +2478,13 @@ open class FfiXmtpClient:
             )
     }
 
-    open func setConsentState(state: FfiConsentState, entityType: FfiConsentEntityType, entity: String) async throws {
+    open func setConsentStates(records: [FfiConsent]) async throws {
         return
             try await uniffiRustCallAsync(
                 rustFutureFunc: {
-                    uniffi_xmtpv3_fn_method_ffixmtpclient_set_consent_state(
+                    uniffi_xmtpv3_fn_method_ffixmtpclient_set_consent_states(
                         self.uniffiClonePointer(),
-                        FfiConverterTypeFfiConsentState.lower(state), FfiConverterTypeFfiConsentEntityType.lower(entityType), FfiConverterString.lower(entity)
+                        FfiConverterSequenceTypeFfiConsent.lower(records)
                     )
                 },
                 pollFunc: ffi_xmtpv3_rust_future_poll_void,
@@ -2538,6 +2538,66 @@ public func FfiConverterTypeFfiXmtpClient_lift(_ pointer: UnsafeMutableRawPointe
 
 public func FfiConverterTypeFfiXmtpClient_lower(_ value: FfiXmtpClient) -> UnsafeMutableRawPointer {
     return FfiConverterTypeFfiXmtpClient.lower(value)
+}
+
+public struct FfiConsent {
+    public var entityType: FfiConsentEntityType
+    public var state: FfiConsentState
+    public var entity: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(entityType: FfiConsentEntityType, state: FfiConsentState, entity: String) {
+        self.entityType = entityType
+        self.state = state
+        self.entity = entity
+    }
+}
+
+extension FfiConsent: Equatable, Hashable {
+    public static func == (lhs: FfiConsent, rhs: FfiConsent) -> Bool {
+        if lhs.entityType != rhs.entityType {
+            return false
+        }
+        if lhs.state != rhs.state {
+            return false
+        }
+        if lhs.entity != rhs.entity {
+            return false
+        }
+        return true
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(entityType)
+        hasher.combine(state)
+        hasher.combine(entity)
+    }
+}
+
+public struct FfiConverterTypeFfiConsent: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiConsent {
+        return
+            try FfiConsent(
+                entityType: FfiConverterTypeFfiConsentEntityType.read(from: &buf),
+                state: FfiConverterTypeFfiConsentState.read(from: &buf),
+                entity: FfiConverterString.read(from: &buf)
+            )
+    }
+
+    public static func write(_ value: FfiConsent, into buf: inout [UInt8]) {
+        FfiConverterTypeFfiConsentEntityType.write(value.entityType, into: &buf)
+        FfiConverterTypeFfiConsentState.write(value.state, into: &buf)
+        FfiConverterString.write(value.entity, into: &buf)
+    }
+}
+
+public func FfiConverterTypeFfiConsent_lift(_ buf: RustBuffer) throws -> FfiConsent {
+    return try FfiConverterTypeFfiConsent.lift(buf)
+}
+
+public func FfiConverterTypeFfiConsent_lower(_ value: FfiConsent) -> RustBuffer {
+    return FfiConverterTypeFfiConsent.lower(value)
 }
 
 public struct FfiCreateGroupOptions {
@@ -4896,6 +4956,28 @@ private struct FfiConverterSequenceTypeFfiGroup: FfiConverterRustBuffer {
     }
 }
 
+private struct FfiConverterSequenceTypeFfiConsent: FfiConverterRustBuffer {
+    typealias SwiftType = [FfiConsent]
+
+    public static func write(_ value: [FfiConsent], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeFfiConsent.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [FfiConsent] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [FfiConsent]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            try seq.append(FfiConverterTypeFfiConsent.read(from: &buf))
+        }
+        return seq
+    }
+}
+
 private struct FfiConverterSequenceTypeFfiEnvelope: FfiConverterRustBuffer {
     typealias SwiftType = [FfiEnvelope]
 
@@ -5564,7 +5646,7 @@ private var initializationResult: InitializationResult = {
     if uniffi_xmtpv3_checksum_method_ffixmtpclient_revoke_wallet() != 12211 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_xmtpv3_checksum_method_ffixmtpclient_set_consent_state() != 36178 {
+    if uniffi_xmtpv3_checksum_method_ffixmtpclient_set_consent_states() != 64566 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_ffixmtpclient_signature_request() != 18270 {
