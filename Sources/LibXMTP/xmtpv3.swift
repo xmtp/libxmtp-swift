@@ -758,7 +758,7 @@ public protocol FfiGroupProtocol: AnyObject {
 
     func isSuperAdmin(inboxId: String) throws -> Bool
 
-    func listMembers() throws -> [FfiGroupMember]
+    func listMembers() async throws -> [FfiGroupMember]
 
     func processStreamedGroupMessage(envelopeBytes: Data) async throws -> FfiMessage
 
@@ -1002,10 +1002,20 @@ open class FfiGroup:
         })
     }
 
-    open func listMembers() throws -> [FfiGroupMember] {
-        return try FfiConverterSequenceTypeFfiGroupMember.lift(rustCallWithError(FfiConverterTypeGenericError.lift) {
-            uniffi_xmtpv3_fn_method_ffigroup_list_members(self.uniffiClonePointer(), $0)
-        })
+    open func listMembers() async throws -> [FfiGroupMember] {
+        return
+            try await uniffiRustCallAsync(
+                rustFutureFunc: {
+                    uniffi_xmtpv3_fn_method_ffigroup_list_members(
+                        self.uniffiClonePointer()
+                    )
+                },
+                pollFunc: ffi_xmtpv3_rust_future_poll_rust_buffer,
+                completeFunc: ffi_xmtpv3_rust_future_complete_rust_buffer,
+                freeFunc: ffi_xmtpv3_rust_future_free_rust_buffer,
+                liftFunc: FfiConverterSequenceTypeFfiGroupMember.lift,
+                errorHandler: FfiConverterTypeGenericError.lift
+            )
     }
 
     open func processStreamedGroupMessage(envelopeBytes: Data) async throws -> FfiMessage {
@@ -2875,15 +2885,15 @@ public func FfiConverterTypeFfiGroupMember_lower(_ value: FfiGroupMember) -> Rus
 public struct FfiInboxState {
     public var inboxId: String
     public var recoveryAddress: String
-    public var installationIds: [Data]
+    public var installations: [FfiInstallation]
     public var accountAddresses: [String]
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
-    public init(inboxId: String, recoveryAddress: String, installationIds: [Data], accountAddresses: [String]) {
+    public init(inboxId: String, recoveryAddress: String, installations: [FfiInstallation], accountAddresses: [String]) {
         self.inboxId = inboxId
         self.recoveryAddress = recoveryAddress
-        self.installationIds = installationIds
+        self.installations = installations
         self.accountAddresses = accountAddresses
     }
 }
@@ -2896,7 +2906,7 @@ extension FfiInboxState: Equatable, Hashable {
         if lhs.recoveryAddress != rhs.recoveryAddress {
             return false
         }
-        if lhs.installationIds != rhs.installationIds {
+        if lhs.installations != rhs.installations {
             return false
         }
         if lhs.accountAddresses != rhs.accountAddresses {
@@ -2908,7 +2918,7 @@ extension FfiInboxState: Equatable, Hashable {
     public func hash(into hasher: inout Hasher) {
         hasher.combine(inboxId)
         hasher.combine(recoveryAddress)
-        hasher.combine(installationIds)
+        hasher.combine(installations)
         hasher.combine(accountAddresses)
     }
 }
@@ -2919,7 +2929,7 @@ public struct FfiConverterTypeFfiInboxState: FfiConverterRustBuffer {
             try FfiInboxState(
                 inboxId: FfiConverterString.read(from: &buf),
                 recoveryAddress: FfiConverterString.read(from: &buf),
-                installationIds: FfiConverterSequenceData.read(from: &buf),
+                installations: FfiConverterSequenceTypeFfiInstallation.read(from: &buf),
                 accountAddresses: FfiConverterSequenceString.read(from: &buf)
             )
     }
@@ -2927,7 +2937,7 @@ public struct FfiConverterTypeFfiInboxState: FfiConverterRustBuffer {
     public static func write(_ value: FfiInboxState, into buf: inout [UInt8]) {
         FfiConverterString.write(value.inboxId, into: &buf)
         FfiConverterString.write(value.recoveryAddress, into: &buf)
-        FfiConverterSequenceData.write(value.installationIds, into: &buf)
+        FfiConverterSequenceTypeFfiInstallation.write(value.installations, into: &buf)
         FfiConverterSequenceString.write(value.accountAddresses, into: &buf)
     }
 }
@@ -2938,6 +2948,58 @@ public func FfiConverterTypeFfiInboxState_lift(_ buf: RustBuffer) throws -> FfiI
 
 public func FfiConverterTypeFfiInboxState_lower(_ value: FfiInboxState) -> RustBuffer {
     return FfiConverterTypeFfiInboxState.lower(value)
+}
+
+public struct FfiInstallation {
+    public var id: Data
+    public var clientTimestampNs: UInt64?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(id: Data, clientTimestampNs: UInt64?) {
+        self.id = id
+        self.clientTimestampNs = clientTimestampNs
+    }
+}
+
+extension FfiInstallation: Equatable, Hashable {
+    public static func == (lhs: FfiInstallation, rhs: FfiInstallation) -> Bool {
+        if lhs.id != rhs.id {
+            return false
+        }
+        if lhs.clientTimestampNs != rhs.clientTimestampNs {
+            return false
+        }
+        return true
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+        hasher.combine(clientTimestampNs)
+    }
+}
+
+public struct FfiConverterTypeFfiInstallation: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiInstallation {
+        return
+            try FfiInstallation(
+                id: FfiConverterData.read(from: &buf),
+                clientTimestampNs: FfiConverterOptionUInt64.read(from: &buf)
+            )
+    }
+
+    public static func write(_ value: FfiInstallation, into buf: inout [UInt8]) {
+        FfiConverterData.write(value.id, into: &buf)
+        FfiConverterOptionUInt64.write(value.clientTimestampNs, into: &buf)
+    }
+}
+
+public func FfiConverterTypeFfiInstallation_lift(_ buf: RustBuffer) throws -> FfiInstallation {
+    return try FfiConverterTypeFfiInstallation.lift(buf)
+}
+
+public func FfiConverterTypeFfiInstallation_lower(_ value: FfiInstallation) -> RustBuffer {
+    return FfiConverterTypeFfiInstallation.lower(value)
 }
 
 public struct FfiListConversationsOptions {
@@ -4680,6 +4742,27 @@ extension FfiConverterCallbackInterfaceFfiV2SubscriptionCallback: FfiConverter {
     }
 }
 
+private struct FfiConverterOptionUInt64: FfiConverterRustBuffer {
+    typealias SwiftType = UInt64?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterUInt64.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterUInt64.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
 private struct FfiConverterOptionInt64: FfiConverterRustBuffer {
     typealias SwiftType = Int64?
 
@@ -5017,6 +5100,28 @@ private struct FfiConverterSequenceTypeFfiGroupMember: FfiConverterRustBuffer {
         seq.reserveCapacity(Int(len))
         for _ in 0 ..< len {
             try seq.append(FfiConverterTypeFfiGroupMember.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+private struct FfiConverterSequenceTypeFfiInstallation: FfiConverterRustBuffer {
+    typealias SwiftType = [FfiInstallation]
+
+    public static func write(_ value: [FfiInstallation], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeFfiInstallation.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [FfiInstallation] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [FfiInstallation]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            try seq.append(FfiConverterTypeFfiInstallation.read(from: &buf))
         }
         return seq
     }
@@ -5478,7 +5583,7 @@ private var initializationResult: InitializationResult = {
     if uniffi_xmtpv3_checksum_method_ffigroup_is_super_admin() != 61614 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_xmtpv3_checksum_method_ffigroup_list_members() != 61034 {
+    if uniffi_xmtpv3_checksum_method_ffigroup_list_members() != 3945 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_ffigroup_process_streamed_group_message() != 19069 {
