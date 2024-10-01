@@ -508,6 +508,8 @@ private struct FfiConverterData: FfiConverterRustBuffer {
 }
 
 public protocol FfiConversationsProtocol: AnyObject {
+    func createDm(accountAddress: String) async throws -> FfiGroup
+
     func createGroup(accountAddresses: [String], opts: FfiCreateGroupOptions) async throws -> FfiGroup
 
     func list(opts: FfiListConversationsOptions) async throws -> [FfiGroup]
@@ -561,6 +563,23 @@ open class FfiConversations:
         }
 
         try! rustCall { uniffi_xmtpv3_fn_free_fficonversations(pointer, $0) }
+    }
+
+    open func createDm(accountAddress: String) async throws -> FfiGroup {
+        return
+            try await uniffiRustCallAsync(
+                rustFutureFunc: {
+                    uniffi_xmtpv3_fn_method_fficonversations_create_dm(
+                        self.uniffiClonePointer(),
+                        FfiConverterString.lower(accountAddress)
+                    )
+                },
+                pollFunc: ffi_xmtpv3_rust_future_poll_pointer,
+                completeFunc: ffi_xmtpv3_rust_future_complete_pointer,
+                freeFunc: ffi_xmtpv3_rust_future_free_pointer,
+                liftFunc: FfiConverterTypeFfiGroup.lift,
+                errorHandler: FfiConverterTypeGenericError.lift
+            )
     }
 
     open func createGroup(accountAddresses: [String], opts: FfiCreateGroupOptions) async throws -> FfiGroup {
@@ -5503,6 +5522,9 @@ private var initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_func_verify_k256_sha256() != 25521 {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if uniffi_xmtpv3_checksum_method_fficonversations_create_dm() != 61687 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_fficonversations_create_group() != 62996 {
