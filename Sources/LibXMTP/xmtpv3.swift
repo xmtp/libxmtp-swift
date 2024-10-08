@@ -1534,7 +1534,7 @@ public func FfiConverterTypeFfiGroupPermissions_lower(_ value: FfiGroupPermissio
 public protocol FfiSignatureRequestProtocol: AnyObject {
     func addEcdsaSignature(signatureBytes: Data) async throws
 
-    func addScwSignature(signatureBytes: Data, address: String, chainId: UInt64, blockNumber: UInt64) async throws
+    func addScwSignature(signatureBytes: Data, address: String, chainId: UInt64, blockNumber: UInt64?) async throws
 
     func isReady() async -> Bool
 
@@ -1603,13 +1603,13 @@ open class FfiSignatureRequest:
             )
     }
 
-    open func addScwSignature(signatureBytes: Data, address: String, chainId: UInt64, blockNumber: UInt64) async throws {
+    open func addScwSignature(signatureBytes: Data, address: String, chainId: UInt64, blockNumber: UInt64?) async throws {
         return
             try await uniffiRustCallAsync(
                 rustFutureFunc: {
                     uniffi_xmtpv3_fn_method_ffisignaturerequest_add_scw_signature(
                         self.uniffiClonePointer(),
-                        FfiConverterData.lower(signatureBytes), FfiConverterString.lower(address), FfiConverterUInt64.lower(chainId), FfiConverterUInt64.lower(blockNumber)
+                        FfiConverterData.lower(signatureBytes), FfiConverterString.lower(address), FfiConverterUInt64.lower(chainId), FfiConverterOptionUInt64.lower(blockNumber)
                     )
                 },
                 pollFunc: ffi_xmtpv3_rust_future_poll_void,
@@ -4239,6 +4239,8 @@ public enum GenericError {
     case SignatureRequestError(message: String)
 
     case Erc1271SignatureError(message: String)
+
+    case Verifier(message: String)
 }
 
 public struct FfiConverterTypeGenericError: FfiConverterRustBuffer {
@@ -4291,6 +4293,10 @@ public struct FfiConverterTypeGenericError: FfiConverterRustBuffer {
                 message: FfiConverterString.read(from: &buf)
             )
 
+        case 12: return try .Verifier(
+                message: FfiConverterString.read(from: &buf)
+            )
+
         default: throw UniffiInternalError.unexpectedEnumCase
         }
     }
@@ -4319,6 +4325,8 @@ public struct FfiConverterTypeGenericError: FfiConverterRustBuffer {
             writeInt(&buf, Int32(10))
         case .Erc1271SignatureError(_ /* message is ignored*/ ):
             writeInt(&buf, Int32(11))
+        case .Verifier(_ /* message is ignored*/ ):
+            writeInt(&buf, Int32(12))
         }
     }
 }
@@ -5674,7 +5682,7 @@ private var initializationResult: InitializationResult = {
     if uniffi_xmtpv3_checksum_method_ffisignaturerequest_add_ecdsa_signature() != 8706 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_xmtpv3_checksum_method_ffisignaturerequest_add_scw_signature() != 23994 {
+    if uniffi_xmtpv3_checksum_method_ffisignaturerequest_add_scw_signature() != 52793 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_ffisignaturerequest_is_ready() != 65051 {
