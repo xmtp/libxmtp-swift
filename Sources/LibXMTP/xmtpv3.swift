@@ -2163,6 +2163,14 @@ public protocol FfiXmtpClientProtocol: AnyObject {
      */
     func addWallet(existingWalletAddress: String, newWalletAddress: String) async throws -> FfiSignatureRequest
 
+    /**
+     * * Get the inbox state for each `inbox_id`.
+     *      *
+     *      * If `refresh_from_network` is true, the client will go to the network first to refresh the state.
+     *      * Otherwise, the state will be read from the local database.
+     */
+    func addressesFromInboxId(refreshFromNetwork: Bool, inboxIds: [String]) async throws -> [FfiInboxState]
+
     func applySignatureRequest(signatureRequest: FfiSignatureRequest) async throws
 
     func canMessage(accountAddresses: [String]) async throws -> [String: Bool]
@@ -2270,6 +2278,29 @@ open class FfiXmtpClient:
                 completeFunc: ffi_xmtpv3_rust_future_complete_pointer,
                 freeFunc: ffi_xmtpv3_rust_future_free_pointer,
                 liftFunc: FfiConverterTypeFfiSignatureRequest.lift,
+                errorHandler: FfiConverterTypeGenericError.lift
+            )
+    }
+
+    /**
+     * * Get the inbox state for each `inbox_id`.
+     *      *
+     *      * If `refresh_from_network` is true, the client will go to the network first to refresh the state.
+     *      * Otherwise, the state will be read from the local database.
+     */
+    open func addressesFromInboxId(refreshFromNetwork: Bool, inboxIds: [String]) async throws -> [FfiInboxState] {
+        return
+            try await uniffiRustCallAsync(
+                rustFutureFunc: {
+                    uniffi_xmtpv3_fn_method_ffixmtpclient_addresses_from_inbox_id(
+                        self.uniffiClonePointer(),
+                        FfiConverterBool.lower(refreshFromNetwork), FfiConverterSequenceString.lower(inboxIds)
+                    )
+                },
+                pollFunc: ffi_xmtpv3_rust_future_poll_rust_buffer,
+                completeFunc: ffi_xmtpv3_rust_future_complete_rust_buffer,
+                freeFunc: ffi_xmtpv3_rust_future_free_rust_buffer,
+                liftFunc: FfiConverterSequenceTypeFfiInboxState.lift,
                 errorHandler: FfiConverterTypeGenericError.lift
             )
     }
@@ -5132,6 +5163,28 @@ private struct FfiConverterSequenceTypeFfiGroupMember: FfiConverterRustBuffer {
     }
 }
 
+private struct FfiConverterSequenceTypeFfiInboxState: FfiConverterRustBuffer {
+    typealias SwiftType = [FfiInboxState]
+
+    public static func write(_ value: [FfiInboxState], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeFfiInboxState.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [FfiInboxState] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [FfiInboxState]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            try seq.append(FfiConverterTypeFfiInboxState.read(from: &buf))
+        }
+        return seq
+    }
+}
+
 private struct FfiConverterSequenceTypeFfiInstallation: FfiConverterRustBuffer {
     typealias SwiftType = [FfiInstallation]
 
@@ -5728,6 +5781,9 @@ private var initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_ffixmtpclient_add_wallet() != 23786 {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if uniffi_xmtpv3_checksum_method_ffixmtpclient_addresses_from_inbox_id() != 29264 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_ffixmtpclient_apply_signature_request() != 32172 {
