@@ -50,11 +50,9 @@ private extension ForeignBytes {
 
 private extension Data {
     init(rustBuffer: RustBuffer) {
-        self.init(
-            bytesNoCopy: rustBuffer.data!,
-            count: Int(rustBuffer.len),
-            deallocator: .none
-        )
+        // TODO: This copies the buffer. Can we read directly from a
+        // Rust buffer?
+        self.init(bytes: rustBuffer.data!, count: Int(rustBuffer.len))
     }
 }
 
@@ -170,16 +168,10 @@ private protocol FfiConverter {
 private protocol FfiConverterPrimitive: FfiConverter where FfiType == SwiftType {}
 
 extension FfiConverterPrimitive {
-    #if swift(>=5.8)
-        @_documentation(visibility: private)
-    #endif
     public static func lift(_ value: FfiType) throws -> SwiftType {
         return value
     }
 
-    #if swift(>=5.8)
-        @_documentation(visibility: private)
-    #endif
     public static func lower(_ value: SwiftType) -> FfiType {
         return value
     }
@@ -190,9 +182,6 @@ extension FfiConverterPrimitive {
 private protocol FfiConverterRustBuffer: FfiConverter where FfiType == RustBuffer {}
 
 extension FfiConverterRustBuffer {
-    #if swift(>=5.8)
-        @_documentation(visibility: private)
-    #endif
     public static func lift(_ buf: RustBuffer) throws -> SwiftType {
         var reader = createReader(data: Data(rustBuffer: buf))
         let value = try read(from: &reader)
@@ -203,9 +192,6 @@ extension FfiConverterRustBuffer {
         return value
     }
 
-    #if swift(>=5.8)
-        @_documentation(visibility: private)
-    #endif
     public static func lower(_ value: SwiftType) -> RustBuffer {
         var writer = createWriter()
         write(value, into: &writer)
@@ -395,9 +381,6 @@ private class UniffiHandleMap<T> {
 
 // Public interface members begin here.
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 private struct FfiConverterUInt8: FfiConverterPrimitive {
     typealias FfiType = UInt8
     typealias SwiftType = UInt8
@@ -411,9 +394,6 @@ private struct FfiConverterUInt8: FfiConverterPrimitive {
     }
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 private struct FfiConverterUInt32: FfiConverterPrimitive {
     typealias FfiType = UInt32
     typealias SwiftType = UInt32
@@ -427,9 +407,6 @@ private struct FfiConverterUInt32: FfiConverterPrimitive {
     }
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 private struct FfiConverterUInt64: FfiConverterPrimitive {
     typealias FfiType = UInt64
     typealias SwiftType = UInt64
@@ -443,9 +420,6 @@ private struct FfiConverterUInt64: FfiConverterPrimitive {
     }
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 private struct FfiConverterInt64: FfiConverterPrimitive {
     typealias FfiType = Int64
     typealias SwiftType = Int64
@@ -459,9 +433,6 @@ private struct FfiConverterInt64: FfiConverterPrimitive {
     }
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 private struct FfiConverterBool: FfiConverter {
     typealias FfiType = Int8
     typealias SwiftType = Bool
@@ -483,9 +454,6 @@ private struct FfiConverterBool: FfiConverter {
     }
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 private struct FfiConverterString: FfiConverter {
     typealias SwiftType = String
     typealias FfiType = RustBuffer
@@ -524,9 +492,6 @@ private struct FfiConverterString: FfiConverter {
     }
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 private struct FfiConverterData: FfiConverterRustBuffer {
     typealias SwiftType = Data
 
@@ -630,9 +595,6 @@ open class FfiConversation:
     fileprivate let pointer: UnsafeMutableRawPointer!
 
     /// Used to instantiate a [FFIObject] without an actual pointer, for fakes in tests, mostly.
-    #if swift(>=5.8)
-        @_documentation(visibility: private)
-    #endif
     public struct NoPointer {
         public init() {}
     }
@@ -644,21 +606,15 @@ open class FfiConversation:
         self.pointer = pointer
     }
 
-    // This constructor can be used to instantiate a fake object.
-    // - Parameter noPointer: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
-    //
-    // - Warning:
-    //     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing [Pointer] the FFI lower functions will crash.
-    #if swift(>=5.8)
-        @_documentation(visibility: private)
-    #endif
+    /// This constructor can be used to instantiate a fake object.
+    /// - Parameter noPointer: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    ///
+    /// - Warning:
+    ///     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing [Pointer] the FFI lower functions will crash.
     public init(noPointer _: NoPointer) {
         pointer = nil
     }
 
-    #if swift(>=5.8)
-        @_documentation(visibility: private)
-    #endif
     public func uniffiClonePointer() -> UnsafeMutableRawPointer {
         return try! rustCall { uniffi_xmtpv3_fn_clone_fficonversation(self.pointer, $0) }
     }
@@ -1112,9 +1068,6 @@ open class FfiConversation:
     }
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public struct FfiConverterTypeFfiConversation: FfiConverter {
     typealias FfiType = UnsafeMutableRawPointer
     typealias SwiftType = FfiConversation
@@ -1145,16 +1098,10 @@ public struct FfiConverterTypeFfiConversation: FfiConverter {
     }
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public func FfiConverterTypeFfiConversation_lift(_ pointer: UnsafeMutableRawPointer) throws -> FfiConversation {
     return try FfiConverterTypeFfiConversation.lift(pointer)
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public func FfiConverterTypeFfiConversation_lower(_ value: FfiConversation) -> UnsafeMutableRawPointer {
     return FfiConverterTypeFfiConversation.lower(value)
 }
@@ -1171,9 +1118,6 @@ open class FfiConversationMetadata:
     fileprivate let pointer: UnsafeMutableRawPointer!
 
     /// Used to instantiate a [FFIObject] without an actual pointer, for fakes in tests, mostly.
-    #if swift(>=5.8)
-        @_documentation(visibility: private)
-    #endif
     public struct NoPointer {
         public init() {}
     }
@@ -1185,21 +1129,15 @@ open class FfiConversationMetadata:
         self.pointer = pointer
     }
 
-    // This constructor can be used to instantiate a fake object.
-    // - Parameter noPointer: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
-    //
-    // - Warning:
-    //     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing [Pointer] the FFI lower functions will crash.
-    #if swift(>=5.8)
-        @_documentation(visibility: private)
-    #endif
+    /// This constructor can be used to instantiate a fake object.
+    /// - Parameter noPointer: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    ///
+    /// - Warning:
+    ///     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing [Pointer] the FFI lower functions will crash.
     public init(noPointer _: NoPointer) {
         pointer = nil
     }
 
-    #if swift(>=5.8)
-        @_documentation(visibility: private)
-    #endif
     public func uniffiClonePointer() -> UnsafeMutableRawPointer {
         return try! rustCall { uniffi_xmtpv3_fn_clone_fficonversationmetadata(self.pointer, $0) }
     }
@@ -1227,9 +1165,6 @@ open class FfiConversationMetadata:
     }
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public struct FfiConverterTypeFfiConversationMetadata: FfiConverter {
     typealias FfiType = UnsafeMutableRawPointer
     typealias SwiftType = FfiConversationMetadata
@@ -1260,16 +1195,10 @@ public struct FfiConverterTypeFfiConversationMetadata: FfiConverter {
     }
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public func FfiConverterTypeFfiConversationMetadata_lift(_ pointer: UnsafeMutableRawPointer) throws -> FfiConversationMetadata {
     return try FfiConverterTypeFfiConversationMetadata.lift(pointer)
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public func FfiConverterTypeFfiConversationMetadata_lower(_ value: FfiConversationMetadata) -> UnsafeMutableRawPointer {
     return FfiConverterTypeFfiConversationMetadata.lower(value)
 }
@@ -1310,9 +1239,6 @@ open class FfiConversations:
     fileprivate let pointer: UnsafeMutableRawPointer!
 
     /// Used to instantiate a [FFIObject] without an actual pointer, for fakes in tests, mostly.
-    #if swift(>=5.8)
-        @_documentation(visibility: private)
-    #endif
     public struct NoPointer {
         public init() {}
     }
@@ -1324,21 +1250,15 @@ open class FfiConversations:
         self.pointer = pointer
     }
 
-    // This constructor can be used to instantiate a fake object.
-    // - Parameter noPointer: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
-    //
-    // - Warning:
-    //     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing [Pointer] the FFI lower functions will crash.
-    #if swift(>=5.8)
-        @_documentation(visibility: private)
-    #endif
+    /// This constructor can be used to instantiate a fake object.
+    /// - Parameter noPointer: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    ///
+    /// - Warning:
+    ///     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing [Pointer] the FFI lower functions will crash.
     public init(noPointer _: NoPointer) {
         pointer = nil
     }
 
-    #if swift(>=5.8)
-        @_documentation(visibility: private)
-    #endif
     public func uniffiClonePointer() -> UnsafeMutableRawPointer {
         return try! rustCall { uniffi_xmtpv3_fn_clone_fficonversations(self.pointer, $0) }
     }
@@ -1590,9 +1510,6 @@ open class FfiConversations:
     }
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public struct FfiConverterTypeFfiConversations: FfiConverter {
     typealias FfiType = UnsafeMutableRawPointer
     typealias SwiftType = FfiConversations
@@ -1623,16 +1540,10 @@ public struct FfiConverterTypeFfiConversations: FfiConverter {
     }
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public func FfiConverterTypeFfiConversations_lift(_ pointer: UnsafeMutableRawPointer) throws -> FfiConversations {
     return try FfiConverterTypeFfiConversations.lift(pointer)
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public func FfiConverterTypeFfiConversations_lower(_ value: FfiConversations) -> UnsafeMutableRawPointer {
     return FfiConverterTypeFfiConversations.lower(value)
 }
@@ -1649,9 +1560,6 @@ open class FfiGroupPermissions:
     fileprivate let pointer: UnsafeMutableRawPointer!
 
     /// Used to instantiate a [FFIObject] without an actual pointer, for fakes in tests, mostly.
-    #if swift(>=5.8)
-        @_documentation(visibility: private)
-    #endif
     public struct NoPointer {
         public init() {}
     }
@@ -1663,21 +1571,15 @@ open class FfiGroupPermissions:
         self.pointer = pointer
     }
 
-    // This constructor can be used to instantiate a fake object.
-    // - Parameter noPointer: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
-    //
-    // - Warning:
-    //     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing [Pointer] the FFI lower functions will crash.
-    #if swift(>=5.8)
-        @_documentation(visibility: private)
-    #endif
+    /// This constructor can be used to instantiate a fake object.
+    /// - Parameter noPointer: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    ///
+    /// - Warning:
+    ///     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing [Pointer] the FFI lower functions will crash.
     public init(noPointer _: NoPointer) {
         pointer = nil
     }
 
-    #if swift(>=5.8)
-        @_documentation(visibility: private)
-    #endif
     public func uniffiClonePointer() -> UnsafeMutableRawPointer {
         return try! rustCall { uniffi_xmtpv3_fn_clone_ffigrouppermissions(self.pointer, $0) }
     }
@@ -1705,9 +1607,6 @@ open class FfiGroupPermissions:
     }
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public struct FfiConverterTypeFfiGroupPermissions: FfiConverter {
     typealias FfiType = UnsafeMutableRawPointer
     typealias SwiftType = FfiGroupPermissions
@@ -1738,16 +1637,10 @@ public struct FfiConverterTypeFfiGroupPermissions: FfiConverter {
     }
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public func FfiConverterTypeFfiGroupPermissions_lift(_ pointer: UnsafeMutableRawPointer) throws -> FfiGroupPermissions {
     return try FfiConverterTypeFfiGroupPermissions.lift(pointer)
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public func FfiConverterTypeFfiGroupPermissions_lower(_ value: FfiGroupPermissions) -> UnsafeMutableRawPointer {
     return FfiConverterTypeFfiGroupPermissions.lower(value)
 }
@@ -1773,9 +1666,6 @@ open class FfiSignatureRequest:
     fileprivate let pointer: UnsafeMutableRawPointer!
 
     /// Used to instantiate a [FFIObject] without an actual pointer, for fakes in tests, mostly.
-    #if swift(>=5.8)
-        @_documentation(visibility: private)
-    #endif
     public struct NoPointer {
         public init() {}
     }
@@ -1787,21 +1677,15 @@ open class FfiSignatureRequest:
         self.pointer = pointer
     }
 
-    // This constructor can be used to instantiate a fake object.
-    // - Parameter noPointer: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
-    //
-    // - Warning:
-    //     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing [Pointer] the FFI lower functions will crash.
-    #if swift(>=5.8)
-        @_documentation(visibility: private)
-    #endif
+    /// This constructor can be used to instantiate a fake object.
+    /// - Parameter noPointer: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    ///
+    /// - Warning:
+    ///     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing [Pointer] the FFI lower functions will crash.
     public init(noPointer _: NoPointer) {
         pointer = nil
     }
 
-    #if swift(>=5.8)
-        @_documentation(visibility: private)
-    #endif
     public func uniffiClonePointer() -> UnsafeMutableRawPointer {
         return try! rustCall { uniffi_xmtpv3_fn_clone_ffisignaturerequest(self.pointer, $0) }
     }
@@ -1902,9 +1786,6 @@ open class FfiSignatureRequest:
     }
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public struct FfiConverterTypeFfiSignatureRequest: FfiConverter {
     typealias FfiType = UnsafeMutableRawPointer
     typealias SwiftType = FfiSignatureRequest
@@ -1935,16 +1816,10 @@ public struct FfiConverterTypeFfiSignatureRequest: FfiConverter {
     }
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public func FfiConverterTypeFfiSignatureRequest_lift(_ pointer: UnsafeMutableRawPointer) throws -> FfiSignatureRequest {
     return try FfiConverterTypeFfiSignatureRequest.lift(pointer)
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public func FfiConverterTypeFfiSignatureRequest_lower(_ value: FfiSignatureRequest) -> UnsafeMutableRawPointer {
     return FfiConverterTypeFfiSignatureRequest.lower(value)
 }
@@ -1962,8 +1837,6 @@ public protocol FfiStreamCloserProtocol: AnyObject {
     func endAndWait() async throws
 
     func isClosed() -> Bool
-
-    func waitForReady() async
 }
 
 open class FfiStreamCloser:
@@ -1972,9 +1845,6 @@ open class FfiStreamCloser:
     fileprivate let pointer: UnsafeMutableRawPointer!
 
     /// Used to instantiate a [FFIObject] without an actual pointer, for fakes in tests, mostly.
-    #if swift(>=5.8)
-        @_documentation(visibility: private)
-    #endif
     public struct NoPointer {
         public init() {}
     }
@@ -1986,21 +1856,15 @@ open class FfiStreamCloser:
         self.pointer = pointer
     }
 
-    // This constructor can be used to instantiate a fake object.
-    // - Parameter noPointer: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
-    //
-    // - Warning:
-    //     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing [Pointer] the FFI lower functions will crash.
-    #if swift(>=5.8)
-        @_documentation(visibility: private)
-    #endif
+    /// This constructor can be used to instantiate a fake object.
+    /// - Parameter noPointer: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    ///
+    /// - Warning:
+    ///     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing [Pointer] the FFI lower functions will crash.
     public init(noPointer _: NoPointer) {
         pointer = nil
     }
 
-    #if swift(>=5.8)
-        @_documentation(visibility: private)
-    #endif
     public func uniffiClonePointer() -> UnsafeMutableRawPointer {
         return try! rustCall { uniffi_xmtpv3_fn_clone_ffistreamcloser(self.pointer, $0) }
     }
@@ -2048,27 +1912,8 @@ open class FfiStreamCloser:
             uniffi_xmtpv3_fn_method_ffistreamcloser_is_closed(self.uniffiClonePointer(), $0)
         })
     }
-
-    open func waitForReady() async {
-        return
-            try! await uniffiRustCallAsync(
-                rustFutureFunc: {
-                    uniffi_xmtpv3_fn_method_ffistreamcloser_wait_for_ready(
-                        self.uniffiClonePointer()
-                    )
-                },
-                pollFunc: ffi_xmtpv3_rust_future_poll_void,
-                completeFunc: ffi_xmtpv3_rust_future_complete_void,
-                freeFunc: ffi_xmtpv3_rust_future_free_void,
-                liftFunc: { $0 },
-                errorHandler: nil
-            )
-    }
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public struct FfiConverterTypeFfiStreamCloser: FfiConverter {
     typealias FfiType = UnsafeMutableRawPointer
     typealias SwiftType = FfiStreamCloser
@@ -2099,16 +1944,10 @@ public struct FfiConverterTypeFfiStreamCloser: FfiConverter {
     }
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public func FfiConverterTypeFfiStreamCloser_lift(_ pointer: UnsafeMutableRawPointer) throws -> FfiStreamCloser {
     return try FfiConverterTypeFfiStreamCloser.lift(pointer)
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public func FfiConverterTypeFfiStreamCloser_lower(_ value: FfiStreamCloser) -> UnsafeMutableRawPointer {
     return FfiConverterTypeFfiStreamCloser.lower(value)
 }
@@ -2131,9 +1970,6 @@ open class FfiV2ApiClient:
     fileprivate let pointer: UnsafeMutableRawPointer!
 
     /// Used to instantiate a [FFIObject] without an actual pointer, for fakes in tests, mostly.
-    #if swift(>=5.8)
-        @_documentation(visibility: private)
-    #endif
     public struct NoPointer {
         public init() {}
     }
@@ -2145,21 +1981,15 @@ open class FfiV2ApiClient:
         self.pointer = pointer
     }
 
-    // This constructor can be used to instantiate a fake object.
-    // - Parameter noPointer: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
-    //
-    // - Warning:
-    //     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing [Pointer] the FFI lower functions will crash.
-    #if swift(>=5.8)
-        @_documentation(visibility: private)
-    #endif
+    /// This constructor can be used to instantiate a fake object.
+    /// - Parameter noPointer: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    ///
+    /// - Warning:
+    ///     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing [Pointer] the FFI lower functions will crash.
     public init(noPointer _: NoPointer) {
         pointer = nil
     }
 
-    #if swift(>=5.8)
-        @_documentation(visibility: private)
-    #endif
     public func uniffiClonePointer() -> UnsafeMutableRawPointer {
         return try! rustCall { uniffi_xmtpv3_fn_clone_ffiv2apiclient(self.pointer, $0) }
     }
@@ -2249,9 +2079,6 @@ open class FfiV2ApiClient:
     }
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public struct FfiConverterTypeFfiV2ApiClient: FfiConverter {
     typealias FfiType = UnsafeMutableRawPointer
     typealias SwiftType = FfiV2ApiClient
@@ -2282,16 +2109,10 @@ public struct FfiConverterTypeFfiV2ApiClient: FfiConverter {
     }
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public func FfiConverterTypeFfiV2ApiClient_lift(_ pointer: UnsafeMutableRawPointer) throws -> FfiV2ApiClient {
     return try FfiConverterTypeFfiV2ApiClient.lift(pointer)
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public func FfiConverterTypeFfiV2ApiClient_lower(_ value: FfiV2ApiClient) -> UnsafeMutableRawPointer {
     return FfiConverterTypeFfiV2ApiClient.lower(value)
 }
@@ -2327,9 +2148,6 @@ open class FfiV2Subscription:
     fileprivate let pointer: UnsafeMutableRawPointer!
 
     /// Used to instantiate a [FFIObject] without an actual pointer, for fakes in tests, mostly.
-    #if swift(>=5.8)
-        @_documentation(visibility: private)
-    #endif
     public struct NoPointer {
         public init() {}
     }
@@ -2341,21 +2159,15 @@ open class FfiV2Subscription:
         self.pointer = pointer
     }
 
-    // This constructor can be used to instantiate a fake object.
-    // - Parameter noPointer: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
-    //
-    // - Warning:
-    //     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing [Pointer] the FFI lower functions will crash.
-    #if swift(>=5.8)
-        @_documentation(visibility: private)
-    #endif
+    /// This constructor can be used to instantiate a fake object.
+    /// - Parameter noPointer: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    ///
+    /// - Warning:
+    ///     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing [Pointer] the FFI lower functions will crash.
     public init(noPointer _: NoPointer) {
         pointer = nil
     }
 
-    #if swift(>=5.8)
-        @_documentation(visibility: private)
-    #endif
     public func uniffiClonePointer() -> UnsafeMutableRawPointer {
         return try! rustCall { uniffi_xmtpv3_fn_clone_ffiv2subscription(self.pointer, $0) }
     }
@@ -2421,9 +2233,6 @@ open class FfiV2Subscription:
     }
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public struct FfiConverterTypeFfiV2Subscription: FfiConverter {
     typealias FfiType = UnsafeMutableRawPointer
     typealias SwiftType = FfiV2Subscription
@@ -2454,16 +2263,10 @@ public struct FfiConverterTypeFfiV2Subscription: FfiConverter {
     }
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public func FfiConverterTypeFfiV2Subscription_lift(_ pointer: UnsafeMutableRawPointer) throws -> FfiV2Subscription {
     return try FfiConverterTypeFfiV2Subscription.lift(pointer)
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public func FfiConverterTypeFfiV2Subscription_lower(_ value: FfiV2Subscription) -> UnsafeMutableRawPointer {
     return FfiConverterTypeFfiV2Subscription.lower(value)
 }
@@ -2541,9 +2344,6 @@ open class FfiXmtpClient:
     fileprivate let pointer: UnsafeMutableRawPointer!
 
     /// Used to instantiate a [FFIObject] without an actual pointer, for fakes in tests, mostly.
-    #if swift(>=5.8)
-        @_documentation(visibility: private)
-    #endif
     public struct NoPointer {
         public init() {}
     }
@@ -2555,21 +2355,15 @@ open class FfiXmtpClient:
         self.pointer = pointer
     }
 
-    // This constructor can be used to instantiate a fake object.
-    // - Parameter noPointer: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
-    //
-    // - Warning:
-    //     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing [Pointer] the FFI lower functions will crash.
-    #if swift(>=5.8)
-        @_documentation(visibility: private)
-    #endif
+    /// This constructor can be used to instantiate a fake object.
+    /// - Parameter noPointer: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    ///
+    /// - Warning:
+    ///     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing [Pointer] the FFI lower functions will crash.
     public init(noPointer _: NoPointer) {
         pointer = nil
     }
 
-    #if swift(>=5.8)
-        @_documentation(visibility: private)
-    #endif
     public func uniffiClonePointer() -> UnsafeMutableRawPointer {
         return try! rustCall { uniffi_xmtpv3_fn_clone_ffixmtpclient(self.pointer, $0) }
     }
@@ -2891,9 +2685,6 @@ open class FfiXmtpClient:
     }
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public struct FfiConverterTypeFfiXmtpClient: FfiConverter {
     typealias FfiType = UnsafeMutableRawPointer
     typealias SwiftType = FfiXmtpClient
@@ -2924,16 +2715,10 @@ public struct FfiConverterTypeFfiXmtpClient: FfiConverter {
     }
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public func FfiConverterTypeFfiXmtpClient_lift(_ pointer: UnsafeMutableRawPointer) throws -> FfiXmtpClient {
     return try FfiConverterTypeFfiXmtpClient.lift(pointer)
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public func FfiConverterTypeFfiXmtpClient_lower(_ value: FfiXmtpClient) -> UnsafeMutableRawPointer {
     return FfiConverterTypeFfiXmtpClient.lower(value)
 }
@@ -2973,9 +2758,6 @@ extension FfiConsent: Equatable, Hashable {
     }
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public struct FfiConverterTypeFfiConsent: FfiConverterRustBuffer {
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiConsent {
         return
@@ -2993,16 +2775,10 @@ public struct FfiConverterTypeFfiConsent: FfiConverterRustBuffer {
     }
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public func FfiConverterTypeFfiConsent_lift(_ buf: RustBuffer) throws -> FfiConsent {
     return try FfiConverterTypeFfiConsent.lift(buf)
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public func FfiConverterTypeFfiConsent_lower(_ value: FfiConsent) -> RustBuffer {
     return FfiConverterTypeFfiConsent.lower(value)
 }
@@ -3054,9 +2830,6 @@ extension FfiConversationMember: Equatable, Hashable {
     }
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public struct FfiConverterTypeFfiConversationMember: FfiConverterRustBuffer {
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiConversationMember {
         return
@@ -3078,16 +2851,10 @@ public struct FfiConverterTypeFfiConversationMember: FfiConverterRustBuffer {
     }
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public func FfiConverterTypeFfiConversationMember_lift(_ buf: RustBuffer) throws -> FfiConversationMember {
     return try FfiConverterTypeFfiConversationMember.lift(buf)
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public func FfiConverterTypeFfiConversationMember_lower(_ value: FfiConversationMember) -> RustBuffer {
     return FfiConverterTypeFfiConversationMember.lower(value)
 }
@@ -3145,9 +2912,6 @@ extension FfiCreateGroupOptions: Equatable, Hashable {
     }
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public struct FfiConverterTypeFfiCreateGroupOptions: FfiConverterRustBuffer {
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiCreateGroupOptions {
         return
@@ -3171,16 +2935,10 @@ public struct FfiConverterTypeFfiCreateGroupOptions: FfiConverterRustBuffer {
     }
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public func FfiConverterTypeFfiCreateGroupOptions_lift(_ buf: RustBuffer) throws -> FfiCreateGroupOptions {
     return try FfiConverterTypeFfiCreateGroupOptions.lift(buf)
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public func FfiConverterTypeFfiCreateGroupOptions_lower(_ value: FfiCreateGroupOptions) -> RustBuffer {
     return FfiConverterTypeFfiCreateGroupOptions.lower(value)
 }
@@ -3214,9 +2972,6 @@ extension FfiCursor: Equatable, Hashable {
     }
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public struct FfiConverterTypeFfiCursor: FfiConverterRustBuffer {
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiCursor {
         return
@@ -3232,16 +2987,10 @@ public struct FfiConverterTypeFfiCursor: FfiConverterRustBuffer {
     }
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public func FfiConverterTypeFfiCursor_lift(_ buf: RustBuffer) throws -> FfiCursor {
     return try FfiConverterTypeFfiCursor.lift(buf)
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public func FfiConverterTypeFfiCursor_lower(_ value: FfiCursor) -> RustBuffer {
     return FfiConverterTypeFfiCursor.lower(value)
 }
@@ -3281,9 +3030,6 @@ extension FfiEnvelope: Equatable, Hashable {
     }
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public struct FfiConverterTypeFfiEnvelope: FfiConverterRustBuffer {
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiEnvelope {
         return
@@ -3301,16 +3047,10 @@ public struct FfiConverterTypeFfiEnvelope: FfiConverterRustBuffer {
     }
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public func FfiConverterTypeFfiEnvelope_lift(_ buf: RustBuffer) throws -> FfiEnvelope {
     return try FfiConverterTypeFfiEnvelope.lift(buf)
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public func FfiConverterTypeFfiEnvelope_lower(_ value: FfiEnvelope) -> RustBuffer {
     return FfiConverterTypeFfiEnvelope.lower(value)
 }
@@ -3356,9 +3096,6 @@ extension FfiInboxState: Equatable, Hashable {
     }
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public struct FfiConverterTypeFfiInboxState: FfiConverterRustBuffer {
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiInboxState {
         return
@@ -3378,16 +3115,10 @@ public struct FfiConverterTypeFfiInboxState: FfiConverterRustBuffer {
     }
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public func FfiConverterTypeFfiInboxState_lift(_ buf: RustBuffer) throws -> FfiInboxState {
     return try FfiConverterTypeFfiInboxState.lift(buf)
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public func FfiConverterTypeFfiInboxState_lower(_ value: FfiInboxState) -> RustBuffer {
     return FfiConverterTypeFfiInboxState.lower(value)
 }
@@ -3421,9 +3152,6 @@ extension FfiInstallation: Equatable, Hashable {
     }
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public struct FfiConverterTypeFfiInstallation: FfiConverterRustBuffer {
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiInstallation {
         return
@@ -3439,16 +3167,10 @@ public struct FfiConverterTypeFfiInstallation: FfiConverterRustBuffer {
     }
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public func FfiConverterTypeFfiInstallation_lift(_ buf: RustBuffer) throws -> FfiInstallation {
     return try FfiConverterTypeFfiInstallation.lift(buf)
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public func FfiConverterTypeFfiInstallation_lower(_ value: FfiInstallation) -> RustBuffer {
     return FfiConverterTypeFfiInstallation.lower(value)
 }
@@ -3488,9 +3210,6 @@ extension FfiListConversationsOptions: Equatable, Hashable {
     }
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public struct FfiConverterTypeFfiListConversationsOptions: FfiConverterRustBuffer {
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiListConversationsOptions {
         return
@@ -3508,16 +3227,10 @@ public struct FfiConverterTypeFfiListConversationsOptions: FfiConverterRustBuffe
     }
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public func FfiConverterTypeFfiListConversationsOptions_lift(_ buf: RustBuffer) throws -> FfiListConversationsOptions {
     return try FfiConverterTypeFfiListConversationsOptions.lift(buf)
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public func FfiConverterTypeFfiListConversationsOptions_lower(_ value: FfiListConversationsOptions) -> RustBuffer {
     return FfiConverterTypeFfiListConversationsOptions.lower(value)
 }
@@ -3563,9 +3276,6 @@ extension FfiListMessagesOptions: Equatable, Hashable {
     }
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public struct FfiConverterTypeFfiListMessagesOptions: FfiConverterRustBuffer {
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiListMessagesOptions {
         return
@@ -3585,16 +3295,10 @@ public struct FfiConverterTypeFfiListMessagesOptions: FfiConverterRustBuffer {
     }
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public func FfiConverterTypeFfiListMessagesOptions_lift(_ buf: RustBuffer) throws -> FfiListMessagesOptions {
     return try FfiConverterTypeFfiListMessagesOptions.lift(buf)
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public func FfiConverterTypeFfiListMessagesOptions_lower(_ value: FfiListMessagesOptions) -> RustBuffer {
     return FfiConverterTypeFfiListMessagesOptions.lower(value)
 }
@@ -3658,9 +3362,6 @@ extension FfiMessage: Equatable, Hashable {
     }
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public struct FfiConverterTypeFfiMessage: FfiConverterRustBuffer {
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiMessage {
         return
@@ -3686,16 +3387,10 @@ public struct FfiConverterTypeFfiMessage: FfiConverterRustBuffer {
     }
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public func FfiConverterTypeFfiMessage_lift(_ buf: RustBuffer) throws -> FfiMessage {
     return try FfiConverterTypeFfiMessage.lift(buf)
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public func FfiConverterTypeFfiMessage_lower(_ value: FfiMessage) -> RustBuffer {
     return FfiConverterTypeFfiMessage.lower(value)
 }
@@ -3735,9 +3430,6 @@ extension FfiPagingInfo: Equatable, Hashable {
     }
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public struct FfiConverterTypeFfiPagingInfo: FfiConverterRustBuffer {
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiPagingInfo {
         return
@@ -3755,16 +3447,10 @@ public struct FfiConverterTypeFfiPagingInfo: FfiConverterRustBuffer {
     }
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public func FfiConverterTypeFfiPagingInfo_lift(_ buf: RustBuffer) throws -> FfiPagingInfo {
     return try FfiConverterTypeFfiPagingInfo.lift(buf)
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public func FfiConverterTypeFfiPagingInfo_lower(_ value: FfiPagingInfo) -> RustBuffer {
     return FfiConverterTypeFfiPagingInfo.lower(value)
 }
@@ -3834,9 +3520,6 @@ extension FfiPermissionPolicySet: Equatable, Hashable {
     }
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public struct FfiConverterTypeFfiPermissionPolicySet: FfiConverterRustBuffer {
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiPermissionPolicySet {
         return
@@ -3864,16 +3547,10 @@ public struct FfiConverterTypeFfiPermissionPolicySet: FfiConverterRustBuffer {
     }
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public func FfiConverterTypeFfiPermissionPolicySet_lift(_ buf: RustBuffer) throws -> FfiPermissionPolicySet {
     return try FfiConverterTypeFfiPermissionPolicySet.lift(buf)
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public func FfiConverterTypeFfiPermissionPolicySet_lower(_ value: FfiPermissionPolicySet) -> RustBuffer {
     return FfiConverterTypeFfiPermissionPolicySet.lower(value)
 }
@@ -3901,9 +3578,6 @@ extension FfiPublishRequest: Equatable, Hashable {
     }
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public struct FfiConverterTypeFfiPublishRequest: FfiConverterRustBuffer {
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiPublishRequest {
         return
@@ -3917,16 +3591,10 @@ public struct FfiConverterTypeFfiPublishRequest: FfiConverterRustBuffer {
     }
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public func FfiConverterTypeFfiPublishRequest_lift(_ buf: RustBuffer) throws -> FfiPublishRequest {
     return try FfiConverterTypeFfiPublishRequest.lift(buf)
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public func FfiConverterTypeFfiPublishRequest_lower(_ value: FfiPublishRequest) -> RustBuffer {
     return FfiConverterTypeFfiPublishRequest.lower(value)
 }
@@ -3954,9 +3622,6 @@ extension FfiV2BatchQueryRequest: Equatable, Hashable {
     }
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public struct FfiConverterTypeFfiV2BatchQueryRequest: FfiConverterRustBuffer {
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiV2BatchQueryRequest {
         return
@@ -3970,16 +3635,10 @@ public struct FfiConverterTypeFfiV2BatchQueryRequest: FfiConverterRustBuffer {
     }
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public func FfiConverterTypeFfiV2BatchQueryRequest_lift(_ buf: RustBuffer) throws -> FfiV2BatchQueryRequest {
     return try FfiConverterTypeFfiV2BatchQueryRequest.lift(buf)
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public func FfiConverterTypeFfiV2BatchQueryRequest_lower(_ value: FfiV2BatchQueryRequest) -> RustBuffer {
     return FfiConverterTypeFfiV2BatchQueryRequest.lower(value)
 }
@@ -4007,9 +3666,6 @@ extension FfiV2BatchQueryResponse: Equatable, Hashable {
     }
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public struct FfiConverterTypeFfiV2BatchQueryResponse: FfiConverterRustBuffer {
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiV2BatchQueryResponse {
         return
@@ -4023,16 +3679,10 @@ public struct FfiConverterTypeFfiV2BatchQueryResponse: FfiConverterRustBuffer {
     }
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public func FfiConverterTypeFfiV2BatchQueryResponse_lift(_ buf: RustBuffer) throws -> FfiV2BatchQueryResponse {
     return try FfiConverterTypeFfiV2BatchQueryResponse.lift(buf)
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public func FfiConverterTypeFfiV2BatchQueryResponse_lower(_ value: FfiV2BatchQueryResponse) -> RustBuffer {
     return FfiConverterTypeFfiV2BatchQueryResponse.lower(value)
 }
@@ -4078,9 +3728,6 @@ extension FfiV2QueryRequest: Equatable, Hashable {
     }
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public struct FfiConverterTypeFfiV2QueryRequest: FfiConverterRustBuffer {
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiV2QueryRequest {
         return
@@ -4100,16 +3747,10 @@ public struct FfiConverterTypeFfiV2QueryRequest: FfiConverterRustBuffer {
     }
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public func FfiConverterTypeFfiV2QueryRequest_lift(_ buf: RustBuffer) throws -> FfiV2QueryRequest {
     return try FfiConverterTypeFfiV2QueryRequest.lift(buf)
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public func FfiConverterTypeFfiV2QueryRequest_lower(_ value: FfiV2QueryRequest) -> RustBuffer {
     return FfiConverterTypeFfiV2QueryRequest.lower(value)
 }
@@ -4143,9 +3784,6 @@ extension FfiV2QueryResponse: Equatable, Hashable {
     }
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public struct FfiConverterTypeFfiV2QueryResponse: FfiConverterRustBuffer {
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiV2QueryResponse {
         return
@@ -4161,16 +3799,10 @@ public struct FfiConverterTypeFfiV2QueryResponse: FfiConverterRustBuffer {
     }
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public func FfiConverterTypeFfiV2QueryResponse_lift(_ buf: RustBuffer) throws -> FfiV2QueryResponse {
     return try FfiConverterTypeFfiV2QueryResponse.lift(buf)
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public func FfiConverterTypeFfiV2QueryResponse_lower(_ value: FfiV2QueryResponse) -> RustBuffer {
     return FfiConverterTypeFfiV2QueryResponse.lower(value)
 }
@@ -4198,9 +3830,6 @@ extension FfiV2SubscribeRequest: Equatable, Hashable {
     }
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public struct FfiConverterTypeFfiV2SubscribeRequest: FfiConverterRustBuffer {
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiV2SubscribeRequest {
         return
@@ -4214,16 +3843,10 @@ public struct FfiConverterTypeFfiV2SubscribeRequest: FfiConverterRustBuffer {
     }
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public func FfiConverterTypeFfiV2SubscribeRequest_lift(_ buf: RustBuffer) throws -> FfiV2SubscribeRequest {
     return try FfiConverterTypeFfiV2SubscribeRequest.lift(buf)
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public func FfiConverterTypeFfiV2SubscribeRequest_lower(_ value: FfiV2SubscribeRequest) -> RustBuffer {
     return FfiConverterTypeFfiV2SubscribeRequest.lower(value)
 }
@@ -4237,9 +3860,6 @@ public enum FfiConsentEntityType {
     case address
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public struct FfiConverterTypeFfiConsentEntityType: FfiConverterRustBuffer {
     typealias SwiftType = FfiConsentEntityType
 
@@ -4270,16 +3890,10 @@ public struct FfiConverterTypeFfiConsentEntityType: FfiConverterRustBuffer {
     }
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public func FfiConverterTypeFfiConsentEntityType_lift(_ buf: RustBuffer) throws -> FfiConsentEntityType {
     return try FfiConverterTypeFfiConsentEntityType.lift(buf)
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public func FfiConverterTypeFfiConsentEntityType_lower(_ value: FfiConsentEntityType) -> RustBuffer {
     return FfiConverterTypeFfiConsentEntityType.lower(value)
 }
@@ -4295,9 +3909,6 @@ public enum FfiConsentState {
     case denied
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public struct FfiConverterTypeFfiConsentState: FfiConverterRustBuffer {
     typealias SwiftType = FfiConsentState
 
@@ -4328,16 +3939,10 @@ public struct FfiConverterTypeFfiConsentState: FfiConverterRustBuffer {
     }
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public func FfiConverterTypeFfiConsentState_lift(_ buf: RustBuffer) throws -> FfiConsentState {
     return try FfiConverterTypeFfiConsentState.lift(buf)
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public func FfiConverterTypeFfiConsentState_lower(_ value: FfiConsentState) -> RustBuffer {
     return FfiConverterTypeFfiConsentState.lower(value)
 }
@@ -4352,9 +3957,6 @@ public enum FfiConversationMessageKind {
     case membershipChange
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public struct FfiConverterTypeFfiConversationMessageKind: FfiConverterRustBuffer {
     typealias SwiftType = FfiConversationMessageKind
 
@@ -4380,16 +3982,10 @@ public struct FfiConverterTypeFfiConversationMessageKind: FfiConverterRustBuffer
     }
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public func FfiConverterTypeFfiConversationMessageKind_lift(_ buf: RustBuffer) throws -> FfiConversationMessageKind {
     return try FfiConverterTypeFfiConversationMessageKind.lift(buf)
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public func FfiConverterTypeFfiConversationMessageKind_lower(_ value: FfiConversationMessageKind) -> RustBuffer {
     return FfiConverterTypeFfiConversationMessageKind.lower(value)
 }
@@ -4405,9 +4001,6 @@ public enum FfiDeliveryStatus {
     case failed
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public struct FfiConverterTypeFfiDeliveryStatus: FfiConverterRustBuffer {
     typealias SwiftType = FfiDeliveryStatus
 
@@ -4438,16 +4031,10 @@ public struct FfiConverterTypeFfiDeliveryStatus: FfiConverterRustBuffer {
     }
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public func FfiConverterTypeFfiDeliveryStatus_lift(_ buf: RustBuffer) throws -> FfiDeliveryStatus {
     return try FfiConverterTypeFfiDeliveryStatus.lift(buf)
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public func FfiConverterTypeFfiDeliveryStatus_lower(_ value: FfiDeliveryStatus) -> RustBuffer {
     return FfiConverterTypeFfiDeliveryStatus.lower(value)
 }
@@ -4463,9 +4050,6 @@ public enum FfiGroupPermissionsOptions {
     case customPolicy
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public struct FfiConverterTypeFfiGroupPermissionsOptions: FfiConverterRustBuffer {
     typealias SwiftType = FfiGroupPermissionsOptions
 
@@ -4496,16 +4080,10 @@ public struct FfiConverterTypeFfiGroupPermissionsOptions: FfiConverterRustBuffer
     }
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public func FfiConverterTypeFfiGroupPermissionsOptions_lift(_ buf: RustBuffer) throws -> FfiGroupPermissionsOptions {
     return try FfiConverterTypeFfiGroupPermissionsOptions.lift(buf)
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public func FfiConverterTypeFfiGroupPermissionsOptions_lower(_ value: FfiGroupPermissionsOptions) -> RustBuffer {
     return FfiConverterTypeFfiGroupPermissionsOptions.lower(value)
 }
@@ -4522,9 +4100,6 @@ public enum FfiMetadataField {
     case pinnedFrameUrl
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public struct FfiConverterTypeFfiMetadataField: FfiConverterRustBuffer {
     typealias SwiftType = FfiMetadataField
 
@@ -4560,16 +4135,10 @@ public struct FfiConverterTypeFfiMetadataField: FfiConverterRustBuffer {
     }
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public func FfiConverterTypeFfiMetadataField_lift(_ buf: RustBuffer) throws -> FfiMetadataField {
     return try FfiConverterTypeFfiMetadataField.lift(buf)
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public func FfiConverterTypeFfiMetadataField_lower(_ value: FfiMetadataField) -> RustBuffer {
     return FfiConverterTypeFfiMetadataField.lower(value)
 }
@@ -4585,9 +4154,6 @@ public enum FfiPermissionLevel {
     case superAdmin
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public struct FfiConverterTypeFfiPermissionLevel: FfiConverterRustBuffer {
     typealias SwiftType = FfiPermissionLevel
 
@@ -4618,16 +4184,10 @@ public struct FfiConverterTypeFfiPermissionLevel: FfiConverterRustBuffer {
     }
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public func FfiConverterTypeFfiPermissionLevel_lift(_ buf: RustBuffer) throws -> FfiPermissionLevel {
     return try FfiConverterTypeFfiPermissionLevel.lift(buf)
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public func FfiConverterTypeFfiPermissionLevel_lower(_ value: FfiPermissionLevel) -> RustBuffer {
     return FfiConverterTypeFfiPermissionLevel.lower(value)
 }
@@ -4646,9 +4206,6 @@ public enum FfiPermissionPolicy {
     case other
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public struct FfiConverterTypeFfiPermissionPolicy: FfiConverterRustBuffer {
     typealias SwiftType = FfiPermissionPolicy
 
@@ -4694,16 +4251,10 @@ public struct FfiConverterTypeFfiPermissionPolicy: FfiConverterRustBuffer {
     }
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public func FfiConverterTypeFfiPermissionPolicy_lift(_ buf: RustBuffer) throws -> FfiPermissionPolicy {
     return try FfiConverterTypeFfiPermissionPolicy.lift(buf)
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public func FfiConverterTypeFfiPermissionPolicy_lower(_ value: FfiPermissionPolicy) -> RustBuffer {
     return FfiConverterTypeFfiPermissionPolicy.lower(value)
 }
@@ -4721,9 +4272,6 @@ public enum FfiPermissionUpdateType {
     case updateMetadata
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public struct FfiConverterTypeFfiPermissionUpdateType: FfiConverterRustBuffer {
     typealias SwiftType = FfiPermissionUpdateType
 
@@ -4764,16 +4312,10 @@ public struct FfiConverterTypeFfiPermissionUpdateType: FfiConverterRustBuffer {
     }
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public func FfiConverterTypeFfiPermissionUpdateType_lift(_ buf: RustBuffer) throws -> FfiPermissionUpdateType {
     return try FfiConverterTypeFfiPermissionUpdateType.lift(buf)
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public func FfiConverterTypeFfiPermissionUpdateType_lower(_ value: FfiPermissionUpdateType) -> RustBuffer {
     return FfiConverterTypeFfiPermissionUpdateType.lower(value)
 }
@@ -4789,9 +4331,6 @@ public enum FfiSortDirection {
     case descending
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public struct FfiConverterTypeFfiSortDirection: FfiConverterRustBuffer {
     typealias SwiftType = FfiSortDirection
 
@@ -4822,16 +4361,10 @@ public struct FfiConverterTypeFfiSortDirection: FfiConverterRustBuffer {
     }
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public func FfiConverterTypeFfiSortDirection_lift(_ buf: RustBuffer) throws -> FfiSortDirection {
     return try FfiConverterTypeFfiSortDirection.lift(buf)
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public func FfiConverterTypeFfiSortDirection_lower(_ value: FfiSortDirection) -> RustBuffer {
     return FfiConverterTypeFfiSortDirection.lower(value)
 }
@@ -4864,9 +4397,6 @@ public enum GenericError {
     case Verifier(message: String)
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public struct FfiConverterTypeGenericError: FfiConverterRustBuffer {
     typealias SwiftType = GenericError
 
@@ -4967,9 +4497,6 @@ public enum SigningError {
     case Generic(message: String)
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 public struct FfiConverterTypeSigningError: FfiConverterRustBuffer {
     typealias SwiftType = SigningError
 
@@ -5054,45 +4581,27 @@ private func uniffiCallbackInitFfiConversationCallback() {
 }
 
 // FfiConverter protocol for callback interfaces
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 private enum FfiConverterCallbackInterfaceFfiConversationCallback {
     fileprivate static var handleMap = UniffiHandleMap<FfiConversationCallback>()
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 extension FfiConverterCallbackInterfaceFfiConversationCallback: FfiConverter {
     typealias SwiftType = FfiConversationCallback
     typealias FfiType = UInt64
 
-    #if swift(>=5.8)
-        @_documentation(visibility: private)
-    #endif
     public static func lift(_ handle: UInt64) throws -> SwiftType {
         try handleMap.get(handle: handle)
     }
 
-    #if swift(>=5.8)
-        @_documentation(visibility: private)
-    #endif
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
         let handle: UInt64 = try readInt(&buf)
         return try lift(handle)
     }
 
-    #if swift(>=5.8)
-        @_documentation(visibility: private)
-    #endif
     public static func lower(_ v: SwiftType) -> UInt64 {
         return handleMap.insert(obj: v)
     }
 
-    #if swift(>=5.8)
-        @_documentation(visibility: private)
-    #endif
     public static func write(_ v: SwiftType, into buf: inout [UInt8]) {
         writeInt(&buf, lower(v))
     }
@@ -5168,45 +4677,27 @@ private func uniffiCallbackInitFfiInboxOwner() {
 }
 
 // FfiConverter protocol for callback interfaces
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 private enum FfiConverterCallbackInterfaceFfiInboxOwner {
     fileprivate static var handleMap = UniffiHandleMap<FfiInboxOwner>()
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 extension FfiConverterCallbackInterfaceFfiInboxOwner: FfiConverter {
     typealias SwiftType = FfiInboxOwner
     typealias FfiType = UInt64
 
-    #if swift(>=5.8)
-        @_documentation(visibility: private)
-    #endif
     public static func lift(_ handle: UInt64) throws -> SwiftType {
         try handleMap.get(handle: handle)
     }
 
-    #if swift(>=5.8)
-        @_documentation(visibility: private)
-    #endif
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
         let handle: UInt64 = try readInt(&buf)
         return try lift(handle)
     }
 
-    #if swift(>=5.8)
-        @_documentation(visibility: private)
-    #endif
     public static func lower(_ v: SwiftType) -> UInt64 {
         return handleMap.insert(obj: v)
     }
 
-    #if swift(>=5.8)
-        @_documentation(visibility: private)
-    #endif
     public static func write(_ v: SwiftType, into buf: inout [UInt8]) {
         writeInt(&buf, lower(v))
     }
@@ -5262,45 +4753,27 @@ private func uniffiCallbackInitFfiLogger() {
 }
 
 // FfiConverter protocol for callback interfaces
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 private enum FfiConverterCallbackInterfaceFfiLogger {
     fileprivate static var handleMap = UniffiHandleMap<FfiLogger>()
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 extension FfiConverterCallbackInterfaceFfiLogger: FfiConverter {
     typealias SwiftType = FfiLogger
     typealias FfiType = UInt64
 
-    #if swift(>=5.8)
-        @_documentation(visibility: private)
-    #endif
     public static func lift(_ handle: UInt64) throws -> SwiftType {
         try handleMap.get(handle: handle)
     }
 
-    #if swift(>=5.8)
-        @_documentation(visibility: private)
-    #endif
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
         let handle: UInt64 = try readInt(&buf)
         return try lift(handle)
     }
 
-    #if swift(>=5.8)
-        @_documentation(visibility: private)
-    #endif
     public static func lower(_ v: SwiftType) -> UInt64 {
         return handleMap.insert(obj: v)
     }
 
-    #if swift(>=5.8)
-        @_documentation(visibility: private)
-    #endif
     public static func write(_ v: SwiftType, into buf: inout [UInt8]) {
         writeInt(&buf, lower(v))
     }
@@ -5352,45 +4825,27 @@ private func uniffiCallbackInitFfiMessageCallback() {
 }
 
 // FfiConverter protocol for callback interfaces
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 private enum FfiConverterCallbackInterfaceFfiMessageCallback {
     fileprivate static var handleMap = UniffiHandleMap<FfiMessageCallback>()
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 extension FfiConverterCallbackInterfaceFfiMessageCallback: FfiConverter {
     typealias SwiftType = FfiMessageCallback
     typealias FfiType = UInt64
 
-    #if swift(>=5.8)
-        @_documentation(visibility: private)
-    #endif
     public static func lift(_ handle: UInt64) throws -> SwiftType {
         try handleMap.get(handle: handle)
     }
 
-    #if swift(>=5.8)
-        @_documentation(visibility: private)
-    #endif
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
         let handle: UInt64 = try readInt(&buf)
         return try lift(handle)
     }
 
-    #if swift(>=5.8)
-        @_documentation(visibility: private)
-    #endif
     public static func lower(_ v: SwiftType) -> UInt64 {
         return handleMap.insert(obj: v)
     }
 
-    #if swift(>=5.8)
-        @_documentation(visibility: private)
-    #endif
     public static func write(_ v: SwiftType, into buf: inout [UInt8]) {
         writeInt(&buf, lower(v))
     }
@@ -5442,53 +4897,32 @@ private func uniffiCallbackInitFfiV2SubscriptionCallback() {
 }
 
 // FfiConverter protocol for callback interfaces
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 private enum FfiConverterCallbackInterfaceFfiV2SubscriptionCallback {
     fileprivate static var handleMap = UniffiHandleMap<FfiV2SubscriptionCallback>()
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 extension FfiConverterCallbackInterfaceFfiV2SubscriptionCallback: FfiConverter {
     typealias SwiftType = FfiV2SubscriptionCallback
     typealias FfiType = UInt64
 
-    #if swift(>=5.8)
-        @_documentation(visibility: private)
-    #endif
     public static func lift(_ handle: UInt64) throws -> SwiftType {
         try handleMap.get(handle: handle)
     }
 
-    #if swift(>=5.8)
-        @_documentation(visibility: private)
-    #endif
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
         let handle: UInt64 = try readInt(&buf)
         return try lift(handle)
     }
 
-    #if swift(>=5.8)
-        @_documentation(visibility: private)
-    #endif
     public static func lower(_ v: SwiftType) -> UInt64 {
         return handleMap.insert(obj: v)
     }
 
-    #if swift(>=5.8)
-        @_documentation(visibility: private)
-    #endif
     public static func write(_ v: SwiftType, into buf: inout [UInt8]) {
         writeInt(&buf, lower(v))
     }
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 private struct FfiConverterOptionUInt64: FfiConverterRustBuffer {
     typealias SwiftType = UInt64?
 
@@ -5510,9 +4944,6 @@ private struct FfiConverterOptionUInt64: FfiConverterRustBuffer {
     }
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 private struct FfiConverterOptionInt64: FfiConverterRustBuffer {
     typealias SwiftType = Int64?
 
@@ -5534,9 +4965,6 @@ private struct FfiConverterOptionInt64: FfiConverterRustBuffer {
     }
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 private struct FfiConverterOptionString: FfiConverterRustBuffer {
     typealias SwiftType = String?
 
@@ -5558,9 +4986,6 @@ private struct FfiConverterOptionString: FfiConverterRustBuffer {
     }
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 private struct FfiConverterOptionData: FfiConverterRustBuffer {
     typealias SwiftType = Data?
 
@@ -5582,9 +5007,6 @@ private struct FfiConverterOptionData: FfiConverterRustBuffer {
     }
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 private struct FfiConverterOptionTypeFfiSignatureRequest: FfiConverterRustBuffer {
     typealias SwiftType = FfiSignatureRequest?
 
@@ -5606,9 +5028,6 @@ private struct FfiConverterOptionTypeFfiSignatureRequest: FfiConverterRustBuffer
     }
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 private struct FfiConverterOptionTypeFfiCursor: FfiConverterRustBuffer {
     typealias SwiftType = FfiCursor?
 
@@ -5630,9 +5049,6 @@ private struct FfiConverterOptionTypeFfiCursor: FfiConverterRustBuffer {
     }
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 private struct FfiConverterOptionTypeFfiPagingInfo: FfiConverterRustBuffer {
     typealias SwiftType = FfiPagingInfo?
 
@@ -5654,9 +5070,6 @@ private struct FfiConverterOptionTypeFfiPagingInfo: FfiConverterRustBuffer {
     }
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 private struct FfiConverterOptionTypeFfiPermissionPolicySet: FfiConverterRustBuffer {
     typealias SwiftType = FfiPermissionPolicySet?
 
@@ -5678,9 +5091,6 @@ private struct FfiConverterOptionTypeFfiPermissionPolicySet: FfiConverterRustBuf
     }
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 private struct FfiConverterOptionTypeFfiDeliveryStatus: FfiConverterRustBuffer {
     typealias SwiftType = FfiDeliveryStatus?
 
@@ -5702,9 +5112,6 @@ private struct FfiConverterOptionTypeFfiDeliveryStatus: FfiConverterRustBuffer {
     }
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 private struct FfiConverterOptionTypeFfiGroupPermissionsOptions: FfiConverterRustBuffer {
     typealias SwiftType = FfiGroupPermissionsOptions?
 
@@ -5726,9 +5133,6 @@ private struct FfiConverterOptionTypeFfiGroupPermissionsOptions: FfiConverterRus
     }
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 private struct FfiConverterOptionTypeFfiMetadataField: FfiConverterRustBuffer {
     typealias SwiftType = FfiMetadataField?
 
@@ -5750,9 +5154,6 @@ private struct FfiConverterOptionTypeFfiMetadataField: FfiConverterRustBuffer {
     }
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 private struct FfiConverterSequenceString: FfiConverterRustBuffer {
     typealias SwiftType = [String]
 
@@ -5775,9 +5176,6 @@ private struct FfiConverterSequenceString: FfiConverterRustBuffer {
     }
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 private struct FfiConverterSequenceData: FfiConverterRustBuffer {
     typealias SwiftType = [Data]
 
@@ -5800,9 +5198,6 @@ private struct FfiConverterSequenceData: FfiConverterRustBuffer {
     }
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 private struct FfiConverterSequenceTypeFfiConversation: FfiConverterRustBuffer {
     typealias SwiftType = [FfiConversation]
 
@@ -5825,9 +5220,6 @@ private struct FfiConverterSequenceTypeFfiConversation: FfiConverterRustBuffer {
     }
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 private struct FfiConverterSequenceTypeFfiConsent: FfiConverterRustBuffer {
     typealias SwiftType = [FfiConsent]
 
@@ -5850,9 +5242,6 @@ private struct FfiConverterSequenceTypeFfiConsent: FfiConverterRustBuffer {
     }
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 private struct FfiConverterSequenceTypeFfiConversationMember: FfiConverterRustBuffer {
     typealias SwiftType = [FfiConversationMember]
 
@@ -5875,9 +5264,6 @@ private struct FfiConverterSequenceTypeFfiConversationMember: FfiConverterRustBu
     }
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 private struct FfiConverterSequenceTypeFfiEnvelope: FfiConverterRustBuffer {
     typealias SwiftType = [FfiEnvelope]
 
@@ -5900,9 +5286,6 @@ private struct FfiConverterSequenceTypeFfiEnvelope: FfiConverterRustBuffer {
     }
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 private struct FfiConverterSequenceTypeFfiInboxState: FfiConverterRustBuffer {
     typealias SwiftType = [FfiInboxState]
 
@@ -5925,9 +5308,6 @@ private struct FfiConverterSequenceTypeFfiInboxState: FfiConverterRustBuffer {
     }
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 private struct FfiConverterSequenceTypeFfiInstallation: FfiConverterRustBuffer {
     typealias SwiftType = [FfiInstallation]
 
@@ -5950,9 +5330,6 @@ private struct FfiConverterSequenceTypeFfiInstallation: FfiConverterRustBuffer {
     }
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 private struct FfiConverterSequenceTypeFfiMessage: FfiConverterRustBuffer {
     typealias SwiftType = [FfiMessage]
 
@@ -5975,9 +5352,6 @@ private struct FfiConverterSequenceTypeFfiMessage: FfiConverterRustBuffer {
     }
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 private struct FfiConverterSequenceTypeFfiV2QueryRequest: FfiConverterRustBuffer {
     typealias SwiftType = [FfiV2QueryRequest]
 
@@ -6000,9 +5374,6 @@ private struct FfiConverterSequenceTypeFfiV2QueryRequest: FfiConverterRustBuffer
     }
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 private struct FfiConverterSequenceTypeFfiV2QueryResponse: FfiConverterRustBuffer {
     typealias SwiftType = [FfiV2QueryResponse]
 
@@ -6025,9 +5396,6 @@ private struct FfiConverterSequenceTypeFfiV2QueryResponse: FfiConverterRustBuffe
     }
 }
 
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 private struct FfiConverterDictionaryStringBool: FfiConverterRustBuffer {
     public static func write(_ value: [String: Bool], into buf: inout [UInt8]) {
         let len = Int32(value.count)
@@ -6527,9 +5895,6 @@ private var initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_ffistreamcloser_is_closed() != 62423 {
-        return InitializationResult.apiChecksumMismatch
-    }
-    if uniffi_xmtpv3_checksum_method_ffistreamcloser_wait_for_ready() != 38545 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_ffiv2apiclient_batch_query() != 26551 {
