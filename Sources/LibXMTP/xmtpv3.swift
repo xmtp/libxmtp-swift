@@ -3080,13 +3080,16 @@ public protocol FfiXmtpClientProtocol: AnyObject {
 
     func installationId() -> Data
 
+    /**
+     * Starts the sync worker if the history sync url is present.
+     */
+    func maybeStartSyncWorker() async throws
+
     func message(messageId: Data) throws -> FfiMessage
 
     func registerIdentity(signatureRequest: FfiSignatureRequest) async throws
 
     func releaseDbConnection() throws
-
-    func requestHistorySync() async throws
 
     /**
      * * Revokes all installations except the one the client is currently using
@@ -3097,6 +3100,8 @@ public protocol FfiXmtpClientProtocol: AnyObject {
      * Revokes or removes an identity - really a wallet address - from the existing client
      */
     func revokeWallet(walletAddress: String) async throws -> FfiSignatureRequest
+
+    func sendSyncRequest(kind: FfiDeviceSyncKind) async throws
 
     func setConsentStates(records: [FfiConsent]) async throws
 
@@ -3351,6 +3356,25 @@ open class FfiXmtpClient:
         })
     }
 
+    /**
+     * Starts the sync worker if the history sync url is present.
+     */
+    open func maybeStartSyncWorker() async throws {
+        return
+            try await uniffiRustCallAsync(
+                rustFutureFunc: {
+                    uniffi_xmtpv3_fn_method_ffixmtpclient_maybe_start_sync_worker(
+                        self.uniffiClonePointer()
+                    )
+                },
+                pollFunc: ffi_xmtpv3_rust_future_poll_void,
+                completeFunc: ffi_xmtpv3_rust_future_complete_void,
+                freeFunc: ffi_xmtpv3_rust_future_free_void,
+                liftFunc: { $0 },
+                errorHandler: FfiConverterTypeGenericError.lift
+            )
+    }
+
     open func message(messageId: Data) throws -> FfiMessage {
         return try FfiConverterTypeFfiMessage.lift(rustCallWithError(FfiConverterTypeGenericError.lift) {
             uniffi_xmtpv3_fn_method_ffixmtpclient_message(self.uniffiClonePointer(),
@@ -3378,22 +3402,6 @@ open class FfiXmtpClient:
     open func releaseDbConnection() throws { try rustCallWithError(FfiConverterTypeGenericError.lift) {
         uniffi_xmtpv3_fn_method_ffixmtpclient_release_db_connection(self.uniffiClonePointer(), $0)
     }
-    }
-
-    open func requestHistorySync() async throws {
-        return
-            try await uniffiRustCallAsync(
-                rustFutureFunc: {
-                    uniffi_xmtpv3_fn_method_ffixmtpclient_request_history_sync(
-                        self.uniffiClonePointer()
-                    )
-                },
-                pollFunc: ffi_xmtpv3_rust_future_poll_void,
-                completeFunc: ffi_xmtpv3_rust_future_complete_void,
-                freeFunc: ffi_xmtpv3_rust_future_free_void,
-                liftFunc: { $0 },
-                errorHandler: FfiConverterTypeGenericError.lift
-            )
     }
 
     /**
@@ -3431,6 +3439,23 @@ open class FfiXmtpClient:
                 completeFunc: ffi_xmtpv3_rust_future_complete_pointer,
                 freeFunc: ffi_xmtpv3_rust_future_free_pointer,
                 liftFunc: FfiConverterTypeFfiSignatureRequest.lift,
+                errorHandler: FfiConverterTypeGenericError.lift
+            )
+    }
+
+    open func sendSyncRequest(kind: FfiDeviceSyncKind) async throws {
+        return
+            try await uniffiRustCallAsync(
+                rustFutureFunc: {
+                    uniffi_xmtpv3_fn_method_ffixmtpclient_send_sync_request(
+                        self.uniffiClonePointer(),
+                        FfiConverterTypeFfiDeviceSyncKind.lower(kind)
+                    )
+                },
+                pollFunc: ffi_xmtpv3_rust_future_poll_void,
+                completeFunc: ffi_xmtpv3_rust_future_complete_void,
+                freeFunc: ffi_xmtpv3_rust_future_free_void,
+                liftFunc: { $0 },
                 errorHandler: FfiConverterTypeGenericError.lift
             )
     }
@@ -5041,6 +5066,58 @@ extension FfiDeliveryStatus: Equatable, Hashable {}
 // Note that we don't yet support `indirect` for enums.
 // See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
 
+public enum FfiDeviceSyncKind {
+    case messages
+    case consent
+}
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeFfiDeviceSyncKind: FfiConverterRustBuffer {
+    typealias SwiftType = FfiDeviceSyncKind
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiDeviceSyncKind {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        case 1: return .messages
+
+        case 2: return .consent
+
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: FfiDeviceSyncKind, into buf: inout [UInt8]) {
+        switch value {
+        case .messages:
+            writeInt(&buf, Int32(1))
+
+        case .consent:
+            writeInt(&buf, Int32(2))
+        }
+    }
+}
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFfiDeviceSyncKind_lift(_ buf: RustBuffer) throws -> FfiDeviceSyncKind {
+    return try FfiConverterTypeFfiDeviceSyncKind.lift(buf)
+}
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFfiDeviceSyncKind_lower(_ value: FfiDeviceSyncKind) -> RustBuffer {
+    return FfiConverterTypeFfiDeviceSyncKind.lower(value)
+}
+
+extension FfiDeviceSyncKind: Equatable, Hashable {}
+
+// Note that we don't yet support `indirect` for enums.
+// See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
+
 public enum FfiDirection {
     case ascending
     case descending
@@ -5537,6 +5614,10 @@ public enum GenericError {
     case Verifier(message: String)
 
     case FailedToConvertToU32(message: String)
+
+    case Association(message: String)
+
+    case DeviceSync(message: String)
 }
 
 #if swift(>=5.8)
@@ -5600,6 +5681,14 @@ public struct FfiConverterTypeGenericError: FfiConverterRustBuffer {
                 message: FfiConverterString.read(from: &buf)
             )
 
+        case 14: return try .Association(
+                message: FfiConverterString.read(from: &buf)
+            )
+
+        case 15: return try .DeviceSync(
+                message: FfiConverterString.read(from: &buf)
+            )
+
         default: throw UniffiInternalError.unexpectedEnumCase
         }
     }
@@ -5632,6 +5721,10 @@ public struct FfiConverterTypeGenericError: FfiConverterRustBuffer {
             writeInt(&buf, Int32(12))
         case .FailedToConvertToU32(_ /* message is ignored*/ ):
             writeInt(&buf, Int32(13))
+        case .Association(_ /* message is ignored*/ ):
+            writeInt(&buf, Int32(14))
+        case .DeviceSync(_ /* message is ignored*/ ):
+            writeInt(&buf, Int32(15))
         }
     }
 }
@@ -6607,8 +6700,8 @@ public func diffieHellmanK256(privateKeyBytes: Data, publicKeyBytes: Data) throw
     })
 }
 
-public func generateInboxId(accountAddress: String, nonce: UInt64) -> String {
-    return try! FfiConverterString.lift(try! rustCall {
+public func generateInboxId(accountAddress: String, nonce: UInt64) throws -> String {
+    return try FfiConverterString.lift(rustCallWithError(FfiConverterTypeGenericError.lift) {
         uniffi_xmtpv3_fn_func_generate_inbox_id(
             FfiConverterString.lower(accountAddress),
             FfiConverterUInt64.lower(nonce), $0
@@ -6752,7 +6845,7 @@ private var initializationResult: InitializationResult = {
     if uniffi_xmtpv3_checksum_func_diffie_hellman_k256() != 37475 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_xmtpv3_checksum_func_generate_inbox_id() != 2184 {
+    if uniffi_xmtpv3_checksum_func_generate_inbox_id() != 47637 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_func_generate_private_preferences_topic_identifier() != 59124 {
@@ -7070,6 +7163,9 @@ private var initializationResult: InitializationResult = {
     if uniffi_xmtpv3_checksum_method_ffixmtpclient_installation_id() != 37173 {
         return InitializationResult.apiChecksumMismatch
     }
+    if uniffi_xmtpv3_checksum_method_ffixmtpclient_maybe_start_sync_worker() != 27018 {
+        return InitializationResult.apiChecksumMismatch
+    }
     if uniffi_xmtpv3_checksum_method_ffixmtpclient_message() != 26932 {
         return InitializationResult.apiChecksumMismatch
     }
@@ -7079,13 +7175,13 @@ private var initializationResult: InitializationResult = {
     if uniffi_xmtpv3_checksum_method_ffixmtpclient_release_db_connection() != 11067 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_xmtpv3_checksum_method_ffixmtpclient_request_history_sync() != 22295 {
-        return InitializationResult.apiChecksumMismatch
-    }
     if uniffi_xmtpv3_checksum_method_ffixmtpclient_revoke_all_other_installations() != 36450 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_ffixmtpclient_revoke_wallet() != 12211 {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if uniffi_xmtpv3_checksum_method_ffixmtpclient_send_sync_request() != 41331 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_ffixmtpclient_set_consent_states() != 64566 {
