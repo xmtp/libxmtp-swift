@@ -557,6 +557,8 @@ public protocol FfiConversationProtocol: AnyObject {
 
     func consentState() throws -> FfiConsentState
 
+    func conversationType() throws -> FfiConversationType
+
     func createdAtNs() -> Int64
 
     func dmPeerInboxId() throws -> String
@@ -758,6 +760,12 @@ open class FfiConversation:
     open func consentState() throws -> FfiConsentState {
         return try FfiConverterTypeFfiConsentState.lift(rustCallWithError(FfiConverterTypeGenericError.lift) {
             uniffi_xmtpv3_fn_method_fficonversation_consent_state(self.uniffiClonePointer(), $0)
+        })
+    }
+
+    open func conversationType() throws -> FfiConversationType {
+        return try FfiConverterTypeFfiConversationType.lift(rustCallWithError(FfiConverterTypeGenericError.lift) {
+            uniffi_xmtpv3_fn_method_fficonversation_conversation_type(self.uniffiClonePointer(), $0)
         })
     }
 
@@ -1360,7 +1368,7 @@ public func FfiConverterTypeFfiConversationCallback_lower(_ value: FfiConversati
 }
 
 public protocol FfiConversationMetadataProtocol: AnyObject {
-    func conversationType() -> String
+    func conversationType() -> FfiConversationType
 
     func creatorInboxId() -> String
 }
@@ -1414,8 +1422,8 @@ open class FfiConversationMetadata:
         try! rustCall { uniffi_xmtpv3_fn_free_fficonversationmetadata(pointer, $0) }
     }
 
-    open func conversationType() -> String {
-        return try! FfiConverterString.lift(try! rustCall {
+    open func conversationType() -> FfiConversationType {
+        return try! FfiConverterTypeFfiConversationType.lift(try! rustCall {
             uniffi_xmtpv3_fn_method_fficonversationmetadata_conversation_type(self.uniffiClonePointer(), $0)
         })
     }
@@ -5008,6 +5016,64 @@ extension FfiConversationMessageKind: Equatable, Hashable {}
 // Note that we don't yet support `indirect` for enums.
 // See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
 
+public enum FfiConversationType {
+    case group
+    case dm
+    case sync
+}
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeFfiConversationType: FfiConverterRustBuffer {
+    typealias SwiftType = FfiConversationType
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiConversationType {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        case 1: return .group
+
+        case 2: return .dm
+
+        case 3: return .sync
+
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: FfiConversationType, into buf: inout [UInt8]) {
+        switch value {
+        case .group:
+            writeInt(&buf, Int32(1))
+
+        case .dm:
+            writeInt(&buf, Int32(2))
+
+        case .sync:
+            writeInt(&buf, Int32(3))
+        }
+    }
+}
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFfiConversationType_lift(_ buf: RustBuffer) throws -> FfiConversationType {
+    return try FfiConverterTypeFfiConversationType.lift(buf)
+}
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFfiConversationType_lower(_ value: FfiConversationType) -> RustBuffer {
+    return FfiConverterTypeFfiConversationType.lower(value)
+}
+
+extension FfiConversationType: Equatable, Hashable {}
+
+// Note that we don't yet support `indirect` for enums.
+// See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
+
 public enum FfiDeliveryStatus {
     case unpublished
     case published
@@ -6905,6 +6971,9 @@ private var initializationResult: InitializationResult = {
     if uniffi_xmtpv3_checksum_method_fficonversation_consent_state() != 25033 {
         return InitializationResult.apiChecksumMismatch
     }
+    if uniffi_xmtpv3_checksum_method_fficonversation_conversation_type() != 16402 {
+        return InitializationResult.apiChecksumMismatch
+    }
     if uniffi_xmtpv3_checksum_method_fficonversation_created_at_ns() != 17973 {
         return InitializationResult.apiChecksumMismatch
     }
@@ -7004,7 +7073,7 @@ private var initializationResult: InitializationResult = {
     if uniffi_xmtpv3_checksum_method_fficonversationcallback_on_error() != 461 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_xmtpv3_checksum_method_fficonversationmetadata_conversation_type() != 48024 {
+    if uniffi_xmtpv3_checksum_method_fficonversationmetadata_conversation_type() != 22241 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_fficonversationmetadata_creator_inbox_id() != 61067 {
