@@ -3113,6 +3113,8 @@ public protocol FfiXmtpClientProtocol: AnyObject {
 
     func setConsentStates(records: [FfiConsent]) async throws
 
+    func signWithInstallationKey(text: String) throws -> Data
+
     func signatureRequest() -> FfiSignatureRequest?
 }
 
@@ -3483,6 +3485,13 @@ open class FfiXmtpClient:
                 liftFunc: { $0 },
                 errorHandler: FfiConverterTypeGenericError.lift
             )
+    }
+
+    open func signWithInstallationKey(text: String) throws -> Data {
+        return try FfiConverterData.lift(rustCallWithError(FfiConverterTypeGenericError.lift) {
+            uniffi_xmtpv3_fn_method_ffixmtpclient_sign_with_installation_key(self.uniffiClonePointer(),
+                                                                             FfiConverterString.lower(text), $0)
+        })
     }
 
     open func signatureRequest() -> FfiSignatureRequest? {
@@ -5684,6 +5693,8 @@ public enum GenericError {
     case Association(message: String)
 
     case DeviceSync(message: String)
+
+    case Identity(message: String)
 }
 
 #if swift(>=5.8)
@@ -5755,6 +5766,10 @@ public struct FfiConverterTypeGenericError: FfiConverterRustBuffer {
                 message: FfiConverterString.read(from: &buf)
             )
 
+        case 16: return try .Identity(
+                message: FfiConverterString.read(from: &buf)
+            )
+
         default: throw UniffiInternalError.unexpectedEnumCase
         }
     }
@@ -5791,6 +5806,8 @@ public struct FfiConverterTypeGenericError: FfiConverterRustBuffer {
             writeInt(&buf, Int32(14))
         case .DeviceSync(_ /* message is ignored*/ ):
             writeInt(&buf, Int32(15))
+        case .Identity(_ /* message is ignored*/ ):
+            writeInt(&buf, Int32(16))
         }
     }
 }
@@ -7254,6 +7271,9 @@ private var initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_ffixmtpclient_set_consent_states() != 64566 {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if uniffi_xmtpv3_checksum_method_ffixmtpclient_sign_with_installation_key() != 49813 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_ffixmtpclient_signature_request() != 18270 {
