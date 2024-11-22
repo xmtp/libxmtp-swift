@@ -3257,9 +3257,9 @@ public func FfiConverterTypeFfiV2SubscriptionCallback_lower(_ value: FfiV2Subscr
 
 public protocol FfiXmtpClientProtocol: AnyObject {
     /**
-     * Adds an identity - really a wallet address - to the existing client
+     * Adds a wallet address to the existing client
      */
-    func addWallet(existingWalletAddress: String, newWalletAddress: String) async throws -> FfiSignatureRequest
+    func addWallet(newWalletAddress: String) async throws -> FfiSignatureRequest
 
     /**
      * * Get the inbox state for each `inbox_id`.
@@ -3383,15 +3383,15 @@ open class FfiXmtpClient:
     }
 
     /**
-     * Adds an identity - really a wallet address - to the existing client
+     * Adds a wallet address to the existing client
      */
-    open func addWallet(existingWalletAddress: String, newWalletAddress: String) async throws -> FfiSignatureRequest {
+    open func addWallet(newWalletAddress: String) async throws -> FfiSignatureRequest {
         return
             try await uniffiRustCallAsync(
                 rustFutureFunc: {
                     uniffi_xmtpv3_fn_method_ffixmtpclient_add_wallet(
                         self.uniffiClonePointer(),
-                        FfiConverterString.lower(existingWalletAddress), FfiConverterString.lower(newWalletAddress)
+                        FfiConverterString.lower(newWalletAddress)
                     )
                 },
                 pollFunc: ffi_xmtpv3_rust_future_poll_pointer,
@@ -7449,7 +7449,7 @@ private var initializationResult: InitializationResult = {
     if uniffi_xmtpv3_checksum_method_ffiv2subscriptioncallback_on_error() != 24930 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_xmtpv3_checksum_method_ffixmtpclient_add_wallet() != 23786 {
+    if uniffi_xmtpv3_checksum_method_ffixmtpclient_add_wallet() != 24482 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_ffixmtpclient_addresses_from_inbox_id() != 29264 {
