@@ -15,24 +15,14 @@ let package = Package(
             targets: ["LibXMTP", "LibXMTPSwiftFFI"]
         ),
     ],
-    dependencies: [
-        .package(
-            url: "https://github.com/sqlcipher/sqlcipher",
-            exact: "4.5.7"
-        )
-    ],
     targets: [
         .target(
             name: "LibXMTP",
-            dependencies: [
-                "LibXMTPSwiftFFI",
-                .product(name: "SQLCipher", package: "sqlcipher")
-            ],
+            dependencies: ["LibXMTPSwiftFFI"],
             path: "Sources/LibXMTP",
             linkerSettings: [
                 .linkedFramework("CoreFoundation"),
-                .linkedFramework("SystemConfiguration"),
-                .unsafeFlags(["-lsqlcipher"]) // Ensure SQLCipher is linked
+                .linkedFramework("SystemConfiguration")
             ]
         ),
         .binaryTarget(

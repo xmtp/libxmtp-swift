@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name             = 'LibXMTP'
-  s.version          = '3.0.6'
+  s.version          = '3.0.7'
   s.summary          = 'XMTP shared Rust code that powers cross-platform SDKs'
 
   s.homepage         = 'https://github.com/xmtp/libxmtp-swift'
@@ -12,7 +12,5 @@ Pod::Spec.new do |s|
 
   s.source           = { :http => "https://github.com/xmtp/libxmtp/releases/download/swift-bindings-ab9d335/LibXMTPSwiftFFI.zip", :type => :zip }
   s.vendored_frameworks = 'LibXMTPSwiftFFI.xcframework'
-  s.source_files     = 'Sources/LibXMTP/**/*'
-
-  s.dependency 'SQLCipher', '= 4.5.7'
+  s.source_files = 'Sources/LibXMTP/**/*'
 end
