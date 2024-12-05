@@ -3302,7 +3302,7 @@ public protocol FfiXmtpClientProtocol: AnyObject {
     /**
      * Starts the sync worker if the history sync url is present.
      */
-    func maybeStartSyncWorker() async throws
+    func maybeStartSyncWorker()
 
     func message(messageId: Data) throws -> FfiMessage
 
@@ -3584,20 +3584,9 @@ open class FfiXmtpClient:
     /**
      * Starts the sync worker if the history sync url is present.
      */
-    open func maybeStartSyncWorker() async throws {
-        return
-            try await uniffiRustCallAsync(
-                rustFutureFunc: {
-                    uniffi_xmtpv3_fn_method_ffixmtpclient_maybe_start_sync_worker(
-                        self.uniffiClonePointer()
-                    )
-                },
-                pollFunc: ffi_xmtpv3_rust_future_poll_void,
-                completeFunc: ffi_xmtpv3_rust_future_complete_void,
-                freeFunc: ffi_xmtpv3_rust_future_free_void,
-                liftFunc: { $0 },
-                errorHandler: FfiConverterTypeGenericError.lift
-            )
+    open func maybeStartSyncWorker() { try! rustCall {
+        uniffi_xmtpv3_fn_method_ffixmtpclient_maybe_start_sync_worker(self.uniffiClonePointer(), $0)
+    }
     }
 
     open func message(messageId: Data) throws -> FfiMessage {
@@ -6201,100 +6190,6 @@ extension FfiConverterCallbackInterfaceFfiInboxOwner: FfiConverter {
     }
 }
 
-public protocol FfiLogger: AnyObject {
-    func log(level: UInt32, levelLabel: String, message: String)
-}
-
-// Put the implementation in a struct so we don't pollute the top-level namespace
-private enum UniffiCallbackInterfaceFfiLogger {
-    // Create the VTable using a series of closures.
-    // Swift automatically converts these into C callback functions.
-    static var vtable: UniffiVTableCallbackInterfaceFfiLogger = .init(
-        log: { (
-            uniffiHandle: UInt64,
-            level: UInt32,
-            levelLabel: RustBuffer,
-            message: RustBuffer,
-            _: UnsafeMutableRawPointer,
-            uniffiCallStatus: UnsafeMutablePointer<RustCallStatus>
-        ) in
-            let makeCall = {
-                () throws in
-                guard let uniffiObj = try? FfiConverterCallbackInterfaceFfiLogger.handleMap.get(handle: uniffiHandle) else {
-                    throw UniffiInternalError.unexpectedStaleHandle
-                }
-                return try uniffiObj.log(
-                    level: FfiConverterUInt32.lift(level),
-                    levelLabel: FfiConverterString.lift(levelLabel),
-                    message: FfiConverterString.lift(message)
-                )
-            }
-
-            let writeReturn = { () }
-            uniffiTraitInterfaceCall(
-                callStatus: uniffiCallStatus,
-                makeCall: makeCall,
-                writeReturn: writeReturn
-            )
-        },
-        uniffiFree: { (uniffiHandle: UInt64) in
-            let result = try? FfiConverterCallbackInterfaceFfiLogger.handleMap.remove(handle: uniffiHandle)
-            if result == nil {
-                print("Uniffi callback interface FfiLogger: handle missing in uniffiFree")
-            }
-        }
-    )
-}
-
-private func uniffiCallbackInitFfiLogger() {
-    uniffi_xmtpv3_fn_init_callback_vtable_ffilogger(&UniffiCallbackInterfaceFfiLogger.vtable)
-}
-
-// FfiConverter protocol for callback interfaces
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
-private enum FfiConverterCallbackInterfaceFfiLogger {
-    fileprivate static var handleMap = UniffiHandleMap<FfiLogger>()
-}
-
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
-extension FfiConverterCallbackInterfaceFfiLogger: FfiConverter {
-    typealias SwiftType = FfiLogger
-    typealias FfiType = UInt64
-
-    #if swift(>=5.8)
-        @_documentation(visibility: private)
-    #endif
-    public static func lift(_ handle: UInt64) throws -> SwiftType {
-        try handleMap.get(handle: handle)
-    }
-
-    #if swift(>=5.8)
-        @_documentation(visibility: private)
-    #endif
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
-        let handle: UInt64 = try readInt(&buf)
-        return try lift(handle)
-    }
-
-    #if swift(>=5.8)
-        @_documentation(visibility: private)
-    #endif
-    public static func lower(_ v: SwiftType) -> UInt64 {
-        return handleMap.insert(obj: v)
-    }
-
-    #if swift(>=5.8)
-        @_documentation(visibility: private)
-    #endif
-    public static func write(_ v: SwiftType, into buf: inout [UInt8]) {
-        writeInt(&buf, lower(v))
-    }
-}
-
 #if swift(>=5.8)
     @_documentation(visibility: private)
 #endif
@@ -6976,11 +6871,11 @@ private func uniffiFutureContinuationCallback(handle: UInt64, pollResult: Int8) 
  * xmtp.create_client(account_address, nonce, inbox_id, Option<legacy_signed_private_key_proto>)
  * ```
  */
-public func createClient(logger: FfiLogger, host: String, isSecure: Bool, db: String?, encryptionKey: Data?, inboxId: String, accountAddress: String, nonce: UInt64, legacySignedPrivateKeyProto: Data?, historySyncUrl: String?) async throws -> FfiXmtpClient {
+public func createClient(host: String, isSecure: Bool, db: String?, encryptionKey: Data?, inboxId: String, accountAddress: String, nonce: UInt64, legacySignedPrivateKeyProto: Data?, historySyncUrl: String?) async throws -> FfiXmtpClient {
     return
         try await uniffiRustCallAsync(
             rustFutureFunc: {
-                uniffi_xmtpv3_fn_func_create_client(FfiConverterCallbackInterfaceFfiLogger.lower(logger), FfiConverterString.lower(host), FfiConverterBool.lower(isSecure), FfiConverterOptionString.lower(db), FfiConverterOptionData.lower(encryptionKey), FfiConverterString.lower(inboxId), FfiConverterString.lower(accountAddress), FfiConverterUInt64.lower(nonce), FfiConverterOptionData.lower(legacySignedPrivateKeyProto), FfiConverterOptionString.lower(historySyncUrl))
+                uniffi_xmtpv3_fn_func_create_client(FfiConverterString.lower(host), FfiConverterBool.lower(isSecure), FfiConverterOptionString.lower(db), FfiConverterOptionData.lower(encryptionKey), FfiConverterString.lower(inboxId), FfiConverterString.lower(accountAddress), FfiConverterUInt64.lower(nonce), FfiConverterOptionData.lower(legacySignedPrivateKeyProto), FfiConverterOptionString.lower(historySyncUrl))
             },
             pollFunc: ffi_xmtpv3_rust_future_poll_pointer,
             completeFunc: ffi_xmtpv3_rust_future_complete_pointer,
@@ -7030,11 +6925,11 @@ public func generatePrivatePreferencesTopicIdentifier(privateKey: Data) throws -
     })
 }
 
-public func getInboxIdForAddress(logger: FfiLogger, host: String, isSecure: Bool, accountAddress: String) async throws -> String? {
+public func getInboxIdForAddress(host: String, isSecure: Bool, accountAddress: String) async throws -> String? {
     return
         try await uniffiRustCallAsync(
             rustFutureFunc: {
-                uniffi_xmtpv3_fn_func_get_inbox_id_for_address(FfiConverterCallbackInterfaceFfiLogger.lower(logger), FfiConverterString.lower(host), FfiConverterBool.lower(isSecure), FfiConverterString.lower(accountAddress))
+                uniffi_xmtpv3_fn_func_get_inbox_id_for_address(FfiConverterString.lower(host), FfiConverterBool.lower(isSecure), FfiConverterString.lower(accountAddress))
             },
             pollFunc: ffi_xmtpv3_rust_future_poll_rust_buffer,
             completeFunc: ffi_xmtpv3_rust_future_complete_rust_buffer,
@@ -7149,7 +7044,7 @@ private var initializationResult: InitializationResult = {
     if bindings_contract_version != scaffolding_contract_version {
         return InitializationResult.contractVersionMismatch
     }
-    if uniffi_xmtpv3_checksum_func_create_client() != 6255 {
+    if uniffi_xmtpv3_checksum_func_create_client() != 50509 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_func_create_v2_client() != 48060 {
@@ -7164,7 +7059,7 @@ private var initializationResult: InitializationResult = {
     if uniffi_xmtpv3_checksum_func_generate_private_preferences_topic_identifier() != 59124 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_xmtpv3_checksum_func_get_inbox_id_for_address() != 36898 {
+    if uniffi_xmtpv3_checksum_func_get_inbox_id_for_address() != 35414 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_func_get_version_info() != 29277 {
@@ -7491,7 +7386,7 @@ private var initializationResult: InitializationResult = {
     if uniffi_xmtpv3_checksum_method_ffixmtpclient_installation_id() != 37173 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_xmtpv3_checksum_method_ffixmtpclient_maybe_start_sync_worker() != 27018 {
+    if uniffi_xmtpv3_checksum_method_ffixmtpclient_maybe_start_sync_worker() != 56811 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_ffixmtpclient_message() != 26932 {
@@ -7533,16 +7428,12 @@ private var initializationResult: InitializationResult = {
     if uniffi_xmtpv3_checksum_method_ffiinboxowner_sign() != 30268 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_xmtpv3_checksum_method_ffilogger_log() != 56011 {
-        return InitializationResult.apiChecksumMismatch
-    }
 
     uniffiCallbackInitFfiConsentCallback()
     uniffiCallbackInitFfiConversationCallback()
     uniffiCallbackInitFfiMessageCallback()
     uniffiCallbackInitFfiV2SubscriptionCallback()
     uniffiCallbackInitFfiInboxOwner()
-    uniffiCallbackInitFfiLogger()
     return InitializationResult.ok
 }()
 
