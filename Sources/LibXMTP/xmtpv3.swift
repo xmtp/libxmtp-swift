@@ -749,19 +749,19 @@ public protocol FfiConversationProtocol: AnyObject {
 
     func consentState() throws -> FfiConsentState
 
-    func conversationType() throws -> FfiConversationType
+    func conversationType() async throws -> FfiConversationType
 
     func createdAtNs() -> Int64
 
     func dmPeerInboxId() throws -> String
 
-    func findMessages(opts: FfiListMessagesOptions) throws -> [FfiMessage]
+    func findMessages(opts: FfiListMessagesOptions) async throws -> [FfiMessage]
 
     func groupDescription() throws -> String
 
     func groupImageUrlSquare() throws -> String
 
-    func groupMetadata() throws -> FfiConversationMetadata
+    func groupMetadata() async throws -> FfiConversationMetadata
 
     func groupName() throws -> String
 
@@ -955,10 +955,20 @@ open class FfiConversation:
         })
     }
 
-    open func conversationType() throws -> FfiConversationType {
-        return try FfiConverterTypeFfiConversationType.lift(rustCallWithError(FfiConverterTypeGenericError.lift) {
-            uniffi_xmtpv3_fn_method_fficonversation_conversation_type(self.uniffiClonePointer(), $0)
-        })
+    open func conversationType() async throws -> FfiConversationType {
+        return
+            try await uniffiRustCallAsync(
+                rustFutureFunc: {
+                    uniffi_xmtpv3_fn_method_fficonversation_conversation_type(
+                        self.uniffiClonePointer()
+                    )
+                },
+                pollFunc: ffi_xmtpv3_rust_future_poll_rust_buffer,
+                completeFunc: ffi_xmtpv3_rust_future_complete_rust_buffer,
+                freeFunc: ffi_xmtpv3_rust_future_free_rust_buffer,
+                liftFunc: FfiConverterTypeFfiConversationType.lift,
+                errorHandler: FfiConverterTypeGenericError.lift
+            )
     }
 
     open func createdAtNs() -> Int64 {
@@ -973,11 +983,21 @@ open class FfiConversation:
         })
     }
 
-    open func findMessages(opts: FfiListMessagesOptions) throws -> [FfiMessage] {
-        return try FfiConverterSequenceTypeFfiMessage.lift(rustCallWithError(FfiConverterTypeGenericError.lift) {
-            uniffi_xmtpv3_fn_method_fficonversation_find_messages(self.uniffiClonePointer(),
-                                                                  FfiConverterTypeFfiListMessagesOptions.lower(opts), $0)
-        })
+    open func findMessages(opts: FfiListMessagesOptions) async throws -> [FfiMessage] {
+        return
+            try await uniffiRustCallAsync(
+                rustFutureFunc: {
+                    uniffi_xmtpv3_fn_method_fficonversation_find_messages(
+                        self.uniffiClonePointer(),
+                        FfiConverterTypeFfiListMessagesOptions.lower(opts)
+                    )
+                },
+                pollFunc: ffi_xmtpv3_rust_future_poll_rust_buffer,
+                completeFunc: ffi_xmtpv3_rust_future_complete_rust_buffer,
+                freeFunc: ffi_xmtpv3_rust_future_free_rust_buffer,
+                liftFunc: FfiConverterSequenceTypeFfiMessage.lift,
+                errorHandler: FfiConverterTypeGenericError.lift
+            )
     }
 
     open func groupDescription() throws -> String {
@@ -992,10 +1012,20 @@ open class FfiConversation:
         })
     }
 
-    open func groupMetadata() throws -> FfiConversationMetadata {
-        return try FfiConverterTypeFfiConversationMetadata.lift(rustCallWithError(FfiConverterTypeGenericError.lift) {
-            uniffi_xmtpv3_fn_method_fficonversation_group_metadata(self.uniffiClonePointer(), $0)
-        })
+    open func groupMetadata() async throws -> FfiConversationMetadata {
+        return
+            try await uniffiRustCallAsync(
+                rustFutureFunc: {
+                    uniffi_xmtpv3_fn_method_fficonversation_group_metadata(
+                        self.uniffiClonePointer()
+                    )
+                },
+                pollFunc: ffi_xmtpv3_rust_future_poll_pointer,
+                completeFunc: ffi_xmtpv3_rust_future_complete_pointer,
+                freeFunc: ffi_xmtpv3_rust_future_free_pointer,
+                liftFunc: FfiConverterTypeFfiConversationMetadata.lift,
+                errorHandler: FfiConverterTypeGenericError.lift
+            )
     }
 
     open func groupName() throws -> String {
@@ -3999,6 +4029,105 @@ public func FfiConverterTypeFfiXmtpClient_lift(_ pointer: UnsafeMutableRawPointe
 #endif
 public func FfiConverterTypeFfiXmtpClient_lower(_ value: FfiXmtpClient) -> UnsafeMutableRawPointer {
     return FfiConverterTypeFfiXmtpClient.lower(value)
+}
+
+public protocol XmtpApiClientProtocol: AnyObject {}
+
+open class XmtpApiClient:
+    XmtpApiClientProtocol
+{
+    fileprivate let pointer: UnsafeMutableRawPointer!
+
+    /// Used to instantiate a [FFIObject] without an actual pointer, for fakes in tests, mostly.
+    #if swift(>=5.8)
+        @_documentation(visibility: private)
+    #endif
+    public struct NoPointer {
+        public init() {}
+    }
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+    public required init(unsafeFromRawPointer pointer: UnsafeMutableRawPointer) {
+        self.pointer = pointer
+    }
+
+    // This constructor can be used to instantiate a fake object.
+    // - Parameter noPointer: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    //
+    // - Warning:
+    //     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing [Pointer] the FFI lower functions will crash.
+    #if swift(>=5.8)
+        @_documentation(visibility: private)
+    #endif
+    public init(noPointer _: NoPointer) {
+        pointer = nil
+    }
+
+    #if swift(>=5.8)
+        @_documentation(visibility: private)
+    #endif
+    public func uniffiClonePointer() -> UnsafeMutableRawPointer {
+        return try! rustCall { uniffi_xmtpv3_fn_clone_xmtpapiclient(self.pointer, $0) }
+    }
+
+    // No primary constructor declared for this class.
+
+    deinit {
+        guard let pointer = pointer else {
+            return
+        }
+
+        try! rustCall { uniffi_xmtpv3_fn_free_xmtpapiclient(pointer, $0) }
+    }
+}
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeXmtpApiClient: FfiConverter {
+    typealias FfiType = UnsafeMutableRawPointer
+    typealias SwiftType = XmtpApiClient
+
+    public static func lift(_ pointer: UnsafeMutableRawPointer) throws -> XmtpApiClient {
+        return XmtpApiClient(unsafeFromRawPointer: pointer)
+    }
+
+    public static func lower(_ value: XmtpApiClient) -> UnsafeMutableRawPointer {
+        return value.uniffiClonePointer()
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> XmtpApiClient {
+        let v: UInt64 = try readInt(&buf)
+        // The Rust code won't compile if a pointer won't fit in a UInt64.
+        // We have to go via `UInt` because that's the thing that's the size of a pointer.
+        let ptr = UnsafeMutableRawPointer(bitPattern: UInt(truncatingIfNeeded: v))
+        if ptr == nil {
+            throw UniffiInternalError.unexpectedNullPointer
+        }
+        return try lift(ptr!)
+    }
+
+    public static func write(_ value: XmtpApiClient, into buf: inout [UInt8]) {
+        // This fiddling is because `Int` is the thing that's the same size as a pointer.
+        // The Rust code won't compile if a pointer won't fit in a `UInt64`.
+        writeInt(&buf, UInt64(bitPattern: Int64(Int(bitPattern: lower(value)))))
+    }
+}
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+public func FfiConverterTypeXmtpApiClient_lift(_ pointer: UnsafeMutableRawPointer) throws -> XmtpApiClient {
+    return try FfiConverterTypeXmtpApiClient.lift(pointer)
+}
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+public func FfiConverterTypeXmtpApiClient_lower(_ value: XmtpApiClient) -> UnsafeMutableRawPointer {
+    return FfiConverterTypeXmtpApiClient.lower(value)
 }
 
 public struct FfiConsent {
@@ -7276,6 +7405,20 @@ private func uniffiFutureContinuationCallback(handle: UInt64, pollResult: Int8) 
     }
 }
 
+public func connectToBackend(host: String, isSecure: Bool) async throws -> XmtpApiClient {
+    return
+        try await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_xmtpv3_fn_func_connect_to_backend(FfiConverterString.lower(host), FfiConverterBool.lower(isSecure))
+            },
+            pollFunc: ffi_xmtpv3_rust_future_poll_pointer,
+            completeFunc: ffi_xmtpv3_rust_future_complete_pointer,
+            freeFunc: ffi_xmtpv3_rust_future_free_pointer,
+            liftFunc: FfiConverterTypeXmtpApiClient.lift,
+            errorHandler: FfiConverterTypeGenericError.lift
+        )
+}
+
 /**
  * It returns a new client of the specified `inbox_id`.
  * Note that the `inbox_id` must be either brand new or already associated with the `account_address`.
@@ -7297,11 +7440,11 @@ private func uniffiFutureContinuationCallback(handle: UInt64, pollResult: Int8) 
  * xmtp.create_client(account_address, nonce, inbox_id, Option<legacy_signed_private_key_proto>)
  * ```
  */
-public func createClient(host: String, isSecure: Bool, db: String?, encryptionKey: Data?, inboxId: String, accountAddress: String, nonce: UInt64, legacySignedPrivateKeyProto: Data?, historySyncUrl: String?) async throws -> FfiXmtpClient {
+public func createClient(api: XmtpApiClient, db: String?, encryptionKey: Data?, inboxId: String, accountAddress: String, nonce: UInt64, legacySignedPrivateKeyProto: Data?, historySyncUrl: String?) async throws -> FfiXmtpClient {
     return
         try await uniffiRustCallAsync(
             rustFutureFunc: {
-                uniffi_xmtpv3_fn_func_create_client(FfiConverterString.lower(host), FfiConverterBool.lower(isSecure), FfiConverterOptionString.lower(db), FfiConverterOptionData.lower(encryptionKey), FfiConverterString.lower(inboxId), FfiConverterString.lower(accountAddress), FfiConverterUInt64.lower(nonce), FfiConverterOptionData.lower(legacySignedPrivateKeyProto), FfiConverterOptionString.lower(historySyncUrl))
+                uniffi_xmtpv3_fn_func_create_client(FfiConverterTypeXmtpApiClient.lower(api), FfiConverterOptionString.lower(db), FfiConverterOptionData.lower(encryptionKey), FfiConverterString.lower(inboxId), FfiConverterString.lower(accountAddress), FfiConverterUInt64.lower(nonce), FfiConverterOptionData.lower(legacySignedPrivateKeyProto), FfiConverterOptionString.lower(historySyncUrl))
             },
             pollFunc: ffi_xmtpv3_rust_future_poll_pointer,
             completeFunc: ffi_xmtpv3_rust_future_complete_pointer,
@@ -7470,7 +7613,10 @@ private var initializationResult: InitializationResult = {
     if bindings_contract_version != scaffolding_contract_version {
         return InitializationResult.contractVersionMismatch
     }
-    if uniffi_xmtpv3_checksum_func_create_client() != 50509 {
+    if uniffi_xmtpv3_checksum_func_connect_to_backend() != 26018 {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if uniffi_xmtpv3_checksum_func_create_client() != 24982 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_func_create_v2_client() != 48060 {
@@ -7545,7 +7691,7 @@ private var initializationResult: InitializationResult = {
     if uniffi_xmtpv3_checksum_method_fficonversation_consent_state() != 25033 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_xmtpv3_checksum_method_fficonversation_conversation_type() != 16402 {
+    if uniffi_xmtpv3_checksum_method_fficonversation_conversation_type() != 51396 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_fficonversation_created_at_ns() != 17973 {
@@ -7554,7 +7700,7 @@ private var initializationResult: InitializationResult = {
     if uniffi_xmtpv3_checksum_method_fficonversation_dm_peer_inbox_id() != 59526 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_xmtpv3_checksum_method_fficonversation_find_messages() != 58508 {
+    if uniffi_xmtpv3_checksum_method_fficonversation_find_messages() != 19931 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_fficonversation_group_description() != 53570 {
@@ -7563,7 +7709,7 @@ private var initializationResult: InitializationResult = {
     if uniffi_xmtpv3_checksum_method_fficonversation_group_image_url_square() != 3200 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_xmtpv3_checksum_method_fficonversation_group_metadata() != 21111 {
+    if uniffi_xmtpv3_checksum_method_fficonversation_group_metadata() != 7860 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_fficonversation_group_name() != 9344 {
