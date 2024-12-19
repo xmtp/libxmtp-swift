@@ -7494,11 +7494,11 @@ public func generatePrivatePreferencesTopicIdentifier(privateKey: Data) throws -
     })
 }
 
-public func getInboxIdForAddress(host: String, isSecure: Bool, accountAddress: String) async throws -> String? {
+public func getInboxIdForAddress(api: XmtpApiClient, accountAddress: String) async throws -> String? {
     return
         try await uniffiRustCallAsync(
             rustFutureFunc: {
-                uniffi_xmtpv3_fn_func_get_inbox_id_for_address(FfiConverterString.lower(host), FfiConverterBool.lower(isSecure), FfiConverterString.lower(accountAddress))
+                uniffi_xmtpv3_fn_func_get_inbox_id_for_address(FfiConverterTypeXmtpApiClient.lower(api), FfiConverterString.lower(accountAddress))
             },
             pollFunc: ffi_xmtpv3_rust_future_poll_rust_buffer,
             completeFunc: ffi_xmtpv3_rust_future_complete_rust_buffer,
@@ -7631,7 +7631,7 @@ private var initializationResult: InitializationResult = {
     if uniffi_xmtpv3_checksum_func_generate_private_preferences_topic_identifier() != 59124 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_xmtpv3_checksum_func_get_inbox_id_for_address() != 35414 {
+    if uniffi_xmtpv3_checksum_func_get_inbox_id_for_address() != 19849 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_func_get_version_info() != 29277 {
