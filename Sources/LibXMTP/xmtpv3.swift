@@ -7494,11 +7494,11 @@ public func generatePrivatePreferencesTopicIdentifier(privateKey: Data) throws -
     })
 }
 
-public func getInboxIdForAddress(api: XmtpApiClient, accountAddress: String) async throws -> String? {
+public func getInboxIdForAddress(host: String, isSecure: Bool, accountAddress: String) async throws -> String? {
     return
         try await uniffiRustCallAsync(
             rustFutureFunc: {
-                uniffi_xmtpv3_fn_func_get_inbox_id_for_address(FfiConverterTypeXmtpApiClient.lower(api), FfiConverterString.lower(accountAddress))
+                uniffi_xmtpv3_fn_func_get_inbox_id_for_address(FfiConverterString.lower(host), FfiConverterBool.lower(isSecure), FfiConverterString.lower(accountAddress))
             },
             pollFunc: ffi_xmtpv3_rust_future_poll_rust_buffer,
             completeFunc: ffi_xmtpv3_rust_future_complete_rust_buffer,
@@ -7513,6 +7513,34 @@ public func getVersionInfo() -> String {
         uniffi_xmtpv3_fn_func_get_version_info($0
         )
     })
+}
+
+public func isAddressAuthorized(host: String, inboxId: String, address: String) async throws -> Bool {
+    return
+        try await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_xmtpv3_fn_func_is_address_authorized(FfiConverterString.lower(host), FfiConverterString.lower(inboxId), FfiConverterString.lower(address))
+            },
+            pollFunc: ffi_xmtpv3_rust_future_poll_i8,
+            completeFunc: ffi_xmtpv3_rust_future_complete_i8,
+            freeFunc: ffi_xmtpv3_rust_future_free_i8,
+            liftFunc: FfiConverterBool.lift,
+            errorHandler: FfiConverterTypeGenericError.lift
+        )
+}
+
+public func isInstallationAuthorized(host: String, inboxId: String, installationId: Data) async throws -> Bool {
+    return
+        try await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_xmtpv3_fn_func_is_installation_authorized(FfiConverterString.lower(host), FfiConverterString.lower(inboxId), FfiConverterData.lower(installationId))
+            },
+            pollFunc: ffi_xmtpv3_rust_future_poll_i8,
+            completeFunc: ffi_xmtpv3_rust_future_complete_i8,
+            freeFunc: ffi_xmtpv3_rust_future_free_i8,
+            liftFunc: FfiConverterBool.lift,
+            errorHandler: FfiConverterTypeGenericError.lift
+        )
 }
 
 public func keccak256(input: Data) -> Data {
@@ -7631,10 +7659,16 @@ private var initializationResult: InitializationResult = {
     if uniffi_xmtpv3_checksum_func_generate_private_preferences_topic_identifier() != 59124 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_xmtpv3_checksum_func_get_inbox_id_for_address() != 19849 {
+    if uniffi_xmtpv3_checksum_func_get_inbox_id_for_address() != 35414 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_func_get_version_info() != 29277 {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if uniffi_xmtpv3_checksum_func_is_address_authorized() != 60555 {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if uniffi_xmtpv3_checksum_func_is_installation_authorized() != 32687 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_func_keccak256() != 61901 {
