@@ -1701,6 +1701,8 @@ public protocol FfiConversationsProtocol: AnyObject {
 
     func createGroup(accountAddresses: [String], opts: FfiCreateGroupOptions) async throws -> FfiConversation
 
+    func getHmacKeys() throws -> [Data: [FfiHmacKey]]
+
     func getSyncGroup() throws -> FfiConversation
 
     func list(opts: FfiListConversationsOptions) async throws -> [FfiConversation]
@@ -1823,6 +1825,12 @@ open class FfiConversations:
                 liftFunc: FfiConverterTypeFfiConversation.lift,
                 errorHandler: FfiConverterTypeGenericError.lift
             )
+    }
+
+    open func getHmacKeys() throws -> [Data: [FfiHmacKey]] {
+        return try FfiConverterDictionaryDataSequenceTypeFfiHmacKey.lift(rustCallWithError(FfiConverterTypeGenericError.lift) {
+            uniffi_xmtpv3_fn_method_fficonversations_get_hmac_keys(self.uniffiClonePointer(), $0)
+        })
     }
 
     open func getSyncGroup() throws -> FfiConversation {
@@ -3554,8 +3562,6 @@ public protocol FfiXmtpClientProtocol: AnyObject {
 
     func getConsentState(entityType: FfiConsentEntityType, entity: String) async throws -> FfiConsentState
 
-    func getHmacKeys() throws -> [FfiHmacKey]
-
     func getLatestInboxState(inboxId: String) async throws -> FfiInboxState
 
     func inboxId() -> String
@@ -3793,12 +3799,6 @@ open class FfiXmtpClient:
                 liftFunc: FfiConverterTypeFfiConsentState.lift,
                 errorHandler: FfiConverterTypeGenericError.lift
             )
-    }
-
-    open func getHmacKeys() throws -> [FfiHmacKey] {
-        return try FfiConverterSequenceTypeFfiHmacKey.lift(rustCallWithError(FfiConverterTypeGenericError.lift) {
-            uniffi_xmtpv3_fn_method_ffixmtpclient_get_hmac_keys(self.uniffiClonePointer(), $0)
-        })
     }
 
     open func getLatestInboxState(inboxId: String) async throws -> FfiInboxState {
@@ -7358,6 +7358,32 @@ private struct FfiConverterDictionaryStringBool: FfiConverterRustBuffer {
     }
 }
 
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+private struct FfiConverterDictionaryDataSequenceTypeFfiHmacKey: FfiConverterRustBuffer {
+    public static func write(_ value: [Data: [FfiHmacKey]], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for (key, value) in value {
+            FfiConverterData.write(key, into: &buf)
+            FfiConverterSequenceTypeFfiHmacKey.write(value, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [Data: [FfiHmacKey]] {
+        let len: Int32 = try readInt(&buf)
+        var dict = [Data: [FfiHmacKey]]()
+        dict.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            let key = try FfiConverterData.read(from: &buf)
+            let value = try FfiConverterSequenceTypeFfiHmacKey.read(from: &buf)
+            dict[key] = value
+        }
+        return dict
+    }
+}
+
 private let UNIFFI_RUST_FUTURE_POLL_READY: Int8 = 0
 private let UNIFFI_RUST_FUTURE_POLL_MAYBE_READY: Int8 = 1
 
@@ -7805,6 +7831,9 @@ private var initializationResult: InitializationResult = {
     if uniffi_xmtpv3_checksum_method_fficonversations_create_group() != 7282 {
         return InitializationResult.apiChecksumMismatch
     }
+    if uniffi_xmtpv3_checksum_method_fficonversations_get_hmac_keys() != 44064 {
+        return InitializationResult.apiChecksumMismatch
+    }
     if uniffi_xmtpv3_checksum_method_fficonversations_get_sync_group() != 42973 {
         return InitializationResult.apiChecksumMismatch
     }
@@ -7956,9 +7985,6 @@ private var initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_ffixmtpclient_get_consent_state() != 58208 {
-        return InitializationResult.apiChecksumMismatch
-    }
-    if uniffi_xmtpv3_checksum_method_ffixmtpclient_get_hmac_keys() != 36015 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_ffixmtpclient_get_latest_inbox_state() != 3165 {
