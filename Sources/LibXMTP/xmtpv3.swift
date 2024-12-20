@@ -1581,6 +1581,105 @@ public func FfiConverterTypeFfiConversationCallback_lower(_ value: FfiConversati
     return FfiConverterTypeFfiConversationCallback.lower(value)
 }
 
+public protocol FfiConversationListItemProtocol: AnyObject {}
+
+open class FfiConversationListItem:
+    FfiConversationListItemProtocol
+{
+    fileprivate let pointer: UnsafeMutableRawPointer!
+
+    /// Used to instantiate a [FFIObject] without an actual pointer, for fakes in tests, mostly.
+    #if swift(>=5.8)
+        @_documentation(visibility: private)
+    #endif
+    public struct NoPointer {
+        public init() {}
+    }
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+    public required init(unsafeFromRawPointer pointer: UnsafeMutableRawPointer) {
+        self.pointer = pointer
+    }
+
+    // This constructor can be used to instantiate a fake object.
+    // - Parameter noPointer: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    //
+    // - Warning:
+    //     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing [Pointer] the FFI lower functions will crash.
+    #if swift(>=5.8)
+        @_documentation(visibility: private)
+    #endif
+    public init(noPointer _: NoPointer) {
+        pointer = nil
+    }
+
+    #if swift(>=5.8)
+        @_documentation(visibility: private)
+    #endif
+    public func uniffiClonePointer() -> UnsafeMutableRawPointer {
+        return try! rustCall { uniffi_xmtpv3_fn_clone_fficonversationlistitem(self.pointer, $0) }
+    }
+
+    // No primary constructor declared for this class.
+
+    deinit {
+        guard let pointer = pointer else {
+            return
+        }
+
+        try! rustCall { uniffi_xmtpv3_fn_free_fficonversationlistitem(pointer, $0) }
+    }
+}
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeFfiConversationListItem: FfiConverter {
+    typealias FfiType = UnsafeMutableRawPointer
+    typealias SwiftType = FfiConversationListItem
+
+    public static func lift(_ pointer: UnsafeMutableRawPointer) throws -> FfiConversationListItem {
+        return FfiConversationListItem(unsafeFromRawPointer: pointer)
+    }
+
+    public static func lower(_ value: FfiConversationListItem) -> UnsafeMutableRawPointer {
+        return value.uniffiClonePointer()
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiConversationListItem {
+        let v: UInt64 = try readInt(&buf)
+        // The Rust code won't compile if a pointer won't fit in a UInt64.
+        // We have to go via `UInt` because that's the thing that's the size of a pointer.
+        let ptr = UnsafeMutableRawPointer(bitPattern: UInt(truncatingIfNeeded: v))
+        if ptr == nil {
+            throw UniffiInternalError.unexpectedNullPointer
+        }
+        return try lift(ptr!)
+    }
+
+    public static func write(_ value: FfiConversationListItem, into buf: inout [UInt8]) {
+        // This fiddling is because `Int` is the thing that's the same size as a pointer.
+        // The Rust code won't compile if a pointer won't fit in a `UInt64`.
+        writeInt(&buf, UInt64(bitPattern: Int64(Int(bitPattern: lower(value)))))
+    }
+}
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFfiConversationListItem_lift(_ pointer: UnsafeMutableRawPointer) throws -> FfiConversationListItem {
+    return try FfiConverterTypeFfiConversationListItem.lift(pointer)
+}
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFfiConversationListItem_lower(_ value: FfiConversationListItem) -> UnsafeMutableRawPointer {
+    return FfiConverterTypeFfiConversationListItem.lower(value)
+}
+
 public protocol FfiConversationMetadataProtocol: AnyObject {
     func conversationType() -> FfiConversationType
 
@@ -1706,6 +1805,8 @@ public protocol FfiConversationsProtocol: AnyObject {
     func getSyncGroup() throws -> FfiConversation
 
     func list(opts: FfiListConversationsOptions) async throws -> [FfiConversation]
+
+    func listConversations() async throws -> [FfiConversationListItem]
 
     func listDms(opts: FfiListConversationsOptions) async throws -> [FfiConversation]
 
@@ -1852,6 +1953,22 @@ open class FfiConversations:
                 completeFunc: ffi_xmtpv3_rust_future_complete_rust_buffer,
                 freeFunc: ffi_xmtpv3_rust_future_free_rust_buffer,
                 liftFunc: FfiConverterSequenceTypeFfiConversation.lift,
+                errorHandler: FfiConverterTypeGenericError.lift
+            )
+    }
+
+    open func listConversations() async throws -> [FfiConversationListItem] {
+        return
+            try await uniffiRustCallAsync(
+                rustFutureFunc: {
+                    uniffi_xmtpv3_fn_method_fficonversations_list_conversations(
+                        self.uniffiClonePointer()
+                    )
+                },
+                pollFunc: ffi_xmtpv3_rust_future_poll_rust_buffer,
+                completeFunc: ffi_xmtpv3_rust_future_complete_rust_buffer,
+                freeFunc: ffi_xmtpv3_rust_future_free_rust_buffer,
+                liftFunc: FfiConverterSequenceTypeFfiConversationListItem.lift,
                 errorHandler: FfiConverterTypeGenericError.lift
             )
     }
@@ -7085,6 +7202,31 @@ private struct FfiConverterSequenceTypeFfiConversation: FfiConverterRustBuffer {
 #if swift(>=5.8)
     @_documentation(visibility: private)
 #endif
+private struct FfiConverterSequenceTypeFfiConversationListItem: FfiConverterRustBuffer {
+    typealias SwiftType = [FfiConversationListItem]
+
+    public static func write(_ value: [FfiConversationListItem], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeFfiConversationListItem.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [FfiConversationListItem] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [FfiConversationListItem]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            try seq.append(FfiConverterTypeFfiConversationListItem.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
 private struct FfiConverterSequenceTypeFfiConsent: FfiConverterRustBuffer {
     typealias SwiftType = [FfiConsent]
 
@@ -7838,6 +7980,9 @@ private var initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_fficonversations_list() != 42790 {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if uniffi_xmtpv3_checksum_method_fficonversations_list_conversations() != 29098 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_fficonversations_list_dms() != 41576 {
