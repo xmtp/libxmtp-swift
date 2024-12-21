@@ -4906,15 +4906,17 @@ public struct FfiListMessagesOptions {
     public var limit: Int64?
     public var deliveryStatus: FfiDeliveryStatus?
     public var direction: FfiDirection?
+    public var contentTypes: [FfiContentType]?
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
-    public init(sentBeforeNs: Int64?, sentAfterNs: Int64?, limit: Int64?, deliveryStatus: FfiDeliveryStatus?, direction: FfiDirection?) {
+    public init(sentBeforeNs: Int64?, sentAfterNs: Int64?, limit: Int64?, deliveryStatus: FfiDeliveryStatus?, direction: FfiDirection?, contentTypes: [FfiContentType]?) {
         self.sentBeforeNs = sentBeforeNs
         self.sentAfterNs = sentAfterNs
         self.limit = limit
         self.deliveryStatus = deliveryStatus
         self.direction = direction
+        self.contentTypes = contentTypes
     }
 }
 
@@ -4935,6 +4937,9 @@ extension FfiListMessagesOptions: Equatable, Hashable {
         if lhs.direction != rhs.direction {
             return false
         }
+        if lhs.contentTypes != rhs.contentTypes {
+            return false
+        }
         return true
     }
 
@@ -4944,6 +4949,7 @@ extension FfiListMessagesOptions: Equatable, Hashable {
         hasher.combine(limit)
         hasher.combine(deliveryStatus)
         hasher.combine(direction)
+        hasher.combine(contentTypes)
     }
 }
 
@@ -4958,7 +4964,8 @@ public struct FfiConverterTypeFfiListMessagesOptions: FfiConverterRustBuffer {
                 sentAfterNs: FfiConverterOptionInt64.read(from: &buf),
                 limit: FfiConverterOptionInt64.read(from: &buf),
                 deliveryStatus: FfiConverterOptionTypeFfiDeliveryStatus.read(from: &buf),
-                direction: FfiConverterOptionTypeFfiDirection.read(from: &buf)
+                direction: FfiConverterOptionTypeFfiDirection.read(from: &buf),
+                contentTypes: FfiConverterOptionSequenceTypeFfiContentType.read(from: &buf)
             )
     }
 
@@ -4968,6 +4975,7 @@ public struct FfiConverterTypeFfiListMessagesOptions: FfiConverterRustBuffer {
         FfiConverterOptionInt64.write(value.limit, into: &buf)
         FfiConverterOptionTypeFfiDeliveryStatus.write(value.deliveryStatus, into: &buf)
         FfiConverterOptionTypeFfiDirection.write(value.direction, into: &buf)
+        FfiConverterOptionSequenceTypeFfiContentType.write(value.contentTypes, into: &buf)
     }
 }
 
@@ -5729,6 +5737,106 @@ public func FfiConverterTypeFfiConsentState_lower(_ value: FfiConsentState) -> R
 }
 
 extension FfiConsentState: Equatable, Hashable {}
+
+// Note that we don't yet support `indirect` for enums.
+// See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
+
+public enum FfiContentType {
+    case unknown
+    case text
+    case groupMembershipChange
+    case groupUpdated
+    case reaction
+    case readReceipt
+    case reply
+    case attachment
+    case remoteAttachment
+    case transactionReference
+}
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeFfiContentType: FfiConverterRustBuffer {
+    typealias SwiftType = FfiContentType
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiContentType {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        case 1: return .unknown
+
+        case 2: return .text
+
+        case 3: return .groupMembershipChange
+
+        case 4: return .groupUpdated
+
+        case 5: return .reaction
+
+        case 6: return .readReceipt
+
+        case 7: return .reply
+
+        case 8: return .attachment
+
+        case 9: return .remoteAttachment
+
+        case 10: return .transactionReference
+
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: FfiContentType, into buf: inout [UInt8]) {
+        switch value {
+        case .unknown:
+            writeInt(&buf, Int32(1))
+
+        case .text:
+            writeInt(&buf, Int32(2))
+
+        case .groupMembershipChange:
+            writeInt(&buf, Int32(3))
+
+        case .groupUpdated:
+            writeInt(&buf, Int32(4))
+
+        case .reaction:
+            writeInt(&buf, Int32(5))
+
+        case .readReceipt:
+            writeInt(&buf, Int32(6))
+
+        case .reply:
+            writeInt(&buf, Int32(7))
+
+        case .attachment:
+            writeInt(&buf, Int32(8))
+
+        case .remoteAttachment:
+            writeInt(&buf, Int32(9))
+
+        case .transactionReference:
+            writeInt(&buf, Int32(10))
+        }
+    }
+}
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFfiContentType_lift(_ buf: RustBuffer) throws -> FfiContentType {
+    return try FfiConverterTypeFfiContentType.lift(buf)
+}
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFfiContentType_lower(_ value: FfiContentType) -> RustBuffer {
+    return FfiConverterTypeFfiContentType.lower(value)
+}
+
+extension FfiContentType: Equatable, Hashable {}
 
 // Note that we don't yet support `indirect` for enums.
 // See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
@@ -7127,6 +7235,30 @@ private struct FfiConverterOptionTypeFfiMetadataField: FfiConverterRustBuffer {
 #if swift(>=5.8)
     @_documentation(visibility: private)
 #endif
+private struct FfiConverterOptionSequenceTypeFfiContentType: FfiConverterRustBuffer {
+    typealias SwiftType = [FfiContentType]?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterSequenceTypeFfiContentType.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterSequenceTypeFfiContentType.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
 private struct FfiConverterSequenceString: FfiConverterRustBuffer {
     typealias SwiftType = [String]
 
@@ -7444,6 +7576,31 @@ private struct FfiConverterSequenceTypeFfiV2QueryResponse: FfiConverterRustBuffe
         seq.reserveCapacity(Int(len))
         for _ in 0 ..< len {
             try seq.append(FfiConverterTypeFfiV2QueryResponse.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+private struct FfiConverterSequenceTypeFfiContentType: FfiConverterRustBuffer {
+    typealias SwiftType = [FfiContentType]
+
+    public static func write(_ value: [FfiContentType], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeFfiContentType.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [FfiContentType] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [FfiContentType]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            try seq.append(FfiConverterTypeFfiContentType.read(from: &buf))
         }
         return seq
     }
