@@ -20,8 +20,7 @@ Swift Package and Cocoapod that wraps an XCFramework emitted by the `bindings_ff
 6. Update `Package.swift` binary target url to point to the same `LibXMTPSwiftFFI.zip` from the step above
 7. Update the `Package.swift` checksum to the checksum from the from the libxmtp release you created
 8. Create a PR and merge to `libxmtp-swift` main branch
-9. Tag your commit on main using the  value of the `s.version` from the `LibXMTP.podspec` that you bumped earlier  in step 5. 
-10. Publish the Cocoapod using the command `pod trunk push LibXMTP.podspec` ([see Cocoapod guide if you have not yet registered](https://guides.cocoapods.org/making/getting-setup-with-trunk.html))
+9. Tag your commit on main using the  value of the `s.version` from the `LibXMTP.podspec` that you bumped earlier  in step 5. => This will also trigger the cocoapod publish (see [deploy_to_cocoapods.yml](https://github.com/xmtp/libxmtp-swift/blob/main/.github/workflows/deploy_to_cocoapods.yml) for more details)
 
 You should now be able to reference the Swift Package and Cocoapod from xmtp-ios using the format below.
 
