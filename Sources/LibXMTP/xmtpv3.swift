@@ -1581,7 +1581,11 @@ public func FfiConverterTypeFfiConversationCallback_lower(_ value: FfiConversati
     return FfiConverterTypeFfiConversationCallback.lower(value)
 }
 
-public protocol FfiConversationListItemProtocol: AnyObject {}
+public protocol FfiConversationListItemProtocol: AnyObject {
+    func conversation() -> FfiConversation
+
+    func lastMessage() -> FfiMessage?
+}
 
 open class FfiConversationListItem:
     FfiConversationListItemProtocol
@@ -1630,6 +1634,18 @@ open class FfiConversationListItem:
         }
 
         try! rustCall { uniffi_xmtpv3_fn_free_fficonversationlistitem(pointer, $0) }
+    }
+
+    open func conversation() -> FfiConversation {
+        return try! FfiConverterTypeFfiConversation.lift(try! rustCall {
+            uniffi_xmtpv3_fn_method_fficonversationlistitem_conversation(self.uniffiClonePointer(), $0)
+        })
+    }
+
+    open func lastMessage() -> FfiMessage? {
+        return try! FfiConverterOptionTypeFfiMessage.lift(try! rustCall {
+            uniffi_xmtpv3_fn_method_fficonversationlistitem_last_message(self.uniffiClonePointer(), $0)
+        })
     }
 }
 
@@ -1804,11 +1820,11 @@ public protocol FfiConversationsProtocol: AnyObject {
 
     func getSyncGroup() throws -> FfiConversation
 
-    func list(opts: FfiListConversationsOptions) async throws -> [FfiConversationListItem]
+    func list(opts: FfiListConversationsOptions) throws -> [FfiConversationListItem]
 
-    func listDms(opts: FfiListConversationsOptions) async throws -> [FfiConversationListItem]
+    func listDms(opts: FfiListConversationsOptions) throws -> [FfiConversationListItem]
 
-    func listGroups(opts: FfiListConversationsOptions) async throws -> [FfiConversationListItem]
+    func listGroups(opts: FfiListConversationsOptions) throws -> [FfiConversationListItem]
 
     func processStreamedWelcomeMessage(envelopeBytes: Data) async throws -> FfiConversation
 
@@ -1938,55 +1954,25 @@ open class FfiConversations:
         })
     }
 
-    open func list(opts: FfiListConversationsOptions) async throws -> [FfiConversationListItem] {
-        return
-            try await uniffiRustCallAsync(
-                rustFutureFunc: {
-                    uniffi_xmtpv3_fn_method_fficonversations_list(
-                        self.uniffiClonePointer(),
-                        FfiConverterTypeFfiListConversationsOptions.lower(opts)
-                    )
-                },
-                pollFunc: ffi_xmtpv3_rust_future_poll_rust_buffer,
-                completeFunc: ffi_xmtpv3_rust_future_complete_rust_buffer,
-                freeFunc: ffi_xmtpv3_rust_future_free_rust_buffer,
-                liftFunc: FfiConverterSequenceTypeFfiConversationListItem.lift,
-                errorHandler: FfiConverterTypeGenericError.lift
-            )
+    open func list(opts: FfiListConversationsOptions) throws -> [FfiConversationListItem] {
+        return try FfiConverterSequenceTypeFfiConversationListItem.lift(rustCallWithError(FfiConverterTypeGenericError.lift) {
+            uniffi_xmtpv3_fn_method_fficonversations_list(self.uniffiClonePointer(),
+                                                          FfiConverterTypeFfiListConversationsOptions.lower(opts), $0)
+        })
     }
 
-    open func listDms(opts: FfiListConversationsOptions) async throws -> [FfiConversationListItem] {
-        return
-            try await uniffiRustCallAsync(
-                rustFutureFunc: {
-                    uniffi_xmtpv3_fn_method_fficonversations_list_dms(
-                        self.uniffiClonePointer(),
-                        FfiConverterTypeFfiListConversationsOptions.lower(opts)
-                    )
-                },
-                pollFunc: ffi_xmtpv3_rust_future_poll_rust_buffer,
-                completeFunc: ffi_xmtpv3_rust_future_complete_rust_buffer,
-                freeFunc: ffi_xmtpv3_rust_future_free_rust_buffer,
-                liftFunc: FfiConverterSequenceTypeFfiConversationListItem.lift,
-                errorHandler: FfiConverterTypeGenericError.lift
-            )
+    open func listDms(opts: FfiListConversationsOptions) throws -> [FfiConversationListItem] {
+        return try FfiConverterSequenceTypeFfiConversationListItem.lift(rustCallWithError(FfiConverterTypeGenericError.lift) {
+            uniffi_xmtpv3_fn_method_fficonversations_list_dms(self.uniffiClonePointer(),
+                                                              FfiConverterTypeFfiListConversationsOptions.lower(opts), $0)
+        })
     }
 
-    open func listGroups(opts: FfiListConversationsOptions) async throws -> [FfiConversationListItem] {
-        return
-            try await uniffiRustCallAsync(
-                rustFutureFunc: {
-                    uniffi_xmtpv3_fn_method_fficonversations_list_groups(
-                        self.uniffiClonePointer(),
-                        FfiConverterTypeFfiListConversationsOptions.lower(opts)
-                    )
-                },
-                pollFunc: ffi_xmtpv3_rust_future_poll_rust_buffer,
-                completeFunc: ffi_xmtpv3_rust_future_complete_rust_buffer,
-                freeFunc: ffi_xmtpv3_rust_future_free_rust_buffer,
-                liftFunc: FfiConverterSequenceTypeFfiConversationListItem.lift,
-                errorHandler: FfiConverterTypeGenericError.lift
-            )
+    open func listGroups(opts: FfiListConversationsOptions) throws -> [FfiConversationListItem] {
+        return try FfiConverterSequenceTypeFfiConversationListItem.lift(rustCallWithError(FfiConverterTypeGenericError.lift) {
+            uniffi_xmtpv3_fn_method_fficonversations_list_groups(self.uniffiClonePointer(),
+                                                                 FfiConverterTypeFfiListConversationsOptions.lower(opts), $0)
+        })
     }
 
     open func processStreamedWelcomeMessage(envelopeBytes: Data) async throws -> FfiConversation {
@@ -7058,6 +7044,30 @@ private struct FfiConverterOptionTypeFfiCursor: FfiConverterRustBuffer {
 #if swift(>=5.8)
     @_documentation(visibility: private)
 #endif
+private struct FfiConverterOptionTypeFfiMessage: FfiConverterRustBuffer {
+    typealias SwiftType = FfiMessage?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeFfiMessage.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeFfiMessage.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
 private struct FfiConverterOptionTypeFfiPagingInfo: FfiConverterRustBuffer {
     typealias SwiftType = FfiPagingInfo?
 
@@ -8108,6 +8118,12 @@ private var initializationResult: InitializationResult = {
     if uniffi_xmtpv3_checksum_method_fficonversationcallback_on_error() != 461 {
         return InitializationResult.apiChecksumMismatch
     }
+    if uniffi_xmtpv3_checksum_method_fficonversationlistitem_conversation() != 20525 {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if uniffi_xmtpv3_checksum_method_fficonversationlistitem_last_message() != 42510 {
+        return InitializationResult.apiChecksumMismatch
+    }
     if uniffi_xmtpv3_checksum_method_fficonversationmetadata_conversation_type() != 22241 {
         return InitializationResult.apiChecksumMismatch
     }
@@ -8126,13 +8142,13 @@ private var initializationResult: InitializationResult = {
     if uniffi_xmtpv3_checksum_method_fficonversations_get_sync_group() != 42973 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_xmtpv3_checksum_method_fficonversations_list() != 32264 {
+    if uniffi_xmtpv3_checksum_method_fficonversations_list() != 23197 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_xmtpv3_checksum_method_fficonversations_list_dms() != 59074 {
+    if uniffi_xmtpv3_checksum_method_fficonversations_list_dms() != 39437 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_xmtpv3_checksum_method_fficonversations_list_groups() != 55611 {
+    if uniffi_xmtpv3_checksum_method_fficonversations_list_groups() != 7791 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_fficonversations_process_streamed_welcome_message() != 57376 {
