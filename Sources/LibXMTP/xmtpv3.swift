@@ -1581,7 +1581,11 @@ public func FfiConverterTypeFfiConversationCallback_lower(_ value: FfiConversati
     return FfiConverterTypeFfiConversationCallback.lower(value)
 }
 
-public protocol FfiConversationListItemProtocol: AnyObject {}
+public protocol FfiConversationListItemProtocol: AnyObject {
+    func conversation() -> FfiConversation
+
+    func lastMessage() -> FfiMessage?
+}
 
 open class FfiConversationListItem:
     FfiConversationListItemProtocol
@@ -1630,6 +1634,18 @@ open class FfiConversationListItem:
         }
 
         try! rustCall { uniffi_xmtpv3_fn_free_fficonversationlistitem(pointer, $0) }
+    }
+
+    open func conversation() -> FfiConversation {
+        return try! FfiConverterTypeFfiConversation.lift(try! rustCall {
+            uniffi_xmtpv3_fn_method_fficonversationlistitem_conversation(self.uniffiClonePointer(), $0)
+        })
+    }
+
+    open func lastMessage() -> FfiMessage? {
+        return try! FfiConverterOptionTypeFfiMessage.lift(try! rustCall {
+            uniffi_xmtpv3_fn_method_fficonversationlistitem_last_message(self.uniffiClonePointer(), $0)
+        })
     }
 }
 
@@ -1804,13 +1820,11 @@ public protocol FfiConversationsProtocol: AnyObject {
 
     func getSyncGroup() throws -> FfiConversation
 
-    func list(opts: FfiListConversationsOptions) async throws -> [FfiConversation]
+    func list(opts: FfiListConversationsOptions) throws -> [FfiConversationListItem]
 
-    func listConversations() async throws -> [FfiConversationListItem]
+    func listDms(opts: FfiListConversationsOptions) throws -> [FfiConversationListItem]
 
-    func listDms(opts: FfiListConversationsOptions) async throws -> [FfiConversation]
-
-    func listGroups(opts: FfiListConversationsOptions) async throws -> [FfiConversation]
+    func listGroups(opts: FfiListConversationsOptions) throws -> [FfiConversationListItem]
 
     func processStreamedWelcomeMessage(envelopeBytes: Data) async throws -> FfiConversation
 
@@ -1940,71 +1954,25 @@ open class FfiConversations:
         })
     }
 
-    open func list(opts: FfiListConversationsOptions) async throws -> [FfiConversation] {
-        return
-            try await uniffiRustCallAsync(
-                rustFutureFunc: {
-                    uniffi_xmtpv3_fn_method_fficonversations_list(
-                        self.uniffiClonePointer(),
-                        FfiConverterTypeFfiListConversationsOptions.lower(opts)
-                    )
-                },
-                pollFunc: ffi_xmtpv3_rust_future_poll_rust_buffer,
-                completeFunc: ffi_xmtpv3_rust_future_complete_rust_buffer,
-                freeFunc: ffi_xmtpv3_rust_future_free_rust_buffer,
-                liftFunc: FfiConverterSequenceTypeFfiConversation.lift,
-                errorHandler: FfiConverterTypeGenericError.lift
-            )
+    open func list(opts: FfiListConversationsOptions) throws -> [FfiConversationListItem] {
+        return try FfiConverterSequenceTypeFfiConversationListItem.lift(rustCallWithError(FfiConverterTypeGenericError.lift) {
+            uniffi_xmtpv3_fn_method_fficonversations_list(self.uniffiClonePointer(),
+                                                          FfiConverterTypeFfiListConversationsOptions.lower(opts), $0)
+        })
     }
 
-    open func listConversations() async throws -> [FfiConversationListItem] {
-        return
-            try await uniffiRustCallAsync(
-                rustFutureFunc: {
-                    uniffi_xmtpv3_fn_method_fficonversations_list_conversations(
-                        self.uniffiClonePointer()
-                    )
-                },
-                pollFunc: ffi_xmtpv3_rust_future_poll_rust_buffer,
-                completeFunc: ffi_xmtpv3_rust_future_complete_rust_buffer,
-                freeFunc: ffi_xmtpv3_rust_future_free_rust_buffer,
-                liftFunc: FfiConverterSequenceTypeFfiConversationListItem.lift,
-                errorHandler: FfiConverterTypeGenericError.lift
-            )
+    open func listDms(opts: FfiListConversationsOptions) throws -> [FfiConversationListItem] {
+        return try FfiConverterSequenceTypeFfiConversationListItem.lift(rustCallWithError(FfiConverterTypeGenericError.lift) {
+            uniffi_xmtpv3_fn_method_fficonversations_list_dms(self.uniffiClonePointer(),
+                                                              FfiConverterTypeFfiListConversationsOptions.lower(opts), $0)
+        })
     }
 
-    open func listDms(opts: FfiListConversationsOptions) async throws -> [FfiConversation] {
-        return
-            try await uniffiRustCallAsync(
-                rustFutureFunc: {
-                    uniffi_xmtpv3_fn_method_fficonversations_list_dms(
-                        self.uniffiClonePointer(),
-                        FfiConverterTypeFfiListConversationsOptions.lower(opts)
-                    )
-                },
-                pollFunc: ffi_xmtpv3_rust_future_poll_rust_buffer,
-                completeFunc: ffi_xmtpv3_rust_future_complete_rust_buffer,
-                freeFunc: ffi_xmtpv3_rust_future_free_rust_buffer,
-                liftFunc: FfiConverterSequenceTypeFfiConversation.lift,
-                errorHandler: FfiConverterTypeGenericError.lift
-            )
-    }
-
-    open func listGroups(opts: FfiListConversationsOptions) async throws -> [FfiConversation] {
-        return
-            try await uniffiRustCallAsync(
-                rustFutureFunc: {
-                    uniffi_xmtpv3_fn_method_fficonversations_list_groups(
-                        self.uniffiClonePointer(),
-                        FfiConverterTypeFfiListConversationsOptions.lower(opts)
-                    )
-                },
-                pollFunc: ffi_xmtpv3_rust_future_poll_rust_buffer,
-                completeFunc: ffi_xmtpv3_rust_future_complete_rust_buffer,
-                freeFunc: ffi_xmtpv3_rust_future_free_rust_buffer,
-                liftFunc: FfiConverterSequenceTypeFfiConversation.lift,
-                errorHandler: FfiConverterTypeGenericError.lift
-            )
+    open func listGroups(opts: FfiListConversationsOptions) throws -> [FfiConversationListItem] {
+        return try FfiConverterSequenceTypeFfiConversationListItem.lift(rustCallWithError(FfiConverterTypeGenericError.lift) {
+            uniffi_xmtpv3_fn_method_fficonversations_list_groups(self.uniffiClonePointer(),
+                                                                 FfiConverterTypeFfiListConversationsOptions.lower(opts), $0)
+        })
     }
 
     open func processStreamedWelcomeMessage(envelopeBytes: Data) async throws -> FfiConversation {
@@ -3705,6 +3673,11 @@ public protocol FfiXmtpClientProtocol: AnyObject {
     func revokeAllOtherInstallations() async throws -> FfiSignatureRequest
 
     /**
+     * * Revoke a list of installations
+     */
+    func revokeInstallations(installationIds: [Data]) async throws -> FfiSignatureRequest
+
+    /**
      * Revokes or removes an identity - really a wallet address - from the existing client
      */
     func revokeWallet(walletAddress: String) async throws -> FfiSignatureRequest
@@ -4008,6 +3981,26 @@ open class FfiXmtpClient:
                 rustFutureFunc: {
                     uniffi_xmtpv3_fn_method_ffixmtpclient_revoke_all_other_installations(
                         self.uniffiClonePointer()
+                    )
+                },
+                pollFunc: ffi_xmtpv3_rust_future_poll_pointer,
+                completeFunc: ffi_xmtpv3_rust_future_complete_pointer,
+                freeFunc: ffi_xmtpv3_rust_future_free_pointer,
+                liftFunc: FfiConverterTypeFfiSignatureRequest.lift,
+                errorHandler: FfiConverterTypeGenericError.lift
+            )
+    }
+
+    /**
+     * * Revoke a list of installations
+     */
+    open func revokeInstallations(installationIds: [Data]) async throws -> FfiSignatureRequest {
+        return
+            try await uniffiRustCallAsync(
+                rustFutureFunc: {
+                    uniffi_xmtpv3_fn_method_ffixmtpclient_revoke_installations(
+                        self.uniffiClonePointer(),
+                        FfiConverterSequenceData.lower(installationIds)
                     )
                 },
                 pollFunc: ffi_xmtpv3_rust_future_poll_pointer,
@@ -4828,14 +4821,16 @@ public struct FfiListConversationsOptions {
     public var createdBeforeNs: Int64?
     public var limit: Int64?
     public var consentState: FfiConsentState?
+    public var includeDuplicateDms: Bool
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
-    public init(createdAfterNs: Int64?, createdBeforeNs: Int64?, limit: Int64?, consentState: FfiConsentState?) {
+    public init(createdAfterNs: Int64?, createdBeforeNs: Int64?, limit: Int64?, consentState: FfiConsentState?, includeDuplicateDms: Bool) {
         self.createdAfterNs = createdAfterNs
         self.createdBeforeNs = createdBeforeNs
         self.limit = limit
         self.consentState = consentState
+        self.includeDuplicateDms = includeDuplicateDms
     }
 }
 
@@ -4853,6 +4848,9 @@ extension FfiListConversationsOptions: Equatable, Hashable {
         if lhs.consentState != rhs.consentState {
             return false
         }
+        if lhs.includeDuplicateDms != rhs.includeDuplicateDms {
+            return false
+        }
         return true
     }
 
@@ -4861,6 +4859,7 @@ extension FfiListConversationsOptions: Equatable, Hashable {
         hasher.combine(createdBeforeNs)
         hasher.combine(limit)
         hasher.combine(consentState)
+        hasher.combine(includeDuplicateDms)
     }
 }
 
@@ -4874,7 +4873,8 @@ public struct FfiConverterTypeFfiListConversationsOptions: FfiConverterRustBuffe
                 createdAfterNs: FfiConverterOptionInt64.read(from: &buf),
                 createdBeforeNs: FfiConverterOptionInt64.read(from: &buf),
                 limit: FfiConverterOptionInt64.read(from: &buf),
-                consentState: FfiConverterOptionTypeFfiConsentState.read(from: &buf)
+                consentState: FfiConverterOptionTypeFfiConsentState.read(from: &buf),
+                includeDuplicateDms: FfiConverterBool.read(from: &buf)
             )
     }
 
@@ -4883,6 +4883,7 @@ public struct FfiConverterTypeFfiListConversationsOptions: FfiConverterRustBuffe
         FfiConverterOptionInt64.write(value.createdBeforeNs, into: &buf)
         FfiConverterOptionInt64.write(value.limit, into: &buf)
         FfiConverterOptionTypeFfiConsentState.write(value.consentState, into: &buf)
+        FfiConverterBool.write(value.includeDuplicateDms, into: &buf)
     }
 }
 
@@ -7043,6 +7044,30 @@ private struct FfiConverterOptionTypeFfiCursor: FfiConverterRustBuffer {
 #if swift(>=5.8)
     @_documentation(visibility: private)
 #endif
+private struct FfiConverterOptionTypeFfiMessage: FfiConverterRustBuffer {
+    typealias SwiftType = FfiMessage?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeFfiMessage.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeFfiMessage.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
 private struct FfiConverterOptionTypeFfiPagingInfo: FfiConverterRustBuffer {
     typealias SwiftType = FfiPagingInfo?
 
@@ -7301,31 +7326,6 @@ private struct FfiConverterSequenceData: FfiConverterRustBuffer {
         seq.reserveCapacity(Int(len))
         for _ in 0 ..< len {
             try seq.append(FfiConverterData.read(from: &buf))
-        }
-        return seq
-    }
-}
-
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
-private struct FfiConverterSequenceTypeFfiConversation: FfiConverterRustBuffer {
-    typealias SwiftType = [FfiConversation]
-
-    public static func write(_ value: [FfiConversation], into buf: inout [UInt8]) {
-        let len = Int32(value.count)
-        writeInt(&buf, len)
-        for item in value {
-            FfiConverterTypeFfiConversation.write(item, into: &buf)
-        }
-    }
-
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [FfiConversation] {
-        let len: Int32 = try readInt(&buf)
-        var seq = [FfiConversation]()
-        seq.reserveCapacity(Int(len))
-        for _ in 0 ..< len {
-            try seq.append(FfiConverterTypeFfiConversation.read(from: &buf))
         }
         return seq
     }
@@ -8118,6 +8118,12 @@ private var initializationResult: InitializationResult = {
     if uniffi_xmtpv3_checksum_method_fficonversationcallback_on_error() != 461 {
         return InitializationResult.apiChecksumMismatch
     }
+    if uniffi_xmtpv3_checksum_method_fficonversationlistitem_conversation() != 20525 {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if uniffi_xmtpv3_checksum_method_fficonversationlistitem_last_message() != 42510 {
+        return InitializationResult.apiChecksumMismatch
+    }
     if uniffi_xmtpv3_checksum_method_fficonversationmetadata_conversation_type() != 22241 {
         return InitializationResult.apiChecksumMismatch
     }
@@ -8136,16 +8142,13 @@ private var initializationResult: InitializationResult = {
     if uniffi_xmtpv3_checksum_method_fficonversations_get_sync_group() != 42973 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_xmtpv3_checksum_method_fficonversations_list() != 42790 {
+    if uniffi_xmtpv3_checksum_method_fficonversations_list() != 23197 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_xmtpv3_checksum_method_fficonversations_list_conversations() != 29098 {
+    if uniffi_xmtpv3_checksum_method_fficonversations_list_dms() != 39437 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_xmtpv3_checksum_method_fficonversations_list_dms() != 41576 {
-        return InitializationResult.apiChecksumMismatch
-    }
-    if uniffi_xmtpv3_checksum_method_fficonversations_list_groups() != 2386 {
+    if uniffi_xmtpv3_checksum_method_fficonversations_list_groups() != 7791 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_fficonversations_process_streamed_welcome_message() != 57376 {
@@ -8311,6 +8314,9 @@ private var initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_ffixmtpclient_revoke_all_other_installations() != 36450 {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if uniffi_xmtpv3_checksum_method_ffixmtpclient_revoke_installations() != 2611 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_ffixmtpclient_revoke_wallet() != 12211 {
