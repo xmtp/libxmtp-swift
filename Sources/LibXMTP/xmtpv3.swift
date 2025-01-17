@@ -1833,7 +1833,11 @@ public func FfiConverterTypeFfiConversationMetadata_lower(_ value: FfiConversati
 public protocol FfiConversationsProtocol: AnyObject {
     func createDm(accountAddress: String) async throws -> FfiConversation
 
+    func createDmWithInboxId(inboxId: String) async throws -> FfiConversation
+
     func createGroup(accountAddresses: [String], opts: FfiCreateGroupOptions) async throws -> FfiConversation
+
+    func createGroupWithInboxIds(inboxIds: [String], opts: FfiCreateGroupOptions) async throws -> FfiConversation
 
     func getHmacKeys() throws -> [Data: [FfiHmacKey]]
 
@@ -1875,7 +1879,7 @@ public protocol FfiConversationsProtocol: AnyObject {
 
     func sync() async throws
 
-    func syncAllConversations(consentState: FfiConsentState?) async throws -> UInt32
+    func syncAllConversations(consentStates: [FfiConsentState]?) async throws -> UInt32
 }
 
 open class FfiConversations:
@@ -1944,6 +1948,23 @@ open class FfiConversations:
             )
     }
 
+    open func createDmWithInboxId(inboxId: String) async throws -> FfiConversation {
+        return
+            try await uniffiRustCallAsync(
+                rustFutureFunc: {
+                    uniffi_xmtpv3_fn_method_fficonversations_create_dm_with_inbox_id(
+                        self.uniffiClonePointer(),
+                        FfiConverterString.lower(inboxId)
+                    )
+                },
+                pollFunc: ffi_xmtpv3_rust_future_poll_pointer,
+                completeFunc: ffi_xmtpv3_rust_future_complete_pointer,
+                freeFunc: ffi_xmtpv3_rust_future_free_pointer,
+                liftFunc: FfiConverterTypeFfiConversation.lift,
+                errorHandler: FfiConverterTypeGenericError.lift
+            )
+    }
+
     open func createGroup(accountAddresses: [String], opts: FfiCreateGroupOptions) async throws -> FfiConversation {
         return
             try await uniffiRustCallAsync(
@@ -1951,6 +1972,23 @@ open class FfiConversations:
                     uniffi_xmtpv3_fn_method_fficonversations_create_group(
                         self.uniffiClonePointer(),
                         FfiConverterSequenceString.lower(accountAddresses), FfiConverterTypeFfiCreateGroupOptions.lower(opts)
+                    )
+                },
+                pollFunc: ffi_xmtpv3_rust_future_poll_pointer,
+                completeFunc: ffi_xmtpv3_rust_future_complete_pointer,
+                freeFunc: ffi_xmtpv3_rust_future_free_pointer,
+                liftFunc: FfiConverterTypeFfiConversation.lift,
+                errorHandler: FfiConverterTypeGenericError.lift
+            )
+    }
+
+    open func createGroupWithInboxIds(inboxIds: [String], opts: FfiCreateGroupOptions) async throws -> FfiConversation {
+        return
+            try await uniffiRustCallAsync(
+                rustFutureFunc: {
+                    uniffi_xmtpv3_fn_method_fficonversations_create_group_with_inbox_ids(
+                        self.uniffiClonePointer(),
+                        FfiConverterSequenceString.lower(inboxIds), FfiConverterTypeFfiCreateGroupOptions.lower(opts)
                     )
                 },
                 pollFunc: ffi_xmtpv3_rust_future_poll_pointer,
@@ -2188,13 +2226,13 @@ open class FfiConversations:
             )
     }
 
-    open func syncAllConversations(consentState: FfiConsentState?) async throws -> UInt32 {
+    open func syncAllConversations(consentStates: [FfiConsentState]?) async throws -> UInt32 {
         return
             try await uniffiRustCallAsync(
                 rustFutureFunc: {
                     uniffi_xmtpv3_fn_method_fficonversations_sync_all_conversations(
                         self.uniffiClonePointer(),
-                        FfiConverterOptionTypeFfiConsentState.lower(consentState)
+                        FfiConverterOptionSequenceTypeFfiConsentState.lower(consentStates)
                     )
                 },
                 pollFunc: ffi_xmtpv3_rust_future_poll_u32,
@@ -4855,16 +4893,16 @@ public struct FfiListConversationsOptions {
     public var createdAfterNs: Int64?
     public var createdBeforeNs: Int64?
     public var limit: Int64?
-    public var consentState: FfiConsentState?
+    public var consentStates: [FfiConsentState]?
     public var includeDuplicateDms: Bool
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
-    public init(createdAfterNs: Int64?, createdBeforeNs: Int64?, limit: Int64?, consentState: FfiConsentState?, includeDuplicateDms: Bool) {
+    public init(createdAfterNs: Int64?, createdBeforeNs: Int64?, limit: Int64?, consentStates: [FfiConsentState]?, includeDuplicateDms: Bool) {
         self.createdAfterNs = createdAfterNs
         self.createdBeforeNs = createdBeforeNs
         self.limit = limit
-        self.consentState = consentState
+        self.consentStates = consentStates
         self.includeDuplicateDms = includeDuplicateDms
     }
 }
@@ -4880,7 +4918,7 @@ extension FfiListConversationsOptions: Equatable, Hashable {
         if lhs.limit != rhs.limit {
             return false
         }
-        if lhs.consentState != rhs.consentState {
+        if lhs.consentStates != rhs.consentStates {
             return false
         }
         if lhs.includeDuplicateDms != rhs.includeDuplicateDms {
@@ -4893,7 +4931,7 @@ extension FfiListConversationsOptions: Equatable, Hashable {
         hasher.combine(createdAfterNs)
         hasher.combine(createdBeforeNs)
         hasher.combine(limit)
-        hasher.combine(consentState)
+        hasher.combine(consentStates)
         hasher.combine(includeDuplicateDms)
     }
 }
@@ -4908,7 +4946,7 @@ public struct FfiConverterTypeFfiListConversationsOptions: FfiConverterRustBuffe
                 createdAfterNs: FfiConverterOptionInt64.read(from: &buf),
                 createdBeforeNs: FfiConverterOptionInt64.read(from: &buf),
                 limit: FfiConverterOptionInt64.read(from: &buf),
-                consentState: FfiConverterOptionTypeFfiConsentState.read(from: &buf),
+                consentStates: FfiConverterOptionSequenceTypeFfiConsentState.read(from: &buf),
                 includeDuplicateDms: FfiConverterBool.read(from: &buf)
             )
     }
@@ -4917,7 +4955,7 @@ public struct FfiConverterTypeFfiListConversationsOptions: FfiConverterRustBuffe
         FfiConverterOptionInt64.write(value.createdAfterNs, into: &buf)
         FfiConverterOptionInt64.write(value.createdBeforeNs, into: &buf)
         FfiConverterOptionInt64.write(value.limit, into: &buf)
-        FfiConverterOptionTypeFfiConsentState.write(value.consentState, into: &buf)
+        FfiConverterOptionSequenceTypeFfiConsentState.write(value.consentStates, into: &buf)
         FfiConverterBool.write(value.includeDuplicateDms, into: &buf)
     }
 }
@@ -7427,30 +7465,6 @@ private struct FfiConverterOptionTypeFfiPermissionPolicySet: FfiConverterRustBuf
 #if swift(>=5.8)
     @_documentation(visibility: private)
 #endif
-private struct FfiConverterOptionTypeFfiConsentState: FfiConverterRustBuffer {
-    typealias SwiftType = FfiConsentState?
-
-    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
-        guard let value = value else {
-            writeInt(&buf, Int8(0))
-            return
-        }
-        writeInt(&buf, Int8(1))
-        FfiConverterTypeFfiConsentState.write(value, into: &buf)
-    }
-
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
-        switch try readInt(&buf) as Int8 {
-        case 0: return nil
-        case 1: return try FfiConverterTypeFfiConsentState.read(from: &buf)
-        default: throw UniffiInternalError.unexpectedOptionalTag
-        }
-    }
-}
-
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 private struct FfiConverterOptionTypeFfiConversationType: FfiConverterRustBuffer {
     typealias SwiftType = FfiConversationType?
 
@@ -7563,6 +7577,30 @@ private struct FfiConverterOptionTypeFfiMetadataField: FfiConverterRustBuffer {
         switch try readInt(&buf) as Int8 {
         case 0: return nil
         case 1: return try FfiConverterTypeFfiMetadataField.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+private struct FfiConverterOptionSequenceTypeFfiConsentState: FfiConverterRustBuffer {
+    typealias SwiftType = [FfiConsentState]?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterSequenceTypeFfiConsentState.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterSequenceTypeFfiConsentState.read(from: &buf)
         default: throw UniffiInternalError.unexpectedOptionalTag
         }
     }
@@ -7912,6 +7950,31 @@ private struct FfiConverterSequenceTypeFfiV2QueryResponse: FfiConverterRustBuffe
         seq.reserveCapacity(Int(len))
         for _ in 0 ..< len {
             try seq.append(FfiConverterTypeFfiV2QueryResponse.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+private struct FfiConverterSequenceTypeFfiConsentState: FfiConverterRustBuffer {
+    typealias SwiftType = [FfiConsentState]
+
+    public static func write(_ value: [FfiConsentState], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeFfiConsentState.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [FfiConsentState] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [FfiConsentState]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            try seq.append(FfiConverterTypeFfiConsentState.read(from: &buf))
         }
         return seq
     }
@@ -8494,7 +8557,13 @@ private var initializationResult: InitializationResult = {
     if uniffi_xmtpv3_checksum_method_fficonversations_create_dm() != 63785 {
         return InitializationResult.apiChecksumMismatch
     }
+    if uniffi_xmtpv3_checksum_method_fficonversations_create_dm_with_inbox_id() != 25323 {
+        return InitializationResult.apiChecksumMismatch
+    }
     if uniffi_xmtpv3_checksum_method_fficonversations_create_group() != 7282 {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if uniffi_xmtpv3_checksum_method_fficonversations_create_group_with_inbox_ids() != 56407 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_fficonversations_get_hmac_keys() != 44064 {
@@ -8545,7 +8614,7 @@ private var initializationResult: InitializationResult = {
     if uniffi_xmtpv3_checksum_method_fficonversations_sync() != 9054 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_xmtpv3_checksum_method_fficonversations_sync_all_conversations() != 2613 {
+    if uniffi_xmtpv3_checksum_method_fficonversations_sync_all_conversations() != 30657 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_ffigrouppermissions_policy_set() != 24928 {
