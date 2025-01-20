@@ -2979,7 +2979,7 @@ public protocol FfiStreamCloserProtocol: AnyObject {
     func end()
 
     /**
-     * End the stream and asyncronously wait for it to shutdown
+     * End the stream and asynchronously wait for it to shutdown
      */
     func endAndWait() async throws
 
@@ -3047,7 +3047,7 @@ open class FfiStreamCloser:
     }
 
     /**
-     * End the stream and asyncronously wait for it to shutdown
+     * End the stream and asynchronously wait for it to shutdown
      */
     open func endAndWait() async throws {
         return
