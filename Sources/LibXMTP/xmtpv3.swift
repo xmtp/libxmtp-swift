@@ -749,6 +749,8 @@ public protocol FfiConversationProtocol: AnyObject {
 
     func consentState() throws -> FfiConsentState
 
+    func conversationMessageDisappearingSettings() throws -> FfiMessageDisappearingSettings
+
     func conversationType() async throws -> FfiConversationType
 
     func createdAtNs() -> Int64
@@ -756,6 +758,8 @@ public protocol FfiConversationProtocol: AnyObject {
     func dmPeerInboxId() throws -> String
 
     func findMessages(opts: FfiListMessagesOptions) async throws -> [FfiMessage]
+
+    func findMessagesWithReactions(opts: FfiListMessagesOptions) async throws -> [FfiMessageWithReactions]
 
     func groupDescription() throws -> String
 
@@ -788,6 +792,8 @@ public protocol FfiConversationProtocol: AnyObject {
 
     func removeAdmin(inboxId: String) async throws
 
+    func removeConversationMessageDisappearingSettings() async throws
+
     func removeMembers(accountAddresses: [String]) async throws
 
     func removeMembersByInboxId(inboxIds: [String]) async throws
@@ -808,6 +814,8 @@ public protocol FfiConversationProtocol: AnyObject {
     func sync() async throws
 
     func updateConsentState(state: FfiConsentState) throws
+
+    func updateConversationMessageDisappearingSettings(settings: FfiMessageDisappearingSettings) async throws
 
     func updateGroupDescription(groupDescription: String) async throws
 
@@ -955,6 +963,12 @@ open class FfiConversation:
         })
     }
 
+    open func conversationMessageDisappearingSettings() throws -> FfiMessageDisappearingSettings {
+        return try FfiConverterTypeFfiMessageDisappearingSettings.lift(rustCallWithError(FfiConverterTypeGenericError.lift) {
+            uniffi_xmtpv3_fn_method_fficonversation_conversation_message_disappearing_settings(self.uniffiClonePointer(), $0)
+        })
+    }
+
     open func conversationType() async throws -> FfiConversationType {
         return
             try await uniffiRustCallAsync(
@@ -996,6 +1010,23 @@ open class FfiConversation:
                 completeFunc: ffi_xmtpv3_rust_future_complete_rust_buffer,
                 freeFunc: ffi_xmtpv3_rust_future_free_rust_buffer,
                 liftFunc: FfiConverterSequenceTypeFfiMessage.lift,
+                errorHandler: FfiConverterTypeGenericError.lift
+            )
+    }
+
+    open func findMessagesWithReactions(opts: FfiListMessagesOptions) async throws -> [FfiMessageWithReactions] {
+        return
+            try await uniffiRustCallAsync(
+                rustFutureFunc: {
+                    uniffi_xmtpv3_fn_method_fficonversation_find_messages_with_reactions(
+                        self.uniffiClonePointer(),
+                        FfiConverterTypeFfiListMessagesOptions.lower(opts)
+                    )
+                },
+                pollFunc: ffi_xmtpv3_rust_future_poll_rust_buffer,
+                completeFunc: ffi_xmtpv3_rust_future_complete_rust_buffer,
+                freeFunc: ffi_xmtpv3_rust_future_free_rust_buffer,
+                liftFunc: FfiConverterSequenceTypeFfiMessageWithReactions.lift,
                 errorHandler: FfiConverterTypeGenericError.lift
             )
     }
@@ -1141,6 +1172,22 @@ open class FfiConversation:
             )
     }
 
+    open func removeConversationMessageDisappearingSettings() async throws {
+        return
+            try await uniffiRustCallAsync(
+                rustFutureFunc: {
+                    uniffi_xmtpv3_fn_method_fficonversation_remove_conversation_message_disappearing_settings(
+                        self.uniffiClonePointer()
+                    )
+                },
+                pollFunc: ffi_xmtpv3_rust_future_poll_void,
+                completeFunc: ffi_xmtpv3_rust_future_complete_void,
+                freeFunc: ffi_xmtpv3_rust_future_free_void,
+                liftFunc: { $0 },
+                errorHandler: FfiConverterTypeGenericError.lift
+            )
+    }
+
     open func removeMembers(accountAddresses: [String]) async throws {
         return
             try await uniffiRustCallAsync(
@@ -1262,6 +1309,23 @@ open class FfiConversation:
         uniffi_xmtpv3_fn_method_fficonversation_update_consent_state(self.uniffiClonePointer(),
                                                                      FfiConverterTypeFfiConsentState.lower(state), $0)
     }
+    }
+
+    open func updateConversationMessageDisappearingSettings(settings: FfiMessageDisappearingSettings) async throws {
+        return
+            try await uniffiRustCallAsync(
+                rustFutureFunc: {
+                    uniffi_xmtpv3_fn_method_fficonversation_update_conversation_message_disappearing_settings(
+                        self.uniffiClonePointer(),
+                        FfiConverterTypeFfiMessageDisappearingSettings.lower(settings)
+                    )
+                },
+                pollFunc: ffi_xmtpv3_rust_future_poll_void,
+                completeFunc: ffi_xmtpv3_rust_future_complete_void,
+                freeFunc: ffi_xmtpv3_rust_future_free_void,
+                liftFunc: { $0 },
+                errorHandler: FfiConverterTypeGenericError.lift
+            )
     }
 
     open func updateGroupDescription(groupDescription: String) async throws {
@@ -1812,9 +1876,13 @@ public func FfiConverterTypeFfiConversationMetadata_lower(_ value: FfiConversati
 }
 
 public protocol FfiConversationsProtocol: AnyObject {
-    func createDm(accountAddress: String) async throws -> FfiConversation
-
     func createGroup(accountAddresses: [String], opts: FfiCreateGroupOptions) async throws -> FfiConversation
+
+    func createGroupWithInboxIds(inboxIds: [String], opts: FfiCreateGroupOptions) async throws -> FfiConversation
+
+    func findOrCreateDm(accountAddress: String) async throws -> FfiConversation
+
+    func findOrCreateDmByInboxId(inboxId: String) async throws -> FfiConversation
 
     func getHmacKeys() throws -> [Data: [FfiHmacKey]]
 
@@ -1856,7 +1924,7 @@ public protocol FfiConversationsProtocol: AnyObject {
 
     func sync() async throws
 
-    func syncAllConversations(consentState: FfiConsentState?) async throws -> UInt32
+    func syncAllConversations(consentStates: [FfiConsentState]?) async throws -> UInt32
 }
 
 open class FfiConversations:
@@ -1908,11 +1976,45 @@ open class FfiConversations:
         try! rustCall { uniffi_xmtpv3_fn_free_fficonversations(pointer, $0) }
     }
 
-    open func createDm(accountAddress: String) async throws -> FfiConversation {
+    open func createGroup(accountAddresses: [String], opts: FfiCreateGroupOptions) async throws -> FfiConversation {
         return
             try await uniffiRustCallAsync(
                 rustFutureFunc: {
-                    uniffi_xmtpv3_fn_method_fficonversations_create_dm(
+                    uniffi_xmtpv3_fn_method_fficonversations_create_group(
+                        self.uniffiClonePointer(),
+                        FfiConverterSequenceString.lower(accountAddresses), FfiConverterTypeFfiCreateGroupOptions.lower(opts)
+                    )
+                },
+                pollFunc: ffi_xmtpv3_rust_future_poll_pointer,
+                completeFunc: ffi_xmtpv3_rust_future_complete_pointer,
+                freeFunc: ffi_xmtpv3_rust_future_free_pointer,
+                liftFunc: FfiConverterTypeFfiConversation.lift,
+                errorHandler: FfiConverterTypeGenericError.lift
+            )
+    }
+
+    open func createGroupWithInboxIds(inboxIds: [String], opts: FfiCreateGroupOptions) async throws -> FfiConversation {
+        return
+            try await uniffiRustCallAsync(
+                rustFutureFunc: {
+                    uniffi_xmtpv3_fn_method_fficonversations_create_group_with_inbox_ids(
+                        self.uniffiClonePointer(),
+                        FfiConverterSequenceString.lower(inboxIds), FfiConverterTypeFfiCreateGroupOptions.lower(opts)
+                    )
+                },
+                pollFunc: ffi_xmtpv3_rust_future_poll_pointer,
+                completeFunc: ffi_xmtpv3_rust_future_complete_pointer,
+                freeFunc: ffi_xmtpv3_rust_future_free_pointer,
+                liftFunc: FfiConverterTypeFfiConversation.lift,
+                errorHandler: FfiConverterTypeGenericError.lift
+            )
+    }
+
+    open func findOrCreateDm(accountAddress: String) async throws -> FfiConversation {
+        return
+            try await uniffiRustCallAsync(
+                rustFutureFunc: {
+                    uniffi_xmtpv3_fn_method_fficonversations_find_or_create_dm(
                         self.uniffiClonePointer(),
                         FfiConverterString.lower(accountAddress)
                     )
@@ -1925,13 +2027,13 @@ open class FfiConversations:
             )
     }
 
-    open func createGroup(accountAddresses: [String], opts: FfiCreateGroupOptions) async throws -> FfiConversation {
+    open func findOrCreateDmByInboxId(inboxId: String) async throws -> FfiConversation {
         return
             try await uniffiRustCallAsync(
                 rustFutureFunc: {
-                    uniffi_xmtpv3_fn_method_fficonversations_create_group(
+                    uniffi_xmtpv3_fn_method_fficonversations_find_or_create_dm_by_inbox_id(
                         self.uniffiClonePointer(),
-                        FfiConverterSequenceString.lower(accountAddresses), FfiConverterTypeFfiCreateGroupOptions.lower(opts)
+                        FfiConverterString.lower(inboxId)
                     )
                 },
                 pollFunc: ffi_xmtpv3_rust_future_poll_pointer,
@@ -2169,13 +2271,13 @@ open class FfiConversations:
             )
     }
 
-    open func syncAllConversations(consentState: FfiConsentState?) async throws -> UInt32 {
+    open func syncAllConversations(consentStates: [FfiConsentState]?) async throws -> UInt32 {
         return
             try await uniffiRustCallAsync(
                 rustFutureFunc: {
                     uniffi_xmtpv3_fn_method_fficonversations_sync_all_conversations(
                         self.uniffiClonePointer(),
-                        FfiConverterOptionTypeFfiConsentState.lower(consentState)
+                        FfiConverterOptionSequenceTypeFfiConsentState.lower(consentStates)
                     )
                 },
                 pollFunc: ffi_xmtpv3_rust_future_poll_u32,
@@ -2922,7 +3024,7 @@ public protocol FfiStreamCloserProtocol: AnyObject {
     func end()
 
     /**
-     * End the stream and asyncronously wait for it to shutdown
+     * End the stream and asynchronously wait for it to shutdown
      */
     func endAndWait() async throws
 
@@ -2990,7 +3092,7 @@ open class FfiStreamCloser:
     }
 
     /**
-     * End the stream and asyncronously wait for it to shutdown
+     * End the stream and asynchronously wait for it to shutdown
      */
     open func endAndWait() async throws {
         return
@@ -4401,16 +4503,18 @@ public struct FfiCreateGroupOptions {
     public var groupDescription: String?
     public var groupPinnedFrameUrl: String?
     public var customPermissionPolicySet: FfiPermissionPolicySet?
+    public var messageDisappearingSettings: FfiMessageDisappearingSettings?
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
-    public init(permissions: FfiGroupPermissionsOptions?, groupName: String?, groupImageUrlSquare: String?, groupDescription: String?, groupPinnedFrameUrl: String?, customPermissionPolicySet: FfiPermissionPolicySet?) {
+    public init(permissions: FfiGroupPermissionsOptions?, groupName: String?, groupImageUrlSquare: String?, groupDescription: String?, groupPinnedFrameUrl: String?, customPermissionPolicySet: FfiPermissionPolicySet?, messageDisappearingSettings: FfiMessageDisappearingSettings?) {
         self.permissions = permissions
         self.groupName = groupName
         self.groupImageUrlSquare = groupImageUrlSquare
         self.groupDescription = groupDescription
         self.groupPinnedFrameUrl = groupPinnedFrameUrl
         self.customPermissionPolicySet = customPermissionPolicySet
+        self.messageDisappearingSettings = messageDisappearingSettings
     }
 }
 
@@ -4434,6 +4538,9 @@ extension FfiCreateGroupOptions: Equatable, Hashable {
         if lhs.customPermissionPolicySet != rhs.customPermissionPolicySet {
             return false
         }
+        if lhs.messageDisappearingSettings != rhs.messageDisappearingSettings {
+            return false
+        }
         return true
     }
 
@@ -4444,6 +4551,7 @@ extension FfiCreateGroupOptions: Equatable, Hashable {
         hasher.combine(groupDescription)
         hasher.combine(groupPinnedFrameUrl)
         hasher.combine(customPermissionPolicySet)
+        hasher.combine(messageDisappearingSettings)
     }
 }
 
@@ -4459,7 +4567,8 @@ public struct FfiConverterTypeFfiCreateGroupOptions: FfiConverterRustBuffer {
                 groupImageUrlSquare: FfiConverterOptionString.read(from: &buf),
                 groupDescription: FfiConverterOptionString.read(from: &buf),
                 groupPinnedFrameUrl: FfiConverterOptionString.read(from: &buf),
-                customPermissionPolicySet: FfiConverterOptionTypeFfiPermissionPolicySet.read(from: &buf)
+                customPermissionPolicySet: FfiConverterOptionTypeFfiPermissionPolicySet.read(from: &buf),
+                messageDisappearingSettings: FfiConverterOptionTypeFfiMessageDisappearingSettings.read(from: &buf)
             )
     }
 
@@ -4470,6 +4579,7 @@ public struct FfiConverterTypeFfiCreateGroupOptions: FfiConverterRustBuffer {
         FfiConverterOptionString.write(value.groupDescription, into: &buf)
         FfiConverterOptionString.write(value.groupPinnedFrameUrl, into: &buf)
         FfiConverterOptionTypeFfiPermissionPolicySet.write(value.customPermissionPolicySet, into: &buf)
+        FfiConverterOptionTypeFfiMessageDisappearingSettings.write(value.messageDisappearingSettings, into: &buf)
     }
 }
 
@@ -4820,16 +4930,16 @@ public struct FfiListConversationsOptions {
     public var createdAfterNs: Int64?
     public var createdBeforeNs: Int64?
     public var limit: Int64?
-    public var consentState: FfiConsentState?
+    public var consentStates: [FfiConsentState]?
     public var includeDuplicateDms: Bool
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
-    public init(createdAfterNs: Int64?, createdBeforeNs: Int64?, limit: Int64?, consentState: FfiConsentState?, includeDuplicateDms: Bool) {
+    public init(createdAfterNs: Int64?, createdBeforeNs: Int64?, limit: Int64?, consentStates: [FfiConsentState]?, includeDuplicateDms: Bool) {
         self.createdAfterNs = createdAfterNs
         self.createdBeforeNs = createdBeforeNs
         self.limit = limit
-        self.consentState = consentState
+        self.consentStates = consentStates
         self.includeDuplicateDms = includeDuplicateDms
     }
 }
@@ -4845,7 +4955,7 @@ extension FfiListConversationsOptions: Equatable, Hashable {
         if lhs.limit != rhs.limit {
             return false
         }
-        if lhs.consentState != rhs.consentState {
+        if lhs.consentStates != rhs.consentStates {
             return false
         }
         if lhs.includeDuplicateDms != rhs.includeDuplicateDms {
@@ -4858,7 +4968,7 @@ extension FfiListConversationsOptions: Equatable, Hashable {
         hasher.combine(createdAfterNs)
         hasher.combine(createdBeforeNs)
         hasher.combine(limit)
-        hasher.combine(consentState)
+        hasher.combine(consentStates)
         hasher.combine(includeDuplicateDms)
     }
 }
@@ -4873,7 +4983,7 @@ public struct FfiConverterTypeFfiListConversationsOptions: FfiConverterRustBuffe
                 createdAfterNs: FfiConverterOptionInt64.read(from: &buf),
                 createdBeforeNs: FfiConverterOptionInt64.read(from: &buf),
                 limit: FfiConverterOptionInt64.read(from: &buf),
-                consentState: FfiConverterOptionTypeFfiConsentState.read(from: &buf),
+                consentStates: FfiConverterOptionSequenceTypeFfiConsentState.read(from: &buf),
                 includeDuplicateDms: FfiConverterBool.read(from: &buf)
             )
     }
@@ -4882,7 +4992,7 @@ public struct FfiConverterTypeFfiListConversationsOptions: FfiConverterRustBuffe
         FfiConverterOptionInt64.write(value.createdAfterNs, into: &buf)
         FfiConverterOptionInt64.write(value.createdBeforeNs, into: &buf)
         FfiConverterOptionInt64.write(value.limit, into: &buf)
-        FfiConverterOptionTypeFfiConsentState.write(value.consentState, into: &buf)
+        FfiConverterOptionSequenceTypeFfiConsentState.write(value.consentStates, into: &buf)
         FfiConverterBool.write(value.includeDuplicateDms, into: &buf)
     }
 }
@@ -5095,6 +5205,136 @@ public func FfiConverterTypeFfiMessage_lower(_ value: FfiMessage) -> RustBuffer 
     return FfiConverterTypeFfiMessage.lower(value)
 }
 
+/**
+ * Settings for disappearing messages in a conversation.
+ *
+ * # Fields
+ *
+ * * `from_ns` - The timestamp (in nanoseconds) from when messages should be tracked for deletion.
+ * * `in_ns` - The duration (in nanoseconds) after which tracked messages will be deleted.
+ */
+public struct FfiMessageDisappearingSettings {
+    public var fromNs: Int64
+    public var inNs: Int64
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(fromNs: Int64, inNs: Int64) {
+        self.fromNs = fromNs
+        self.inNs = inNs
+    }
+}
+
+extension FfiMessageDisappearingSettings: Equatable, Hashable {
+    public static func == (lhs: FfiMessageDisappearingSettings, rhs: FfiMessageDisappearingSettings) -> Bool {
+        if lhs.fromNs != rhs.fromNs {
+            return false
+        }
+        if lhs.inNs != rhs.inNs {
+            return false
+        }
+        return true
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(fromNs)
+        hasher.combine(inNs)
+    }
+}
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeFfiMessageDisappearingSettings: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiMessageDisappearingSettings {
+        return
+            try FfiMessageDisappearingSettings(
+                fromNs: FfiConverterInt64.read(from: &buf),
+                inNs: FfiConverterInt64.read(from: &buf)
+            )
+    }
+
+    public static func write(_ value: FfiMessageDisappearingSettings, into buf: inout [UInt8]) {
+        FfiConverterInt64.write(value.fromNs, into: &buf)
+        FfiConverterInt64.write(value.inNs, into: &buf)
+    }
+}
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFfiMessageDisappearingSettings_lift(_ buf: RustBuffer) throws -> FfiMessageDisappearingSettings {
+    return try FfiConverterTypeFfiMessageDisappearingSettings.lift(buf)
+}
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFfiMessageDisappearingSettings_lower(_ value: FfiMessageDisappearingSettings) -> RustBuffer {
+    return FfiConverterTypeFfiMessageDisappearingSettings.lower(value)
+}
+
+public struct FfiMessageWithReactions {
+    public var message: FfiMessage
+    public var reactions: [FfiMessage]
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(message: FfiMessage, reactions: [FfiMessage]) {
+        self.message = message
+        self.reactions = reactions
+    }
+}
+
+extension FfiMessageWithReactions: Equatable, Hashable {
+    public static func == (lhs: FfiMessageWithReactions, rhs: FfiMessageWithReactions) -> Bool {
+        if lhs.message != rhs.message {
+            return false
+        }
+        if lhs.reactions != rhs.reactions {
+            return false
+        }
+        return true
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(message)
+        hasher.combine(reactions)
+    }
+}
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeFfiMessageWithReactions: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiMessageWithReactions {
+        return
+            try FfiMessageWithReactions(
+                message: FfiConverterTypeFfiMessage.read(from: &buf),
+                reactions: FfiConverterSequenceTypeFfiMessage.read(from: &buf)
+            )
+    }
+
+    public static func write(_ value: FfiMessageWithReactions, into buf: inout [UInt8]) {
+        FfiConverterTypeFfiMessage.write(value.message, into: &buf)
+        FfiConverterSequenceTypeFfiMessage.write(value.reactions, into: &buf)
+    }
+}
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFfiMessageWithReactions_lift(_ buf: RustBuffer) throws -> FfiMessageWithReactions {
+    return try FfiConverterTypeFfiMessageWithReactions.lift(buf)
+}
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFfiMessageWithReactions_lower(_ value: FfiMessageWithReactions) -> RustBuffer {
+    return FfiConverterTypeFfiMessageWithReactions.lower(value)
+}
+
 public struct FfiPagingInfo {
     public var limit: UInt32
     public var cursor: FfiCursor?
@@ -5173,10 +5413,11 @@ public struct FfiPermissionPolicySet {
     public var updateGroupDescriptionPolicy: FfiPermissionPolicy
     public var updateGroupImageUrlSquarePolicy: FfiPermissionPolicy
     public var updateGroupPinnedFrameUrlPolicy: FfiPermissionPolicy
+    public var updateMessageDisappearingPolicy: FfiPermissionPolicy
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
-    public init(addMemberPolicy: FfiPermissionPolicy, removeMemberPolicy: FfiPermissionPolicy, addAdminPolicy: FfiPermissionPolicy, removeAdminPolicy: FfiPermissionPolicy, updateGroupNamePolicy: FfiPermissionPolicy, updateGroupDescriptionPolicy: FfiPermissionPolicy, updateGroupImageUrlSquarePolicy: FfiPermissionPolicy, updateGroupPinnedFrameUrlPolicy: FfiPermissionPolicy) {
+    public init(addMemberPolicy: FfiPermissionPolicy, removeMemberPolicy: FfiPermissionPolicy, addAdminPolicy: FfiPermissionPolicy, removeAdminPolicy: FfiPermissionPolicy, updateGroupNamePolicy: FfiPermissionPolicy, updateGroupDescriptionPolicy: FfiPermissionPolicy, updateGroupImageUrlSquarePolicy: FfiPermissionPolicy, updateGroupPinnedFrameUrlPolicy: FfiPermissionPolicy, updateMessageDisappearingPolicy: FfiPermissionPolicy) {
         self.addMemberPolicy = addMemberPolicy
         self.removeMemberPolicy = removeMemberPolicy
         self.addAdminPolicy = addAdminPolicy
@@ -5185,6 +5426,7 @@ public struct FfiPermissionPolicySet {
         self.updateGroupDescriptionPolicy = updateGroupDescriptionPolicy
         self.updateGroupImageUrlSquarePolicy = updateGroupImageUrlSquarePolicy
         self.updateGroupPinnedFrameUrlPolicy = updateGroupPinnedFrameUrlPolicy
+        self.updateMessageDisappearingPolicy = updateMessageDisappearingPolicy
     }
 }
 
@@ -5214,6 +5456,9 @@ extension FfiPermissionPolicySet: Equatable, Hashable {
         if lhs.updateGroupPinnedFrameUrlPolicy != rhs.updateGroupPinnedFrameUrlPolicy {
             return false
         }
+        if lhs.updateMessageDisappearingPolicy != rhs.updateMessageDisappearingPolicy {
+            return false
+        }
         return true
     }
 
@@ -5226,6 +5471,7 @@ extension FfiPermissionPolicySet: Equatable, Hashable {
         hasher.combine(updateGroupDescriptionPolicy)
         hasher.combine(updateGroupImageUrlSquarePolicy)
         hasher.combine(updateGroupPinnedFrameUrlPolicy)
+        hasher.combine(updateMessageDisappearingPolicy)
     }
 }
 
@@ -5243,7 +5489,8 @@ public struct FfiConverterTypeFfiPermissionPolicySet: FfiConverterRustBuffer {
                 updateGroupNamePolicy: FfiConverterTypeFfiPermissionPolicy.read(from: &buf),
                 updateGroupDescriptionPolicy: FfiConverterTypeFfiPermissionPolicy.read(from: &buf),
                 updateGroupImageUrlSquarePolicy: FfiConverterTypeFfiPermissionPolicy.read(from: &buf),
-                updateGroupPinnedFrameUrlPolicy: FfiConverterTypeFfiPermissionPolicy.read(from: &buf)
+                updateGroupPinnedFrameUrlPolicy: FfiConverterTypeFfiPermissionPolicy.read(from: &buf),
+                updateMessageDisappearingPolicy: FfiConverterTypeFfiPermissionPolicy.read(from: &buf)
             )
     }
 
@@ -5256,6 +5503,7 @@ public struct FfiConverterTypeFfiPermissionPolicySet: FfiConverterRustBuffer {
         FfiConverterTypeFfiPermissionPolicy.write(value.updateGroupDescriptionPolicy, into: &buf)
         FfiConverterTypeFfiPermissionPolicy.write(value.updateGroupImageUrlSquarePolicy, into: &buf)
         FfiConverterTypeFfiPermissionPolicy.write(value.updateGroupPinnedFrameUrlPolicy, into: &buf)
+        FfiConverterTypeFfiPermissionPolicy.write(value.updateMessageDisappearingPolicy, into: &buf)
     }
 }
 
@@ -5324,6 +5572,91 @@ public func FfiConverterTypeFfiPublishRequest_lift(_ buf: RustBuffer) throws -> 
 #endif
 public func FfiConverterTypeFfiPublishRequest_lower(_ value: FfiPublishRequest) -> RustBuffer {
     return FfiConverterTypeFfiPublishRequest.lower(value)
+}
+
+public struct FfiReaction {
+    public var reference: String
+    public var referenceInboxId: String
+    public var action: FfiReactionAction
+    public var content: String
+    public var schema: FfiReactionSchema
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(reference: String, referenceInboxId: String, action: FfiReactionAction, content: String, schema: FfiReactionSchema) {
+        self.reference = reference
+        self.referenceInboxId = referenceInboxId
+        self.action = action
+        self.content = content
+        self.schema = schema
+    }
+}
+
+extension FfiReaction: Equatable, Hashable {
+    public static func == (lhs: FfiReaction, rhs: FfiReaction) -> Bool {
+        if lhs.reference != rhs.reference {
+            return false
+        }
+        if lhs.referenceInboxId != rhs.referenceInboxId {
+            return false
+        }
+        if lhs.action != rhs.action {
+            return false
+        }
+        if lhs.content != rhs.content {
+            return false
+        }
+        if lhs.schema != rhs.schema {
+            return false
+        }
+        return true
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(reference)
+        hasher.combine(referenceInboxId)
+        hasher.combine(action)
+        hasher.combine(content)
+        hasher.combine(schema)
+    }
+}
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeFfiReaction: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiReaction {
+        return
+            try FfiReaction(
+                reference: FfiConverterString.read(from: &buf),
+                referenceInboxId: FfiConverterString.read(from: &buf),
+                action: FfiConverterTypeFfiReactionAction.read(from: &buf),
+                content: FfiConverterString.read(from: &buf),
+                schema: FfiConverterTypeFfiReactionSchema.read(from: &buf)
+            )
+    }
+
+    public static func write(_ value: FfiReaction, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.reference, into: &buf)
+        FfiConverterString.write(value.referenceInboxId, into: &buf)
+        FfiConverterTypeFfiReactionAction.write(value.action, into: &buf)
+        FfiConverterString.write(value.content, into: &buf)
+        FfiConverterTypeFfiReactionSchema.write(value.schema, into: &buf)
+    }
+}
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFfiReaction_lift(_ buf: RustBuffer) throws -> FfiReaction {
+    return try FfiConverterTypeFfiReaction.lift(buf)
+}
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFfiReaction_lower(_ value: FfiReaction) -> RustBuffer {
+    return FfiConverterTypeFfiReaction.lower(value)
 }
 
 public struct FfiV2BatchQueryRequest {
@@ -6115,7 +6448,7 @@ extension FfiDirection: Equatable, Hashable {}
 // See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
 
 public enum FfiGroupPermissionsOptions {
-    case allMembers
+    case `default`
     case adminOnly
     case customPolicy
 }
@@ -6129,7 +6462,7 @@ public struct FfiConverterTypeFfiGroupPermissionsOptions: FfiConverterRustBuffer
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiGroupPermissionsOptions {
         let variant: Int32 = try readInt(&buf)
         switch variant {
-        case 1: return .allMembers
+        case 1: return .default
 
         case 2: return .adminOnly
 
@@ -6141,7 +6474,7 @@ public struct FfiConverterTypeFfiGroupPermissionsOptions: FfiConverterRustBuffer
 
     public static func write(_ value: FfiGroupPermissionsOptions, into buf: inout [UInt8]) {
         switch value {
-        case .allMembers:
+        case .default:
             writeInt(&buf, Int32(1))
 
         case .adminOnly:
@@ -6489,6 +6822,128 @@ extension FfiPreferenceUpdate: Equatable, Hashable {}
 // Note that we don't yet support `indirect` for enums.
 // See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
 
+public enum FfiReactionAction {
+    case unknown
+    case added
+    case removed
+}
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeFfiReactionAction: FfiConverterRustBuffer {
+    typealias SwiftType = FfiReactionAction
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiReactionAction {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        case 1: return .unknown
+
+        case 2: return .added
+
+        case 3: return .removed
+
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: FfiReactionAction, into buf: inout [UInt8]) {
+        switch value {
+        case .unknown:
+            writeInt(&buf, Int32(1))
+
+        case .added:
+            writeInt(&buf, Int32(2))
+
+        case .removed:
+            writeInt(&buf, Int32(3))
+        }
+    }
+}
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFfiReactionAction_lift(_ buf: RustBuffer) throws -> FfiReactionAction {
+    return try FfiConverterTypeFfiReactionAction.lift(buf)
+}
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFfiReactionAction_lower(_ value: FfiReactionAction) -> RustBuffer {
+    return FfiConverterTypeFfiReactionAction.lower(value)
+}
+
+extension FfiReactionAction: Equatable, Hashable {}
+
+// Note that we don't yet support `indirect` for enums.
+// See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
+
+public enum FfiReactionSchema {
+    case unknown
+    case unicode
+    case shortcode
+    case custom
+}
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeFfiReactionSchema: FfiConverterRustBuffer {
+    typealias SwiftType = FfiReactionSchema
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiReactionSchema {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        case 1: return .unknown
+
+        case 2: return .unicode
+
+        case 3: return .shortcode
+
+        case 4: return .custom
+
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: FfiReactionSchema, into buf: inout [UInt8]) {
+        switch value {
+        case .unknown:
+            writeInt(&buf, Int32(1))
+
+        case .unicode:
+            writeInt(&buf, Int32(2))
+
+        case .shortcode:
+            writeInt(&buf, Int32(3))
+
+        case .custom:
+            writeInt(&buf, Int32(4))
+        }
+    }
+}
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFfiReactionSchema_lift(_ buf: RustBuffer) throws -> FfiReactionSchema {
+    return try FfiConverterTypeFfiReactionSchema.lift(buf)
+}
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFfiReactionSchema_lower(_ value: FfiReactionSchema) -> RustBuffer {
+    return FfiConverterTypeFfiReactionSchema.lower(value)
+}
+
+extension FfiReactionSchema: Equatable, Hashable {}
+
+// Note that we don't yet support `indirect` for enums.
+// See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
+
 public enum FfiSortDirection {
     case unspecified
     case ascending
@@ -6621,6 +7076,8 @@ public enum GenericError {
     case DeviceSync(message: String)
 
     case Identity(message: String)
+
+    case Subscription(message: String)
 }
 
 #if swift(>=5.8)
@@ -6696,6 +7153,10 @@ public struct FfiConverterTypeGenericError: FfiConverterRustBuffer {
                 message: FfiConverterString.read(from: &buf)
             )
 
+        case 17: return try .Subscription(
+                message: FfiConverterString.read(from: &buf)
+            )
+
         default: throw UniffiInternalError.unexpectedEnumCase
         }
     }
@@ -6734,6 +7195,8 @@ public struct FfiConverterTypeGenericError: FfiConverterRustBuffer {
             writeInt(&buf, Int32(15))
         case .Identity(_ /* message is ignored*/ ):
             writeInt(&buf, Int32(16))
+        case .Subscription(_ /* message is ignored*/ ):
+            writeInt(&buf, Int32(17))
         }
     }
 }
@@ -7068,6 +7531,30 @@ private struct FfiConverterOptionTypeFfiMessage: FfiConverterRustBuffer {
 #if swift(>=5.8)
     @_documentation(visibility: private)
 #endif
+private struct FfiConverterOptionTypeFfiMessageDisappearingSettings: FfiConverterRustBuffer {
+    typealias SwiftType = FfiMessageDisappearingSettings?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeFfiMessageDisappearingSettings.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeFfiMessageDisappearingSettings.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
 private struct FfiConverterOptionTypeFfiPagingInfo: FfiConverterRustBuffer {
     typealias SwiftType = FfiPagingInfo?
 
@@ -7108,30 +7595,6 @@ private struct FfiConverterOptionTypeFfiPermissionPolicySet: FfiConverterRustBuf
         switch try readInt(&buf) as Int8 {
         case 0: return nil
         case 1: return try FfiConverterTypeFfiPermissionPolicySet.read(from: &buf)
-        default: throw UniffiInternalError.unexpectedOptionalTag
-        }
-    }
-}
-
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
-private struct FfiConverterOptionTypeFfiConsentState: FfiConverterRustBuffer {
-    typealias SwiftType = FfiConsentState?
-
-    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
-        guard let value = value else {
-            writeInt(&buf, Int8(0))
-            return
-        }
-        writeInt(&buf, Int8(1))
-        FfiConverterTypeFfiConsentState.write(value, into: &buf)
-    }
-
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
-        switch try readInt(&buf) as Int8 {
-        case 0: return nil
-        case 1: return try FfiConverterTypeFfiConsentState.read(from: &buf)
         default: throw UniffiInternalError.unexpectedOptionalTag
         }
     }
@@ -7252,6 +7715,30 @@ private struct FfiConverterOptionTypeFfiMetadataField: FfiConverterRustBuffer {
         switch try readInt(&buf) as Int8 {
         case 0: return nil
         case 1: return try FfiConverterTypeFfiMetadataField.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+private struct FfiConverterOptionSequenceTypeFfiConsentState: FfiConverterRustBuffer {
+    typealias SwiftType = [FfiConsentState]?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterSequenceTypeFfiConsentState.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterSequenceTypeFfiConsentState.read(from: &buf)
         default: throw UniffiInternalError.unexpectedOptionalTag
         }
     }
@@ -7534,6 +8021,31 @@ private struct FfiConverterSequenceTypeFfiMessage: FfiConverterRustBuffer {
 #if swift(>=5.8)
     @_documentation(visibility: private)
 #endif
+private struct FfiConverterSequenceTypeFfiMessageWithReactions: FfiConverterRustBuffer {
+    typealias SwiftType = [FfiMessageWithReactions]
+
+    public static func write(_ value: [FfiMessageWithReactions], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeFfiMessageWithReactions.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [FfiMessageWithReactions] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [FfiMessageWithReactions]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            try seq.append(FfiConverterTypeFfiMessageWithReactions.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
 private struct FfiConverterSequenceTypeFfiV2QueryRequest: FfiConverterRustBuffer {
     typealias SwiftType = [FfiV2QueryRequest]
 
@@ -7576,6 +8088,31 @@ private struct FfiConverterSequenceTypeFfiV2QueryResponse: FfiConverterRustBuffe
         seq.reserveCapacity(Int(len))
         for _ in 0 ..< len {
             try seq.append(FfiConverterTypeFfiV2QueryResponse.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+private struct FfiConverterSequenceTypeFfiConsentState: FfiConverterRustBuffer {
+    typealias SwiftType = [FfiConsentState]
+
+    public static func write(_ value: [FfiConsentState], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeFfiConsentState.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [FfiConsentState] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [FfiConsentState]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            try seq.append(FfiConverterTypeFfiConsentState.read(from: &buf))
         }
         return seq
     }
@@ -7793,11 +8330,27 @@ public func createV2Client(host: String, isSecure: Bool) async throws -> FfiV2Ap
         )
 }
 
+public func decodeReaction(bytes: Data) throws -> FfiReaction {
+    return try FfiConverterTypeFfiReaction.lift(rustCallWithError(FfiConverterTypeGenericError.lift) {
+        uniffi_xmtpv3_fn_func_decode_reaction(
+            FfiConverterData.lower(bytes), $0
+        )
+    })
+}
+
 public func diffieHellmanK256(privateKeyBytes: Data, publicKeyBytes: Data) throws -> Data {
     return try FfiConverterData.lift(rustCallWithError(FfiConverterTypeGenericError.lift) {
         uniffi_xmtpv3_fn_func_diffie_hellman_k256(
             FfiConverterData.lower(privateKeyBytes),
             FfiConverterData.lower(publicKeyBytes), $0
+        )
+    })
+}
+
+public func encodeReaction(reaction: FfiReaction) throws -> Data {
+    return try FfiConverterData.lift(rustCallWithError(FfiConverterTypeGenericError.lift) {
+        uniffi_xmtpv3_fn_func_encode_reaction(
+            FfiConverterTypeFfiReaction.lower(reaction), $0
         )
     })
 }
@@ -7947,7 +8500,13 @@ private var initializationResult: InitializationResult = {
     if uniffi_xmtpv3_checksum_func_create_v2_client() != 48060 {
         return InitializationResult.apiChecksumMismatch
     }
+    if uniffi_xmtpv3_checksum_func_decode_reaction() != 28885 {
+        return InitializationResult.apiChecksumMismatch
+    }
     if uniffi_xmtpv3_checksum_func_diffie_hellman_k256() != 37475 {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if uniffi_xmtpv3_checksum_func_encode_reaction() != 6548 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_func_generate_inbox_id() != 47637 {
@@ -8016,6 +8575,9 @@ private var initializationResult: InitializationResult = {
     if uniffi_xmtpv3_checksum_method_fficonversation_consent_state() != 25033 {
         return InitializationResult.apiChecksumMismatch
     }
+    if uniffi_xmtpv3_checksum_method_fficonversation_conversation_message_disappearing_settings() != 41159 {
+        return InitializationResult.apiChecksumMismatch
+    }
     if uniffi_xmtpv3_checksum_method_fficonversation_conversation_type() != 51396 {
         return InitializationResult.apiChecksumMismatch
     }
@@ -8026,6 +8588,9 @@ private var initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_fficonversation_find_messages() != 19931 {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if uniffi_xmtpv3_checksum_method_fficonversation_find_messages_with_reactions() != 33179 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_fficonversation_group_description() != 53570 {
@@ -8070,6 +8635,9 @@ private var initializationResult: InitializationResult = {
     if uniffi_xmtpv3_checksum_method_fficonversation_remove_admin() != 7973 {
         return InitializationResult.apiChecksumMismatch
     }
+    if uniffi_xmtpv3_checksum_method_fficonversation_remove_conversation_message_disappearing_settings() != 37503 {
+        return InitializationResult.apiChecksumMismatch
+    }
     if uniffi_xmtpv3_checksum_method_fficonversation_remove_members() != 49452 {
         return InitializationResult.apiChecksumMismatch
     }
@@ -8095,6 +8663,9 @@ private var initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_fficonversation_update_consent_state() != 27721 {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if uniffi_xmtpv3_checksum_method_fficonversation_update_conversation_message_disappearing_settings() != 18023 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_fficonversation_update_group_description() != 14549 {
@@ -8130,10 +8701,16 @@ private var initializationResult: InitializationResult = {
     if uniffi_xmtpv3_checksum_method_fficonversationmetadata_creator_inbox_id() != 61067 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_xmtpv3_checksum_method_fficonversations_create_dm() != 63785 {
+    if uniffi_xmtpv3_checksum_method_fficonversations_create_group() != 7282 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_xmtpv3_checksum_method_fficonversations_create_group() != 7282 {
+    if uniffi_xmtpv3_checksum_method_fficonversations_create_group_with_inbox_ids() != 56407 {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if uniffi_xmtpv3_checksum_method_fficonversations_find_or_create_dm() != 24174 {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if uniffi_xmtpv3_checksum_method_fficonversations_find_or_create_dm_by_inbox_id() != 63943 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_fficonversations_get_hmac_keys() != 44064 {
@@ -8184,7 +8761,7 @@ private var initializationResult: InitializationResult = {
     if uniffi_xmtpv3_checksum_method_fficonversations_sync() != 9054 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_xmtpv3_checksum_method_fficonversations_sync_all_conversations() != 2613 {
+    if uniffi_xmtpv3_checksum_method_fficonversations_sync_all_conversations() != 30657 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_ffigrouppermissions_policy_set() != 24928 {
@@ -8223,7 +8800,7 @@ private var initializationResult: InitializationResult = {
     if uniffi_xmtpv3_checksum_method_ffistreamcloser_end() != 11040 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_xmtpv3_checksum_method_ffistreamcloser_end_and_wait() != 1181 {
+    if uniffi_xmtpv3_checksum_method_ffistreamcloser_end_and_wait() != 23074 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_ffistreamcloser_is_closed() != 62423 {
