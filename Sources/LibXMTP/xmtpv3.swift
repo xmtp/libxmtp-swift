@@ -771,8 +771,6 @@ public protocol FfiConversationProtocol: AnyObject {
 
     func groupPermissions() throws -> FfiGroupPermissions
 
-    func groupPinnedFrameUrl() throws -> String
-
     func id() -> Data
 
     func isActive() throws -> Bool
@@ -822,8 +820,6 @@ public protocol FfiConversationProtocol: AnyObject {
     func updateGroupImageUrlSquare(groupImageUrlSquare: String) async throws
 
     func updateGroupName(groupName: String) async throws
-
-    func updateGroupPinnedFrameUrl(pinnedFrameUrl: String) async throws
 
     func updatePermissionPolicy(permissionUpdateType: FfiPermissionUpdateType, permissionPolicyOption: FfiPermissionPolicy, metadataField: FfiMetadataField?) async throws
 }
@@ -1068,12 +1064,6 @@ open class FfiConversation:
     open func groupPermissions() throws -> FfiGroupPermissions {
         return try FfiConverterTypeFfiGroupPermissions.lift(rustCallWithError(FfiConverterTypeGenericError.lift) {
             uniffi_xmtpv3_fn_method_fficonversation_group_permissions(self.uniffiClonePointer(), $0)
-        })
-    }
-
-    open func groupPinnedFrameUrl() throws -> String {
-        return try FfiConverterString.lift(rustCallWithError(FfiConverterTypeGenericError.lift) {
-            uniffi_xmtpv3_fn_method_fficonversation_group_pinned_frame_url(self.uniffiClonePointer(), $0)
         })
     }
 
@@ -1369,23 +1359,6 @@ open class FfiConversation:
                     uniffi_xmtpv3_fn_method_fficonversation_update_group_name(
                         self.uniffiClonePointer(),
                         FfiConverterString.lower(groupName)
-                    )
-                },
-                pollFunc: ffi_xmtpv3_rust_future_poll_void,
-                completeFunc: ffi_xmtpv3_rust_future_complete_void,
-                freeFunc: ffi_xmtpv3_rust_future_free_void,
-                liftFunc: { $0 },
-                errorHandler: FfiConverterTypeGenericError.lift
-            )
-    }
-
-    open func updateGroupPinnedFrameUrl(pinnedFrameUrl: String) async throws {
-        return
-            try await uniffiRustCallAsync(
-                rustFutureFunc: {
-                    uniffi_xmtpv3_fn_method_fficonversation_update_group_pinned_frame_url(
-                        self.uniffiClonePointer(),
-                        FfiConverterString.lower(pinnedFrameUrl)
                     )
                 },
                 pollFunc: ffi_xmtpv3_rust_future_poll_void,
@@ -4501,18 +4474,16 @@ public struct FfiCreateGroupOptions {
     public var groupName: String?
     public var groupImageUrlSquare: String?
     public var groupDescription: String?
-    public var groupPinnedFrameUrl: String?
     public var customPermissionPolicySet: FfiPermissionPolicySet?
     public var messageDisappearingSettings: FfiMessageDisappearingSettings?
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
-    public init(permissions: FfiGroupPermissionsOptions?, groupName: String?, groupImageUrlSquare: String?, groupDescription: String?, groupPinnedFrameUrl: String?, customPermissionPolicySet: FfiPermissionPolicySet?, messageDisappearingSettings: FfiMessageDisappearingSettings?) {
+    public init(permissions: FfiGroupPermissionsOptions?, groupName: String?, groupImageUrlSquare: String?, groupDescription: String?, customPermissionPolicySet: FfiPermissionPolicySet?, messageDisappearingSettings: FfiMessageDisappearingSettings?) {
         self.permissions = permissions
         self.groupName = groupName
         self.groupImageUrlSquare = groupImageUrlSquare
         self.groupDescription = groupDescription
-        self.groupPinnedFrameUrl = groupPinnedFrameUrl
         self.customPermissionPolicySet = customPermissionPolicySet
         self.messageDisappearingSettings = messageDisappearingSettings
     }
@@ -4532,9 +4503,6 @@ extension FfiCreateGroupOptions: Equatable, Hashable {
         if lhs.groupDescription != rhs.groupDescription {
             return false
         }
-        if lhs.groupPinnedFrameUrl != rhs.groupPinnedFrameUrl {
-            return false
-        }
         if lhs.customPermissionPolicySet != rhs.customPermissionPolicySet {
             return false
         }
@@ -4549,7 +4517,6 @@ extension FfiCreateGroupOptions: Equatable, Hashable {
         hasher.combine(groupName)
         hasher.combine(groupImageUrlSquare)
         hasher.combine(groupDescription)
-        hasher.combine(groupPinnedFrameUrl)
         hasher.combine(customPermissionPolicySet)
         hasher.combine(messageDisappearingSettings)
     }
@@ -4566,7 +4533,6 @@ public struct FfiConverterTypeFfiCreateGroupOptions: FfiConverterRustBuffer {
                 groupName: FfiConverterOptionString.read(from: &buf),
                 groupImageUrlSquare: FfiConverterOptionString.read(from: &buf),
                 groupDescription: FfiConverterOptionString.read(from: &buf),
-                groupPinnedFrameUrl: FfiConverterOptionString.read(from: &buf),
                 customPermissionPolicySet: FfiConverterOptionTypeFfiPermissionPolicySet.read(from: &buf),
                 messageDisappearingSettings: FfiConverterOptionTypeFfiMessageDisappearingSettings.read(from: &buf)
             )
@@ -4577,7 +4543,6 @@ public struct FfiConverterTypeFfiCreateGroupOptions: FfiConverterRustBuffer {
         FfiConverterOptionString.write(value.groupName, into: &buf)
         FfiConverterOptionString.write(value.groupImageUrlSquare, into: &buf)
         FfiConverterOptionString.write(value.groupDescription, into: &buf)
-        FfiConverterOptionString.write(value.groupPinnedFrameUrl, into: &buf)
         FfiConverterOptionTypeFfiPermissionPolicySet.write(value.customPermissionPolicySet, into: &buf)
         FfiConverterOptionTypeFfiMessageDisappearingSettings.write(value.messageDisappearingSettings, into: &buf)
     }
@@ -5412,12 +5377,11 @@ public struct FfiPermissionPolicySet {
     public var updateGroupNamePolicy: FfiPermissionPolicy
     public var updateGroupDescriptionPolicy: FfiPermissionPolicy
     public var updateGroupImageUrlSquarePolicy: FfiPermissionPolicy
-    public var updateGroupPinnedFrameUrlPolicy: FfiPermissionPolicy
     public var updateMessageDisappearingPolicy: FfiPermissionPolicy
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
-    public init(addMemberPolicy: FfiPermissionPolicy, removeMemberPolicy: FfiPermissionPolicy, addAdminPolicy: FfiPermissionPolicy, removeAdminPolicy: FfiPermissionPolicy, updateGroupNamePolicy: FfiPermissionPolicy, updateGroupDescriptionPolicy: FfiPermissionPolicy, updateGroupImageUrlSquarePolicy: FfiPermissionPolicy, updateGroupPinnedFrameUrlPolicy: FfiPermissionPolicy, updateMessageDisappearingPolicy: FfiPermissionPolicy) {
+    public init(addMemberPolicy: FfiPermissionPolicy, removeMemberPolicy: FfiPermissionPolicy, addAdminPolicy: FfiPermissionPolicy, removeAdminPolicy: FfiPermissionPolicy, updateGroupNamePolicy: FfiPermissionPolicy, updateGroupDescriptionPolicy: FfiPermissionPolicy, updateGroupImageUrlSquarePolicy: FfiPermissionPolicy, updateMessageDisappearingPolicy: FfiPermissionPolicy) {
         self.addMemberPolicy = addMemberPolicy
         self.removeMemberPolicy = removeMemberPolicy
         self.addAdminPolicy = addAdminPolicy
@@ -5425,7 +5389,6 @@ public struct FfiPermissionPolicySet {
         self.updateGroupNamePolicy = updateGroupNamePolicy
         self.updateGroupDescriptionPolicy = updateGroupDescriptionPolicy
         self.updateGroupImageUrlSquarePolicy = updateGroupImageUrlSquarePolicy
-        self.updateGroupPinnedFrameUrlPolicy = updateGroupPinnedFrameUrlPolicy
         self.updateMessageDisappearingPolicy = updateMessageDisappearingPolicy
     }
 }
@@ -5453,9 +5416,6 @@ extension FfiPermissionPolicySet: Equatable, Hashable {
         if lhs.updateGroupImageUrlSquarePolicy != rhs.updateGroupImageUrlSquarePolicy {
             return false
         }
-        if lhs.updateGroupPinnedFrameUrlPolicy != rhs.updateGroupPinnedFrameUrlPolicy {
-            return false
-        }
         if lhs.updateMessageDisappearingPolicy != rhs.updateMessageDisappearingPolicy {
             return false
         }
@@ -5470,7 +5430,6 @@ extension FfiPermissionPolicySet: Equatable, Hashable {
         hasher.combine(updateGroupNamePolicy)
         hasher.combine(updateGroupDescriptionPolicy)
         hasher.combine(updateGroupImageUrlSquarePolicy)
-        hasher.combine(updateGroupPinnedFrameUrlPolicy)
         hasher.combine(updateMessageDisappearingPolicy)
     }
 }
@@ -5489,7 +5448,6 @@ public struct FfiConverterTypeFfiPermissionPolicySet: FfiConverterRustBuffer {
                 updateGroupNamePolicy: FfiConverterTypeFfiPermissionPolicy.read(from: &buf),
                 updateGroupDescriptionPolicy: FfiConverterTypeFfiPermissionPolicy.read(from: &buf),
                 updateGroupImageUrlSquarePolicy: FfiConverterTypeFfiPermissionPolicy.read(from: &buf),
-                updateGroupPinnedFrameUrlPolicy: FfiConverterTypeFfiPermissionPolicy.read(from: &buf),
                 updateMessageDisappearingPolicy: FfiConverterTypeFfiPermissionPolicy.read(from: &buf)
             )
     }
@@ -5502,7 +5460,6 @@ public struct FfiConverterTypeFfiPermissionPolicySet: FfiConverterRustBuffer {
         FfiConverterTypeFfiPermissionPolicy.write(value.updateGroupNamePolicy, into: &buf)
         FfiConverterTypeFfiPermissionPolicy.write(value.updateGroupDescriptionPolicy, into: &buf)
         FfiConverterTypeFfiPermissionPolicy.write(value.updateGroupImageUrlSquarePolicy, into: &buf)
-        FfiConverterTypeFfiPermissionPolicy.write(value.updateGroupPinnedFrameUrlPolicy, into: &buf)
         FfiConverterTypeFfiPermissionPolicy.write(value.updateMessageDisappearingPolicy, into: &buf)
     }
 }
@@ -6509,7 +6466,6 @@ public enum FfiMetadataField {
     case groupName
     case description
     case imageUrlSquare
-    case pinnedFrameUrl
 }
 
 #if swift(>=5.8)
@@ -6527,8 +6483,6 @@ public struct FfiConverterTypeFfiMetadataField: FfiConverterRustBuffer {
 
         case 3: return .imageUrlSquare
 
-        case 4: return .pinnedFrameUrl
-
         default: throw UniffiInternalError.unexpectedEnumCase
         }
     }
@@ -6543,9 +6497,6 @@ public struct FfiConverterTypeFfiMetadataField: FfiConverterRustBuffer {
 
         case .imageUrlSquare:
             writeInt(&buf, Int32(3))
-
-        case .pinnedFrameUrl:
-            writeInt(&buf, Int32(4))
         }
     }
 }
@@ -8608,9 +8559,6 @@ private var initializationResult: InitializationResult = {
     if uniffi_xmtpv3_checksum_method_fficonversation_group_permissions() != 61947 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_xmtpv3_checksum_method_fficonversation_group_pinned_frame_url() != 40964 {
-        return InitializationResult.apiChecksumMismatch
-    }
     if uniffi_xmtpv3_checksum_method_fficonversation_id() != 5542 {
         return InitializationResult.apiChecksumMismatch
     }
@@ -8675,9 +8623,6 @@ private var initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_fficonversation_update_group_name() != 62600 {
-        return InitializationResult.apiChecksumMismatch
-    }
-    if uniffi_xmtpv3_checksum_method_fficonversation_update_group_pinned_frame_url() != 21997 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_fficonversation_update_permission_policy() != 3743 {
