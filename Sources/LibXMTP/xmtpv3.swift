@@ -795,6 +795,8 @@ public protocol FfiConversationProtocol: AnyObject {
 
     func isAdmin(inboxId: String) throws -> Bool
 
+    func isConversationMessageDisappearingEnabled() throws -> Bool
+
     func isSuperAdmin(inboxId: String) throws -> Bool
 
     func listMembers() async throws -> [FfiConversationMember]
@@ -1117,6 +1119,12 @@ open class FfiConversation:
         return try FfiConverterBool.lift(rustCallWithError(FfiConverterTypeGenericError.lift) {
             uniffi_xmtpv3_fn_method_fficonversation_is_admin(self.uniffiClonePointer(),
                                                              FfiConverterString.lower(inboxId), $0)
+        })
+    }
+
+    open func isConversationMessageDisappearingEnabled() throws -> Bool {
+        return try FfiConverterBool.lift(rustCallWithError(FfiConverterTypeGenericError.lift) {
+            uniffi_xmtpv3_fn_method_fficonversation_is_conversation_message_disappearing_enabled(self.uniffiClonePointer(), $0)
         })
     }
 
@@ -8953,6 +8961,9 @@ private var initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_fficonversation_is_admin() != 12325 {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if uniffi_xmtpv3_checksum_method_fficonversation_is_conversation_message_disappearing_enabled() != 13756 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_fficonversation_is_super_admin() != 25811 {
