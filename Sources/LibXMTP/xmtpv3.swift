@@ -765,7 +765,7 @@ public protocol FfiConversationProtocol: AnyObject {
 
     func consentState() throws -> FfiConsentState
 
-    func conversationMessageDisappearingSettings() throws -> FfiMessageDisappearingSettings
+    func conversationMessageDisappearingSettings() throws -> FfiMessageDisappearingSettings?
 
     func conversationType() async throws -> FfiConversationType
 
@@ -979,8 +979,8 @@ open class FfiConversation:
         })
     }
 
-    open func conversationMessageDisappearingSettings() throws -> FfiMessageDisappearingSettings {
-        return try FfiConverterTypeFfiMessageDisappearingSettings.lift(rustCallWithError(FfiConverterTypeGenericError.lift) {
+    open func conversationMessageDisappearingSettings() throws -> FfiMessageDisappearingSettings? {
+        return try FfiConverterOptionTypeFfiMessageDisappearingSettings.lift(rustCallWithError(FfiConverterTypeGenericError.lift) {
             uniffi_xmtpv3_fn_method_fficonversation_conversation_message_disappearing_settings(self.uniffiClonePointer(), $0)
         })
     }
@@ -1895,9 +1895,9 @@ public protocol FfiConversationsProtocol: AnyObject {
 
     func createGroupWithInboxIds(inboxIds: [String], opts: FfiCreateGroupOptions) async throws -> FfiConversation
 
-    func findOrCreateDm(accountAddress: String) async throws -> FfiConversation
+    func findOrCreateDm(accountAddress: String, opts: FfiCreateDmOptions) async throws -> FfiConversation
 
-    func findOrCreateDmByInboxId(inboxId: String) async throws -> FfiConversation
+    func findOrCreateDmByInboxId(inboxId: String, opts: FfiCreateDmOptions) async throws -> FfiConversation
 
     func getHmacKeys() throws -> [Data: [FfiHmacKey]]
 
@@ -2025,13 +2025,13 @@ open class FfiConversations:
             )
     }
 
-    open func findOrCreateDm(accountAddress: String) async throws -> FfiConversation {
+    open func findOrCreateDm(accountAddress: String, opts: FfiCreateDmOptions) async throws -> FfiConversation {
         return
             try await uniffiRustCallAsync(
                 rustFutureFunc: {
                     uniffi_xmtpv3_fn_method_fficonversations_find_or_create_dm(
                         self.uniffiClonePointer(),
-                        FfiConverterString.lower(accountAddress)
+                        FfiConverterString.lower(accountAddress), FfiConverterTypeFfiCreateDMOptions.lower(opts)
                     )
                 },
                 pollFunc: ffi_xmtpv3_rust_future_poll_pointer,
@@ -2042,13 +2042,13 @@ open class FfiConversations:
             )
     }
 
-    open func findOrCreateDmByInboxId(inboxId: String) async throws -> FfiConversation {
+    open func findOrCreateDmByInboxId(inboxId: String, opts: FfiCreateDmOptions) async throws -> FfiConversation {
         return
             try await uniffiRustCallAsync(
                 rustFutureFunc: {
                     uniffi_xmtpv3_fn_method_fficonversations_find_or_create_dm_by_inbox_id(
                         self.uniffiClonePointer(),
-                        FfiConverterString.lower(inboxId)
+                        FfiConverterString.lower(inboxId), FfiConverterTypeFfiCreateDMOptions.lower(opts)
                     )
                 },
                 pollFunc: ffi_xmtpv3_rust_future_poll_pointer,
@@ -4766,6 +4766,59 @@ public func FfiConverterTypeFfiConversationMember_lift(_ buf: RustBuffer) throws
 #endif
 public func FfiConverterTypeFfiConversationMember_lower(_ value: FfiConversationMember) -> RustBuffer {
     return FfiConverterTypeFfiConversationMember.lower(value)
+}
+
+public struct FfiCreateDmOptions {
+    public var messageDisappearingSettings: FfiMessageDisappearingSettings?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(messageDisappearingSettings: FfiMessageDisappearingSettings?) {
+        self.messageDisappearingSettings = messageDisappearingSettings
+    }
+}
+
+extension FfiCreateDmOptions: Equatable, Hashable {
+    public static func == (lhs: FfiCreateDmOptions, rhs: FfiCreateDmOptions) -> Bool {
+        if lhs.messageDisappearingSettings != rhs.messageDisappearingSettings {
+            return false
+        }
+        return true
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(messageDisappearingSettings)
+    }
+}
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeFfiCreateDMOptions: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiCreateDmOptions {
+        return
+            try FfiCreateDmOptions(
+                messageDisappearingSettings: FfiConverterOptionTypeFfiMessageDisappearingSettings.read(from: &buf)
+            )
+    }
+
+    public static func write(_ value: FfiCreateDmOptions, into buf: inout [UInt8]) {
+        FfiConverterOptionTypeFfiMessageDisappearingSettings.write(value.messageDisappearingSettings, into: &buf)
+    }
+}
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFfiCreateDMOptions_lift(_ buf: RustBuffer) throws -> FfiCreateDmOptions {
+    return try FfiConverterTypeFfiCreateDMOptions.lift(buf)
+}
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFfiCreateDMOptions_lower(_ value: FfiCreateDmOptions) -> RustBuffer {
+    return FfiConverterTypeFfiCreateDMOptions.lower(value)
 }
 
 public struct FfiCreateGroupOptions {
@@ -8918,7 +8971,7 @@ private var initializationResult: InitializationResult = {
     if uniffi_xmtpv3_checksum_method_fficonversation_consent_state() != 25033 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_xmtpv3_checksum_method_fficonversation_conversation_message_disappearing_settings() != 41159 {
+    if uniffi_xmtpv3_checksum_method_fficonversation_conversation_message_disappearing_settings() != 53380 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_fficonversation_conversation_type() != 51396 {
@@ -9050,10 +9103,10 @@ private var initializationResult: InitializationResult = {
     if uniffi_xmtpv3_checksum_method_fficonversations_create_group_with_inbox_ids() != 56407 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_xmtpv3_checksum_method_fficonversations_find_or_create_dm() != 24174 {
+    if uniffi_xmtpv3_checksum_method_fficonversations_find_or_create_dm() != 42914 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_xmtpv3_checksum_method_fficonversations_find_or_create_dm_by_inbox_id() != 63943 {
+    if uniffi_xmtpv3_checksum_method_fficonversations_find_or_create_dm_by_inbox_id() != 42164 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_fficonversations_get_hmac_keys() != 44064 {
