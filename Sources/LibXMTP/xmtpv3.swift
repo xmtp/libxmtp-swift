@@ -753,9 +753,9 @@ public func FfiConverterTypeFfiConsentCallback_lower(_ value: FfiConsentCallback
 public protocol FfiConversationProtocol: AnyObject {
     func addAdmin(inboxId: String) async throws
 
-    func addMembers(accountAddresses: [String]) async throws
+    func addMembers(accountAddresses: [String]) async throws -> FfiUpdateGroupMembershipResult
 
-    func addMembersByInboxId(inboxIds: [String]) async throws
+    func addMembersByInboxId(inboxIds: [String]) async throws -> FfiUpdateGroupMembershipResult
 
     func addSuperAdmin(inboxId: String) async throws
 
@@ -910,7 +910,7 @@ open class FfiConversation:
             )
     }
 
-    open func addMembers(accountAddresses: [String]) async throws {
+    open func addMembers(accountAddresses: [String]) async throws -> FfiUpdateGroupMembershipResult {
         return
             try await uniffiRustCallAsync(
                 rustFutureFunc: {
@@ -919,15 +919,15 @@ open class FfiConversation:
                         FfiConverterSequenceString.lower(accountAddresses)
                     )
                 },
-                pollFunc: ffi_xmtpv3_rust_future_poll_void,
-                completeFunc: ffi_xmtpv3_rust_future_complete_void,
-                freeFunc: ffi_xmtpv3_rust_future_free_void,
-                liftFunc: { $0 },
+                pollFunc: ffi_xmtpv3_rust_future_poll_rust_buffer,
+                completeFunc: ffi_xmtpv3_rust_future_complete_rust_buffer,
+                freeFunc: ffi_xmtpv3_rust_future_free_rust_buffer,
+                liftFunc: FfiConverterTypeFfiUpdateGroupMembershipResult.lift,
                 errorHandler: FfiConverterTypeGenericError.lift
             )
     }
 
-    open func addMembersByInboxId(inboxIds: [String]) async throws {
+    open func addMembersByInboxId(inboxIds: [String]) async throws -> FfiUpdateGroupMembershipResult {
         return
             try await uniffiRustCallAsync(
                 rustFutureFunc: {
@@ -936,10 +936,10 @@ open class FfiConversation:
                         FfiConverterSequenceString.lower(inboxIds)
                     )
                 },
-                pollFunc: ffi_xmtpv3_rust_future_poll_void,
-                completeFunc: ffi_xmtpv3_rust_future_complete_void,
-                freeFunc: ffi_xmtpv3_rust_future_free_void,
-                liftFunc: { $0 },
+                pollFunc: ffi_xmtpv3_rust_future_poll_rust_buffer,
+                completeFunc: ffi_xmtpv3_rust_future_complete_rust_buffer,
+                freeFunc: ffi_xmtpv3_rust_future_free_rust_buffer,
+                liftFunc: FfiConverterTypeFfiUpdateGroupMembershipResult.lift,
                 errorHandler: FfiConverterTypeGenericError.lift
             )
     }
@@ -6130,6 +6130,75 @@ public func FfiConverterTypeFfiRemoteAttachmentInfo_lower(_ value: FfiRemoteAtta
     return FfiConverterTypeFfiRemoteAttachmentInfo.lower(value)
 }
 
+public struct FfiUpdateGroupMembershipResult {
+    public var addedMembers: [String: UInt64]
+    public var removedMembers: [String]
+    public var failedInstallations: [Data]
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(addedMembers: [String: UInt64], removedMembers: [String], failedInstallations: [Data]) {
+        self.addedMembers = addedMembers
+        self.removedMembers = removedMembers
+        self.failedInstallations = failedInstallations
+    }
+}
+
+extension FfiUpdateGroupMembershipResult: Equatable, Hashable {
+    public static func == (lhs: FfiUpdateGroupMembershipResult, rhs: FfiUpdateGroupMembershipResult) -> Bool {
+        if lhs.addedMembers != rhs.addedMembers {
+            return false
+        }
+        if lhs.removedMembers != rhs.removedMembers {
+            return false
+        }
+        if lhs.failedInstallations != rhs.failedInstallations {
+            return false
+        }
+        return true
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(addedMembers)
+        hasher.combine(removedMembers)
+        hasher.combine(failedInstallations)
+    }
+}
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeFfiUpdateGroupMembershipResult: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiUpdateGroupMembershipResult {
+        return
+            try FfiUpdateGroupMembershipResult(
+                addedMembers: FfiConverterDictionaryStringUInt64.read(from: &buf),
+                removedMembers: FfiConverterSequenceString.read(from: &buf),
+                failedInstallations: FfiConverterSequenceData.read(from: &buf)
+            )
+    }
+
+    public static func write(_ value: FfiUpdateGroupMembershipResult, into buf: inout [UInt8]) {
+        FfiConverterDictionaryStringUInt64.write(value.addedMembers, into: &buf)
+        FfiConverterSequenceString.write(value.removedMembers, into: &buf)
+        FfiConverterSequenceData.write(value.failedInstallations, into: &buf)
+    }
+}
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFfiUpdateGroupMembershipResult_lift(_ buf: RustBuffer) throws -> FfiUpdateGroupMembershipResult {
+    return try FfiConverterTypeFfiUpdateGroupMembershipResult.lift(buf)
+}
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFfiUpdateGroupMembershipResult_lower(_ value: FfiUpdateGroupMembershipResult) -> RustBuffer {
+    return FfiConverterTypeFfiUpdateGroupMembershipResult.lower(value)
+}
+
 public struct FfiV2BatchQueryRequest {
     public var requests: [FfiV2QueryRequest]
 
@@ -8786,6 +8855,32 @@ private struct FfiConverterSequenceTypeFfiPreferenceUpdate: FfiConverterRustBuff
 #if swift(>=5.8)
     @_documentation(visibility: private)
 #endif
+private struct FfiConverterDictionaryStringUInt64: FfiConverterRustBuffer {
+    public static func write(_ value: [String: UInt64], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for (key, value) in value {
+            FfiConverterString.write(key, into: &buf)
+            FfiConverterUInt64.write(value, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [String: UInt64] {
+        let len: Int32 = try readInt(&buf)
+        var dict = [String: UInt64]()
+        dict.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            let key = try FfiConverterString.read(from: &buf)
+            let value = try FfiConverterUInt64.read(from: &buf)
+            dict[key] = value
+        }
+        return dict
+    }
+}
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
 private struct FfiConverterDictionaryStringBool: FfiConverterRustBuffer {
     public static func write(_ value: [String: Bool], into buf: inout [UInt8]) {
         let len = Int32(value.count)
@@ -9194,10 +9289,10 @@ private var initializationResult: InitializationResult = {
     if uniffi_xmtpv3_checksum_method_fficonversation_add_admin() != 52417 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_xmtpv3_checksum_method_fficonversation_add_members() != 3260 {
+    if uniffi_xmtpv3_checksum_method_fficonversation_add_members() != 51549 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_xmtpv3_checksum_method_fficonversation_add_members_by_inbox_id() != 28069 {
+    if uniffi_xmtpv3_checksum_method_fficonversation_add_members_by_inbox_id() != 30553 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_fficonversation_add_super_admin() != 62984 {
