@@ -753,9 +753,9 @@ public func FfiConverterTypeFfiConsentCallback_lower(_ value: FfiConsentCallback
 public protocol FfiConversationProtocol: AnyObject {
     func addAdmin(inboxId: String) async throws
 
-    func addMembers(accountAddresses: [String]) async throws
+    func addMembers(accountAddresses: [String]) async throws -> FfiUpdateGroupMembershipResult
 
-    func addMembersByInboxId(inboxIds: [String]) async throws
+    func addMembersByInboxId(inboxIds: [String]) async throws -> FfiUpdateGroupMembershipResult
 
     func addSuperAdmin(inboxId: String) async throws
 
@@ -910,7 +910,7 @@ open class FfiConversation:
             )
     }
 
-    open func addMembers(accountAddresses: [String]) async throws {
+    open func addMembers(accountAddresses: [String]) async throws -> FfiUpdateGroupMembershipResult {
         return
             try await uniffiRustCallAsync(
                 rustFutureFunc: {
@@ -919,15 +919,15 @@ open class FfiConversation:
                         FfiConverterSequenceString.lower(accountAddresses)
                     )
                 },
-                pollFunc: ffi_xmtpv3_rust_future_poll_void,
-                completeFunc: ffi_xmtpv3_rust_future_complete_void,
-                freeFunc: ffi_xmtpv3_rust_future_free_void,
-                liftFunc: { $0 },
+                pollFunc: ffi_xmtpv3_rust_future_poll_rust_buffer,
+                completeFunc: ffi_xmtpv3_rust_future_complete_rust_buffer,
+                freeFunc: ffi_xmtpv3_rust_future_free_rust_buffer,
+                liftFunc: FfiConverterTypeFfiUpdateGroupMembershipResult.lift,
                 errorHandler: FfiConverterTypeGenericError.lift
             )
     }
 
-    open func addMembersByInboxId(inboxIds: [String]) async throws {
+    open func addMembersByInboxId(inboxIds: [String]) async throws -> FfiUpdateGroupMembershipResult {
         return
             try await uniffiRustCallAsync(
                 rustFutureFunc: {
@@ -936,10 +936,10 @@ open class FfiConversation:
                         FfiConverterSequenceString.lower(inboxIds)
                     )
                 },
-                pollFunc: ffi_xmtpv3_rust_future_poll_void,
-                completeFunc: ffi_xmtpv3_rust_future_complete_void,
-                freeFunc: ffi_xmtpv3_rust_future_free_void,
-                liftFunc: { $0 },
+                pollFunc: ffi_xmtpv3_rust_future_poll_rust_buffer,
+                completeFunc: ffi_xmtpv3_rust_future_complete_rust_buffer,
+                freeFunc: ffi_xmtpv3_rust_future_free_rust_buffer,
+                liftFunc: FfiConverterTypeFfiUpdateGroupMembershipResult.lift,
                 errorHandler: FfiConverterTypeGenericError.lift
             )
     }
@@ -5652,6 +5652,59 @@ public func FfiConverterTypeFfiMessageWithReactions_lower(_ value: FfiMessageWit
     return FfiConverterTypeFfiMessageWithReactions.lower(value)
 }
 
+public struct FfiMultiRemoteAttachment {
+    public var attachments: [FfiRemoteAttachmentInfo]
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(attachments: [FfiRemoteAttachmentInfo]) {
+        self.attachments = attachments
+    }
+}
+
+extension FfiMultiRemoteAttachment: Equatable, Hashable {
+    public static func == (lhs: FfiMultiRemoteAttachment, rhs: FfiMultiRemoteAttachment) -> Bool {
+        if lhs.attachments != rhs.attachments {
+            return false
+        }
+        return true
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(attachments)
+    }
+}
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeFfiMultiRemoteAttachment: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiMultiRemoteAttachment {
+        return
+            try FfiMultiRemoteAttachment(
+                attachments: FfiConverterSequenceTypeFfiRemoteAttachmentInfo.read(from: &buf)
+            )
+    }
+
+    public static func write(_ value: FfiMultiRemoteAttachment, into buf: inout [UInt8]) {
+        FfiConverterSequenceTypeFfiRemoteAttachmentInfo.write(value.attachments, into: &buf)
+    }
+}
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFfiMultiRemoteAttachment_lift(_ buf: RustBuffer) throws -> FfiMultiRemoteAttachment {
+    return try FfiConverterTypeFfiMultiRemoteAttachment.lift(buf)
+}
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFfiMultiRemoteAttachment_lower(_ value: FfiMultiRemoteAttachment) -> RustBuffer {
+    return FfiConverterTypeFfiMultiRemoteAttachment.lower(value)
+}
+
 public struct FfiPagingInfo {
     public var limit: UInt32
     public var cursor: FfiCursor?
@@ -5966,6 +6019,184 @@ public func FfiConverterTypeFfiReaction_lift(_ buf: RustBuffer) throws -> FfiRea
 #endif
 public func FfiConverterTypeFfiReaction_lower(_ value: FfiReaction) -> RustBuffer {
     return FfiConverterTypeFfiReaction.lower(value)
+}
+
+public struct FfiRemoteAttachmentInfo {
+    public var secret: Data
+    public var contentDigest: String
+    public var nonce: Data
+    public var scheme: String
+    public var url: String
+    public var salt: Data
+    public var contentLength: UInt32?
+    public var filename: String?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(secret: Data, contentDigest: String, nonce: Data, scheme: String, url: String, salt: Data, contentLength: UInt32?, filename: String?) {
+        self.secret = secret
+        self.contentDigest = contentDigest
+        self.nonce = nonce
+        self.scheme = scheme
+        self.url = url
+        self.salt = salt
+        self.contentLength = contentLength
+        self.filename = filename
+    }
+}
+
+extension FfiRemoteAttachmentInfo: Equatable, Hashable {
+    public static func == (lhs: FfiRemoteAttachmentInfo, rhs: FfiRemoteAttachmentInfo) -> Bool {
+        if lhs.secret != rhs.secret {
+            return false
+        }
+        if lhs.contentDigest != rhs.contentDigest {
+            return false
+        }
+        if lhs.nonce != rhs.nonce {
+            return false
+        }
+        if lhs.scheme != rhs.scheme {
+            return false
+        }
+        if lhs.url != rhs.url {
+            return false
+        }
+        if lhs.salt != rhs.salt {
+            return false
+        }
+        if lhs.contentLength != rhs.contentLength {
+            return false
+        }
+        if lhs.filename != rhs.filename {
+            return false
+        }
+        return true
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(secret)
+        hasher.combine(contentDigest)
+        hasher.combine(nonce)
+        hasher.combine(scheme)
+        hasher.combine(url)
+        hasher.combine(salt)
+        hasher.combine(contentLength)
+        hasher.combine(filename)
+    }
+}
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeFfiRemoteAttachmentInfo: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiRemoteAttachmentInfo {
+        return
+            try FfiRemoteAttachmentInfo(
+                secret: FfiConverterData.read(from: &buf),
+                contentDigest: FfiConverterString.read(from: &buf),
+                nonce: FfiConverterData.read(from: &buf),
+                scheme: FfiConverterString.read(from: &buf),
+                url: FfiConverterString.read(from: &buf),
+                salt: FfiConverterData.read(from: &buf),
+                contentLength: FfiConverterOptionUInt32.read(from: &buf),
+                filename: FfiConverterOptionString.read(from: &buf)
+            )
+    }
+
+    public static func write(_ value: FfiRemoteAttachmentInfo, into buf: inout [UInt8]) {
+        FfiConverterData.write(value.secret, into: &buf)
+        FfiConverterString.write(value.contentDigest, into: &buf)
+        FfiConverterData.write(value.nonce, into: &buf)
+        FfiConverterString.write(value.scheme, into: &buf)
+        FfiConverterString.write(value.url, into: &buf)
+        FfiConverterData.write(value.salt, into: &buf)
+        FfiConverterOptionUInt32.write(value.contentLength, into: &buf)
+        FfiConverterOptionString.write(value.filename, into: &buf)
+    }
+}
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFfiRemoteAttachmentInfo_lift(_ buf: RustBuffer) throws -> FfiRemoteAttachmentInfo {
+    return try FfiConverterTypeFfiRemoteAttachmentInfo.lift(buf)
+}
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFfiRemoteAttachmentInfo_lower(_ value: FfiRemoteAttachmentInfo) -> RustBuffer {
+    return FfiConverterTypeFfiRemoteAttachmentInfo.lower(value)
+}
+
+public struct FfiUpdateGroupMembershipResult {
+    public var addedMembers: [String: UInt64]
+    public var removedMembers: [String]
+    public var failedInstallations: [Data]
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(addedMembers: [String: UInt64], removedMembers: [String], failedInstallations: [Data]) {
+        self.addedMembers = addedMembers
+        self.removedMembers = removedMembers
+        self.failedInstallations = failedInstallations
+    }
+}
+
+extension FfiUpdateGroupMembershipResult: Equatable, Hashable {
+    public static func == (lhs: FfiUpdateGroupMembershipResult, rhs: FfiUpdateGroupMembershipResult) -> Bool {
+        if lhs.addedMembers != rhs.addedMembers {
+            return false
+        }
+        if lhs.removedMembers != rhs.removedMembers {
+            return false
+        }
+        if lhs.failedInstallations != rhs.failedInstallations {
+            return false
+        }
+        return true
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(addedMembers)
+        hasher.combine(removedMembers)
+        hasher.combine(failedInstallations)
+    }
+}
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeFfiUpdateGroupMembershipResult: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiUpdateGroupMembershipResult {
+        return
+            try FfiUpdateGroupMembershipResult(
+                addedMembers: FfiConverterDictionaryStringUInt64.read(from: &buf),
+                removedMembers: FfiConverterSequenceString.read(from: &buf),
+                failedInstallations: FfiConverterSequenceData.read(from: &buf)
+            )
+    }
+
+    public static func write(_ value: FfiUpdateGroupMembershipResult, into buf: inout [UInt8]) {
+        FfiConverterDictionaryStringUInt64.write(value.addedMembers, into: &buf)
+        FfiConverterSequenceString.write(value.removedMembers, into: &buf)
+        FfiConverterSequenceData.write(value.failedInstallations, into: &buf)
+    }
+}
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFfiUpdateGroupMembershipResult_lift(_ buf: RustBuffer) throws -> FfiUpdateGroupMembershipResult {
+    return try FfiConverterTypeFfiUpdateGroupMembershipResult.lift(buf)
+}
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFfiUpdateGroupMembershipResult_lower(_ value: FfiUpdateGroupMembershipResult) -> RustBuffer {
+    return FfiConverterTypeFfiUpdateGroupMembershipResult.lower(value)
 }
 
 public struct FfiV2BatchQueryRequest {
@@ -7406,8 +7637,6 @@ public enum GenericError {
 
     case Storage(message: String)
 
-    case ApiError(message: String)
-
     case GroupError(message: String)
 
     case Signature(message: String)
@@ -7437,6 +7666,10 @@ public enum GenericError {
     case IoError(message: String)
 
     case Subscription(message: String)
+
+    case ApiClientBuild(message: String)
+
+    case Grpc(message: String)
 }
 
 #if swift(>=5.8)
@@ -7460,67 +7693,71 @@ public struct FfiConverterTypeGenericError: FfiConverterRustBuffer {
                 message: FfiConverterString.read(from: &buf)
             )
 
-        case 4: return try .ApiError(
+        case 4: return try .GroupError(
                 message: FfiConverterString.read(from: &buf)
             )
 
-        case 5: return try .GroupError(
+        case 5: return try .Signature(
                 message: FfiConverterString.read(from: &buf)
             )
 
-        case 6: return try .Signature(
+        case 6: return try .GroupMetadata(
                 message: FfiConverterString.read(from: &buf)
             )
 
-        case 7: return try .GroupMetadata(
+        case 7: return try .GroupMutablePermissions(
                 message: FfiConverterString.read(from: &buf)
             )
 
-        case 8: return try .GroupMutablePermissions(
+        case 8: return try .Generic(
                 message: FfiConverterString.read(from: &buf)
             )
 
-        case 9: return try .Generic(
+        case 9: return try .SignatureRequestError(
                 message: FfiConverterString.read(from: &buf)
             )
 
-        case 10: return try .SignatureRequestError(
+        case 10: return try .Erc1271SignatureError(
                 message: FfiConverterString.read(from: &buf)
             )
 
-        case 11: return try .Erc1271SignatureError(
+        case 11: return try .Verifier(
                 message: FfiConverterString.read(from: &buf)
             )
 
-        case 12: return try .Verifier(
+        case 12: return try .FailedToConvertToU32(
                 message: FfiConverterString.read(from: &buf)
             )
 
-        case 13: return try .FailedToConvertToU32(
+        case 13: return try .Association(
                 message: FfiConverterString.read(from: &buf)
             )
 
-        case 14: return try .Association(
+        case 14: return try .DeviceSync(
                 message: FfiConverterString.read(from: &buf)
             )
 
-        case 15: return try .DeviceSync(
+        case 15: return try .Identity(
                 message: FfiConverterString.read(from: &buf)
             )
 
-        case 16: return try .Identity(
+        case 16: return try .JoinError(
                 message: FfiConverterString.read(from: &buf)
             )
 
-        case 17: return try .JoinError(
+        case 17: return try .IoError(
                 message: FfiConverterString.read(from: &buf)
             )
 
-        case 18: return try .IoError(
+        case 18: return try .Subscription(
                 message: FfiConverterString.read(from: &buf)
             )
 
-        case 19: return try .Subscription(
+        case 19: return try .ApiClientBuild(
+                message: FfiConverterString.read(from: &buf)
+            )
+
+        case 20: return try .Grpc(
                 message: FfiConverterString.read(from: &buf)
             )
 
@@ -7536,38 +7773,40 @@ public struct FfiConverterTypeGenericError: FfiConverterRustBuffer {
             writeInt(&buf, Int32(2))
         case .Storage(_ /* message is ignored*/ ):
             writeInt(&buf, Int32(3))
-        case .ApiError(_ /* message is ignored*/ ):
-            writeInt(&buf, Int32(4))
         case .GroupError(_ /* message is ignored*/ ):
-            writeInt(&buf, Int32(5))
+            writeInt(&buf, Int32(4))
         case .Signature(_ /* message is ignored*/ ):
-            writeInt(&buf, Int32(6))
+            writeInt(&buf, Int32(5))
         case .GroupMetadata(_ /* message is ignored*/ ):
-            writeInt(&buf, Int32(7))
+            writeInt(&buf, Int32(6))
         case .GroupMutablePermissions(_ /* message is ignored*/ ):
-            writeInt(&buf, Int32(8))
+            writeInt(&buf, Int32(7))
         case .Generic(_ /* message is ignored*/ ):
-            writeInt(&buf, Int32(9))
+            writeInt(&buf, Int32(8))
         case .SignatureRequestError(_ /* message is ignored*/ ):
-            writeInt(&buf, Int32(10))
+            writeInt(&buf, Int32(9))
         case .Erc1271SignatureError(_ /* message is ignored*/ ):
-            writeInt(&buf, Int32(11))
+            writeInt(&buf, Int32(10))
         case .Verifier(_ /* message is ignored*/ ):
-            writeInt(&buf, Int32(12))
+            writeInt(&buf, Int32(11))
         case .FailedToConvertToU32(_ /* message is ignored*/ ):
-            writeInt(&buf, Int32(13))
+            writeInt(&buf, Int32(12))
         case .Association(_ /* message is ignored*/ ):
-            writeInt(&buf, Int32(14))
+            writeInt(&buf, Int32(13))
         case .DeviceSync(_ /* message is ignored*/ ):
-            writeInt(&buf, Int32(15))
+            writeInt(&buf, Int32(14))
         case .Identity(_ /* message is ignored*/ ):
-            writeInt(&buf, Int32(16))
+            writeInt(&buf, Int32(15))
         case .JoinError(_ /* message is ignored*/ ):
-            writeInt(&buf, Int32(17))
+            writeInt(&buf, Int32(16))
         case .IoError(_ /* message is ignored*/ ):
-            writeInt(&buf, Int32(18))
+            writeInt(&buf, Int32(17))
         case .Subscription(_ /* message is ignored*/ ):
+            writeInt(&buf, Int32(18))
+        case .ApiClientBuild(_ /* message is ignored*/ ):
             writeInt(&buf, Int32(19))
+        case .Grpc(_ /* message is ignored*/ ):
+            writeInt(&buf, Int32(20))
         }
     }
 }
@@ -7728,6 +7967,30 @@ extension FfiConverterCallbackInterfaceFfiInboxOwner: FfiConverter {
     #endif
     public static func write(_ v: SwiftType, into buf: inout [UInt8]) {
         writeInt(&buf, lower(v))
+    }
+}
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+private struct FfiConverterOptionUInt32: FfiConverterRustBuffer {
+    typealias SwiftType = UInt32?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterUInt32.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterUInt32.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
     }
 }
 
@@ -8417,6 +8680,31 @@ private struct FfiConverterSequenceTypeFfiMessageWithReactions: FfiConverterRust
 #if swift(>=5.8)
     @_documentation(visibility: private)
 #endif
+private struct FfiConverterSequenceTypeFfiRemoteAttachmentInfo: FfiConverterRustBuffer {
+    typealias SwiftType = [FfiRemoteAttachmentInfo]
+
+    public static func write(_ value: [FfiRemoteAttachmentInfo], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeFfiRemoteAttachmentInfo.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [FfiRemoteAttachmentInfo] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [FfiRemoteAttachmentInfo]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            try seq.append(FfiConverterTypeFfiRemoteAttachmentInfo.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
 private struct FfiConverterSequenceTypeFfiV2QueryRequest: FfiConverterRustBuffer {
     typealias SwiftType = [FfiV2QueryRequest]
 
@@ -8561,6 +8849,32 @@ private struct FfiConverterSequenceTypeFfiPreferenceUpdate: FfiConverterRustBuff
             try seq.append(FfiConverterTypeFfiPreferenceUpdate.read(from: &buf))
         }
         return seq
+    }
+}
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+private struct FfiConverterDictionaryStringUInt64: FfiConverterRustBuffer {
+    public static func write(_ value: [String: UInt64], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for (key, value) in value {
+            FfiConverterString.write(key, into: &buf)
+            FfiConverterUInt64.write(value, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [String: UInt64] {
+        let len: Int32 = try readInt(&buf)
+        var dict = [String: UInt64]()
+        dict.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            let key = try FfiConverterString.read(from: &buf)
+            let value = try FfiConverterUInt64.read(from: &buf)
+            dict[key] = value
+        }
+        return dict
     }
 }
 
@@ -8726,6 +9040,14 @@ public func createV2Client(host: String, isSecure: Bool) async throws -> FfiV2Ap
         )
 }
 
+public func decodeMultiRemoteAttachment(bytes: Data) throws -> FfiMultiRemoteAttachment {
+    return try FfiConverterTypeFfiMultiRemoteAttachment.lift(rustCallWithError(FfiConverterTypeGenericError.lift) {
+        uniffi_xmtpv3_fn_func_decode_multi_remote_attachment(
+            FfiConverterData.lower(bytes), $0
+        )
+    })
+}
+
 public func decodeReaction(bytes: Data) throws -> FfiReaction {
     return try FfiConverterTypeFfiReaction.lift(rustCallWithError(FfiConverterTypeGenericError.lift) {
         uniffi_xmtpv3_fn_func_decode_reaction(
@@ -8739,6 +9061,14 @@ public func diffieHellmanK256(privateKeyBytes: Data, publicKeyBytes: Data) throw
         uniffi_xmtpv3_fn_func_diffie_hellman_k256(
             FfiConverterData.lower(privateKeyBytes),
             FfiConverterData.lower(publicKeyBytes), $0
+        )
+    })
+}
+
+public func encodeMultiRemoteAttachment(ffiMultiRemoteAttachment: FfiMultiRemoteAttachment) throws -> Data {
+    return try FfiConverterData.lift(rustCallWithError(FfiConverterTypeGenericError.lift) {
+        uniffi_xmtpv3_fn_func_encode_multi_remote_attachment(
+            FfiConverterTypeFfiMultiRemoteAttachment.lower(ffiMultiRemoteAttachment), $0
         )
     })
 }
@@ -8896,10 +9226,16 @@ private var initializationResult: InitializationResult = {
     if uniffi_xmtpv3_checksum_func_create_v2_client() != 48060 {
         return InitializationResult.apiChecksumMismatch
     }
+    if uniffi_xmtpv3_checksum_func_decode_multi_remote_attachment() != 59746 {
+        return InitializationResult.apiChecksumMismatch
+    }
     if uniffi_xmtpv3_checksum_func_decode_reaction() != 28885 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_func_diffie_hellman_k256() != 37475 {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if uniffi_xmtpv3_checksum_func_encode_multi_remote_attachment() != 28938 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_func_encode_reaction() != 6548 {
@@ -8953,10 +9289,10 @@ private var initializationResult: InitializationResult = {
     if uniffi_xmtpv3_checksum_method_fficonversation_add_admin() != 52417 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_xmtpv3_checksum_method_fficonversation_add_members() != 3260 {
+    if uniffi_xmtpv3_checksum_method_fficonversation_add_members() != 51549 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_xmtpv3_checksum_method_fficonversation_add_members_by_inbox_id() != 28069 {
+    if uniffi_xmtpv3_checksum_method_fficonversation_add_members_by_inbox_id() != 30553 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_xmtpv3_checksum_method_fficonversation_add_super_admin() != 62984 {
