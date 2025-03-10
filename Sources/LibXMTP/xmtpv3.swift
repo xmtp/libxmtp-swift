@@ -808,6 +808,8 @@ public protocol FfiConversationProtocol: AnyObject {
     
     func listMembers() async throws  -> [FfiConversationMember]
     
+    func pausedForVersion() throws  -> String?
+    
     func processStreamedConversationMessage(envelopeBytes: Data) async throws  -> FfiMessage
     
     /**
@@ -1165,6 +1167,13 @@ open func listMembers()async throws  -> [FfiConversationMember]  {
             liftFunc: FfiConverterSequenceTypeFfiConversationMember.lift,
             errorHandler: FfiConverterTypeGenericError.lift
         )
+}
+    
+open func pausedForVersion()throws  -> String?  {
+    return try  FfiConverterOptionString.lift(try rustCallWithError(FfiConverterTypeGenericError_lift) {
+    uniffi_xmtpv3_fn_method_fficonversation_paused_for_version(self.uniffiClonePointer(),$0
+    )
+})
 }
     
 open func processStreamedConversationMessage(envelopeBytes: Data)async throws  -> FfiMessage  {
@@ -3188,6 +3197,8 @@ public protocol FfiSignatureRequestProtocol: AnyObject {
     
     func addEcdsaSignature(signatureBytes: Data) async throws 
     
+    func addPasskeySignature(signature: FfiPasskeySignature) async throws 
+    
     func addScwSignature(signatureBytes: Data, address: String, chainId: UInt64, blockNumber: UInt64?) async throws 
     
     func isReady() async  -> Bool
@@ -3256,6 +3267,23 @@ open func addEcdsaSignature(signatureBytes: Data)async throws   {
                 uniffi_xmtpv3_fn_method_ffisignaturerequest_add_ecdsa_signature(
                     self.uniffiClonePointer(),
                     FfiConverterData.lower(signatureBytes)
+                )
+            },
+            pollFunc: ffi_xmtpv3_rust_future_poll_void,
+            completeFunc: ffi_xmtpv3_rust_future_complete_void,
+            freeFunc: ffi_xmtpv3_rust_future_free_void,
+            liftFunc: { $0 },
+            errorHandler: FfiConverterTypeGenericError.lift
+        )
+}
+    
+open func addPasskeySignature(signature: FfiPasskeySignature)async throws   {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_xmtpv3_fn_method_ffisignaturerequest_add_passkey_signature(
+                    self.uniffiClonePointer(),
+                    FfiConverterTypeFfiPasskeySignature_lower(signature)
                 )
             },
             pollFunc: ffi_xmtpv3_rust_future_poll_void,
@@ -4916,14 +4944,12 @@ public func FfiConverterTypeFfiHmacKey_lower(_ value: FfiHmacKey) -> RustBuffer 
 public struct FfiIdentifier {
     public var identifier: String
     public var identifierKind: FfiIdentifierKind
-    public var relyingPartner: String?
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
-    public init(identifier: String, identifierKind: FfiIdentifierKind, relyingPartner: String?) {
+    public init(identifier: String, identifierKind: FfiIdentifierKind) {
         self.identifier = identifier
         self.identifierKind = identifierKind
-        self.relyingPartner = relyingPartner
     }
 }
 
@@ -4940,16 +4966,12 @@ extension FfiIdentifier: Equatable, Hashable {
         if lhs.identifierKind != rhs.identifierKind {
             return false
         }
-        if lhs.relyingPartner != rhs.relyingPartner {
-            return false
-        }
         return true
     }
 
     public func hash(into hasher: inout Hasher) {
         hasher.combine(identifier)
         hasher.combine(identifierKind)
-        hasher.combine(relyingPartner)
     }
 }
 
@@ -4963,15 +4985,13 @@ public struct FfiConverterTypeFfiIdentifier: FfiConverterRustBuffer {
         return
             try FfiIdentifier(
                 identifier: FfiConverterString.read(from: &buf), 
-                identifierKind: FfiConverterTypeFfiIdentifierKind.read(from: &buf), 
-                relyingPartner: FfiConverterOptionString.read(from: &buf)
+                identifierKind: FfiConverterTypeFfiIdentifierKind.read(from: &buf)
         )
     }
 
     public static func write(_ value: FfiIdentifier, into buf: inout [UInt8]) {
         FfiConverterString.write(value.identifier, into: &buf)
         FfiConverterTypeFfiIdentifierKind.write(value.identifierKind, into: &buf)
-        FfiConverterOptionString.write(value.relyingPartner, into: &buf)
     }
 }
 
@@ -5660,6 +5680,92 @@ public func FfiConverterTypeFfiMultiRemoteAttachment_lift(_ buf: RustBuffer) thr
 #endif
 public func FfiConverterTypeFfiMultiRemoteAttachment_lower(_ value: FfiMultiRemoteAttachment) -> RustBuffer {
     return FfiConverterTypeFfiMultiRemoteAttachment.lower(value)
+}
+
+
+public struct FfiPasskeySignature {
+    public var publicKey: Data
+    public var signature: Data
+    public var authenticatorData: Data
+    public var clientDataJson: Data
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(publicKey: Data, signature: Data, authenticatorData: Data, clientDataJson: Data) {
+        self.publicKey = publicKey
+        self.signature = signature
+        self.authenticatorData = authenticatorData
+        self.clientDataJson = clientDataJson
+    }
+}
+
+#if compiler(>=6)
+extension FfiPasskeySignature: Sendable {}
+#endif
+
+
+extension FfiPasskeySignature: Equatable, Hashable {
+    public static func ==(lhs: FfiPasskeySignature, rhs: FfiPasskeySignature) -> Bool {
+        if lhs.publicKey != rhs.publicKey {
+            return false
+        }
+        if lhs.signature != rhs.signature {
+            return false
+        }
+        if lhs.authenticatorData != rhs.authenticatorData {
+            return false
+        }
+        if lhs.clientDataJson != rhs.clientDataJson {
+            return false
+        }
+        return true
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(publicKey)
+        hasher.combine(signature)
+        hasher.combine(authenticatorData)
+        hasher.combine(clientDataJson)
+    }
+}
+
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeFfiPasskeySignature: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiPasskeySignature {
+        return
+            try FfiPasskeySignature(
+                publicKey: FfiConverterData.read(from: &buf), 
+                signature: FfiConverterData.read(from: &buf), 
+                authenticatorData: FfiConverterData.read(from: &buf), 
+                clientDataJson: FfiConverterData.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: FfiPasskeySignature, into buf: inout [UInt8]) {
+        FfiConverterData.write(value.publicKey, into: &buf)
+        FfiConverterData.write(value.signature, into: &buf)
+        FfiConverterData.write(value.authenticatorData, into: &buf)
+        FfiConverterData.write(value.clientDataJson, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFfiPasskeySignature_lift(_ buf: RustBuffer) throws -> FfiPasskeySignature {
+    return try FfiConverterTypeFfiPasskeySignature.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFfiPasskeySignature_lower(_ value: FfiPasskeySignature) -> RustBuffer {
+    return FfiConverterTypeFfiPasskeySignature.lower(value)
 }
 
 
@@ -9032,6 +9138,9 @@ private let initializationResult: InitializationResult = {
     if (uniffi_xmtpv3_checksum_method_fficonversation_list_members() != 21260) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_xmtpv3_checksum_method_fficonversation_paused_for_version() != 61438) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_xmtpv3_checksum_method_fficonversation_process_streamed_conversation_message() != 4359) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -9189,6 +9298,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_xmtpv3_checksum_method_ffisignaturerequest_add_ecdsa_signature() != 8706) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_xmtpv3_checksum_method_ffisignaturerequest_add_passkey_signature() != 11222) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_xmtpv3_checksum_method_ffisignaturerequest_add_scw_signature() != 52793) {
