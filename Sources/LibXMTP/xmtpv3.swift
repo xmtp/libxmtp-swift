@@ -834,6 +834,8 @@ public protocol FfiConversationProtocol: AnyObject {
      */
     func sendOptimistic(contentBytes: Data) throws  -> Data
     
+    func sendText(text: String) async throws  -> Data
+    
     func stream(messageCallback: FfiMessageCallback) async  -> FfiStreamCloser
     
     func superAdminList() throws  -> [String]
@@ -1324,6 +1326,23 @@ open func sendOptimistic(contentBytes: Data)throws  -> Data  {
         FfiConverterData.lower(contentBytes),$0
     )
 })
+}
+    
+open func sendText(text: String)async throws  -> Data  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_xmtpv3_fn_method_fficonversation_send_text(
+                    self.uniffiClonePointer(),
+                    FfiConverterString.lower(text)
+                )
+            },
+            pollFunc: ffi_xmtpv3_rust_future_poll_rust_buffer,
+            completeFunc: ffi_xmtpv3_rust_future_complete_rust_buffer,
+            freeFunc: ffi_xmtpv3_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterData.lift,
+            errorHandler: FfiConverterTypeGenericError.lift
+        )
 }
     
 open func stream(messageCallback: FfiMessageCallback)async  -> FfiStreamCloser  {
@@ -9166,6 +9185,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_xmtpv3_checksum_method_fficonversation_send_optimistic() != 5885) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_xmtpv3_checksum_method_fficonversation_send_text() != 55684) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_xmtpv3_checksum_method_fficonversation_stream() != 26870) {
