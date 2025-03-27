@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name             = 'LibXMTP'
-  s.version          = '4.1.0'
+  s.version          = '4.0.2'
   s.summary          = 'XMTP shared Rust code that powers cross-platform SDKs'
 
   s.homepage         = 'https://github.com/xmtp/libxmtp-swift'
