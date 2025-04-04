@@ -3653,6 +3653,11 @@ public protocol FfiXmtpClientProtocol: AnyObject {
     
     func canMessage(accountIdentifiers: [FfiIdentifier]) async throws  -> [FfiIdentifier: Bool]
     
+    /**
+     * * Change the recovery identifier for your inboxId
+     */
+    func changeRecoveryIdentifier(newRecoveryIdentifier: FfiIdentifier) async throws  -> FfiSignatureRequest
+    
     func conversation(conversationId: Data) throws  -> FfiConversation
     
     func conversations()  -> FfiConversations
@@ -3664,6 +3669,8 @@ public protocol FfiXmtpClientProtocol: AnyObject {
     func findInboxId(identifier: FfiIdentifier) async throws  -> String?
     
     func getConsentState(entityType: FfiConsentEntityType, entity: String) async throws  -> FfiConsentState
+    
+    func getKeyPackageStatusesForInstallationIds(installationIds: [Data]) async throws  -> [Data: FfiKeyPackageStatus]
     
     func getLatestInboxState(inboxId: String) async throws  -> FfiInboxState
     
@@ -3898,6 +3905,26 @@ open func canMessage(accountIdentifiers: [FfiIdentifier])async throws  -> [FfiId
         )
 }
     
+    /**
+     * * Change the recovery identifier for your inboxId
+     */
+open func changeRecoveryIdentifier(newRecoveryIdentifier: FfiIdentifier)async throws  -> FfiSignatureRequest  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_xmtpv3_fn_method_ffixmtpclient_change_recovery_identifier(
+                    self.uniffiClonePointer(),
+                    FfiConverterTypeFfiIdentifier_lower(newRecoveryIdentifier)
+                )
+            },
+            pollFunc: ffi_xmtpv3_rust_future_poll_pointer,
+            completeFunc: ffi_xmtpv3_rust_future_complete_pointer,
+            freeFunc: ffi_xmtpv3_rust_future_free_pointer,
+            liftFunc: FfiConverterTypeFfiSignatureRequest_lift,
+            errorHandler: FfiConverterTypeGenericError.lift
+        )
+}
+    
 open func conversation(conversationId: Data)throws  -> FfiConversation  {
     return try  FfiConverterTypeFfiConversation_lift(try rustCallWithError(FfiConverterTypeGenericError_lift) {
     uniffi_xmtpv3_fn_method_ffixmtpclient_conversation(self.uniffiClonePointer(),
@@ -3968,6 +3995,23 @@ open func getConsentState(entityType: FfiConsentEntityType, entity: String)async
             completeFunc: ffi_xmtpv3_rust_future_complete_rust_buffer,
             freeFunc: ffi_xmtpv3_rust_future_free_rust_buffer,
             liftFunc: FfiConverterTypeFfiConsentState_lift,
+            errorHandler: FfiConverterTypeGenericError.lift
+        )
+}
+    
+open func getKeyPackageStatusesForInstallationIds(installationIds: [Data])async throws  -> [Data: FfiKeyPackageStatus]  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_xmtpv3_fn_method_ffixmtpclient_get_key_package_statuses_for_installation_ids(
+                    self.uniffiClonePointer(),
+                    FfiConverterSequenceData.lower(installationIds)
+                )
+            },
+            pollFunc: ffi_xmtpv3_rust_future_poll_rust_buffer,
+            completeFunc: ffi_xmtpv3_rust_future_complete_rust_buffer,
+            freeFunc: ffi_xmtpv3_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterDictionaryDataTypeFfiKeyPackageStatus.lift,
             errorHandler: FfiConverterTypeGenericError.lift
         )
 }
@@ -5183,6 +5227,146 @@ public func FfiConverterTypeFfiInstallation_lift(_ buf: RustBuffer) throws -> Ff
 #endif
 public func FfiConverterTypeFfiInstallation_lower(_ value: FfiInstallation) -> RustBuffer {
     return FfiConverterTypeFfiInstallation.lower(value)
+}
+
+
+public struct FfiKeyPackageStatus {
+    public var lifetime: FfiLifetime?
+    public var validationError: String?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(lifetime: FfiLifetime?, validationError: String?) {
+        self.lifetime = lifetime
+        self.validationError = validationError
+    }
+}
+
+#if compiler(>=6)
+extension FfiKeyPackageStatus: Sendable {}
+#endif
+
+
+extension FfiKeyPackageStatus: Equatable, Hashable {
+    public static func ==(lhs: FfiKeyPackageStatus, rhs: FfiKeyPackageStatus) -> Bool {
+        if lhs.lifetime != rhs.lifetime {
+            return false
+        }
+        if lhs.validationError != rhs.validationError {
+            return false
+        }
+        return true
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(lifetime)
+        hasher.combine(validationError)
+    }
+}
+
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeFfiKeyPackageStatus: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiKeyPackageStatus {
+        return
+            try FfiKeyPackageStatus(
+                lifetime: FfiConverterOptionTypeFfiLifetime.read(from: &buf), 
+                validationError: FfiConverterOptionString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: FfiKeyPackageStatus, into buf: inout [UInt8]) {
+        FfiConverterOptionTypeFfiLifetime.write(value.lifetime, into: &buf)
+        FfiConverterOptionString.write(value.validationError, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFfiKeyPackageStatus_lift(_ buf: RustBuffer) throws -> FfiKeyPackageStatus {
+    return try FfiConverterTypeFfiKeyPackageStatus.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFfiKeyPackageStatus_lower(_ value: FfiKeyPackageStatus) -> RustBuffer {
+    return FfiConverterTypeFfiKeyPackageStatus.lower(value)
+}
+
+
+public struct FfiLifetime {
+    public var notBefore: UInt64
+    public var notAfter: UInt64
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(notBefore: UInt64, notAfter: UInt64) {
+        self.notBefore = notBefore
+        self.notAfter = notAfter
+    }
+}
+
+#if compiler(>=6)
+extension FfiLifetime: Sendable {}
+#endif
+
+
+extension FfiLifetime: Equatable, Hashable {
+    public static func ==(lhs: FfiLifetime, rhs: FfiLifetime) -> Bool {
+        if lhs.notBefore != rhs.notBefore {
+            return false
+        }
+        if lhs.notAfter != rhs.notAfter {
+            return false
+        }
+        return true
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(notBefore)
+        hasher.combine(notAfter)
+    }
+}
+
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeFfiLifetime: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiLifetime {
+        return
+            try FfiLifetime(
+                notBefore: FfiConverterUInt64.read(from: &buf), 
+                notAfter: FfiConverterUInt64.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: FfiLifetime, into buf: inout [UInt8]) {
+        FfiConverterUInt64.write(value.notBefore, into: &buf)
+        FfiConverterUInt64.write(value.notAfter, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFfiLifetime_lift(_ buf: RustBuffer) throws -> FfiLifetime {
+    return try FfiConverterTypeFfiLifetime.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFfiLifetime_lower(_ value: FfiLifetime) -> RustBuffer {
+    return FfiConverterTypeFfiLifetime.lower(value)
 }
 
 
@@ -8168,6 +8352,30 @@ fileprivate struct FfiConverterOptionTypeFfiSignatureRequest: FfiConverterRustBu
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterOptionTypeFfiLifetime: FfiConverterRustBuffer {
+    typealias SwiftType = FfiLifetime?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeFfiLifetime.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeFfiLifetime.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterOptionTypeFfiMessage: FfiConverterRustBuffer {
     typealias SwiftType = FfiMessage?
 
@@ -8834,6 +9042,32 @@ fileprivate struct FfiConverterDictionaryStringUInt64: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterDictionaryDataTypeFfiKeyPackageStatus: FfiConverterRustBuffer {
+    public static func write(_ value: [Data: FfiKeyPackageStatus], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for (key, value) in value {
+            FfiConverterData.write(key, into: &buf)
+            FfiConverterTypeFfiKeyPackageStatus.write(value, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [Data: FfiKeyPackageStatus] {
+        let len: Int32 = try readInt(&buf)
+        var dict = [Data: FfiKeyPackageStatus]()
+        dict.reserveCapacity(Int(len))
+        for _ in 0..<len {
+            let key = try FfiConverterData.read(from: &buf)
+            let value = try FfiConverterTypeFfiKeyPackageStatus.read(from: &buf)
+            dict[key] = value
+        }
+        return dict
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterDictionaryDataSequenceTypeFfiHmacKey: FfiConverterRustBuffer {
     public static func write(_ value: [Data: [FfiHmacKey]], into buf: inout [UInt8]) {
         let len = Int32(value.count)
@@ -9367,6 +9601,9 @@ private let initializationResult: InitializationResult = {
     if (uniffi_xmtpv3_checksum_method_ffixmtpclient_can_message() != 32993) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_xmtpv3_checksum_method_ffixmtpclient_change_recovery_identifier() != 39513) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_xmtpv3_checksum_method_ffixmtpclient_conversation() != 60290) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -9383,6 +9620,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_xmtpv3_checksum_method_ffixmtpclient_get_consent_state() != 58208) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_xmtpv3_checksum_method_ffixmtpclient_get_key_package_statuses_for_installation_ids() != 60893) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_xmtpv3_checksum_method_ffixmtpclient_get_latest_inbox_state() != 3165) {
