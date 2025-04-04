@@ -3653,6 +3653,11 @@ public protocol FfiXmtpClientProtocol: AnyObject {
     
     func canMessage(accountIdentifiers: [FfiIdentifier]) async throws  -> [FfiIdentifier: Bool]
     
+    /**
+     * * Change the recovery identifier for your inboxId
+     */
+    func changeRecoveryIdentifier(newRecoveryIdentifier: FfiIdentifier) async throws  -> FfiSignatureRequest
+    
     func conversation(conversationId: Data) throws  -> FfiConversation
     
     func conversations()  -> FfiConversations
@@ -3664,6 +3669,8 @@ public protocol FfiXmtpClientProtocol: AnyObject {
     func findInboxId(identifier: FfiIdentifier) async throws  -> String?
     
     func getConsentState(entityType: FfiConsentEntityType, entity: String) async throws  -> FfiConsentState
+    
+    func getKeyPackageStatusesForInstallationIds(installationIds: [Data]) async throws  -> [Data: FfiKeyPackageStatus]
     
     func getLatestInboxState(inboxId: String) async throws  -> FfiInboxState
     
@@ -3898,6 +3905,26 @@ open func canMessage(accountIdentifiers: [FfiIdentifier])async throws  -> [FfiId
         )
 }
     
+    /**
+     * * Change the recovery identifier for your inboxId
+     */
+open func changeRecoveryIdentifier(newRecoveryIdentifier: FfiIdentifier)async throws  -> FfiSignatureRequest  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_xmtpv3_fn_method_ffixmtpclient_change_recovery_identifier(
+                    self.uniffiClonePointer(),
+                    FfiConverterTypeFfiIdentifier_lower(newRecoveryIdentifier)
+                )
+            },
+            pollFunc: ffi_xmtpv3_rust_future_poll_pointer,
+            completeFunc: ffi_xmtpv3_rust_future_complete_pointer,
+            freeFunc: ffi_xmtpv3_rust_future_free_pointer,
+            liftFunc: FfiConverterTypeFfiSignatureRequest_lift,
+            errorHandler: FfiConverterTypeGenericError.lift
+        )
+}
+    
 open func conversation(conversationId: Data)throws  -> FfiConversation  {
     return try  FfiConverterTypeFfiConversation_lift(try rustCallWithError(FfiConverterTypeGenericError_lift) {
     uniffi_xmtpv3_fn_method_ffixmtpclient_conversation(self.uniffiClonePointer(),
@@ -3968,6 +3995,23 @@ open func getConsentState(entityType: FfiConsentEntityType, entity: String)async
             completeFunc: ffi_xmtpv3_rust_future_complete_rust_buffer,
             freeFunc: ffi_xmtpv3_rust_future_free_rust_buffer,
             liftFunc: FfiConverterTypeFfiConsentState_lift,
+            errorHandler: FfiConverterTypeGenericError.lift
+        )
+}
+    
+open func getKeyPackageStatusesForInstallationIds(installationIds: [Data])async throws  -> [Data: FfiKeyPackageStatus]  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_xmtpv3_fn_method_ffixmtpclient_get_key_package_statuses_for_installation_ids(
+                    self.uniffiClonePointer(),
+                    FfiConverterSequenceData.lower(installationIds)
+                )
+            },
+            pollFunc: ffi_xmtpv3_rust_future_poll_rust_buffer,
+            completeFunc: ffi_xmtpv3_rust_future_complete_rust_buffer,
+            freeFunc: ffi_xmtpv3_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterDictionaryDataTypeFfiKeyPackageStatus.lift,
             errorHandler: FfiConverterTypeGenericError.lift
         )
 }
@@ -5183,6 +5227,146 @@ public func FfiConverterTypeFfiInstallation_lift(_ buf: RustBuffer) throws -> Ff
 #endif
 public func FfiConverterTypeFfiInstallation_lower(_ value: FfiInstallation) -> RustBuffer {
     return FfiConverterTypeFfiInstallation.lower(value)
+}
+
+
+public struct FfiKeyPackageStatus {
+    public var lifetime: FfiLifetime?
+    public var validationError: String?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(lifetime: FfiLifetime?, validationError: String?) {
+        self.lifetime = lifetime
+        self.validationError = validationError
+    }
+}
+
+#if compiler(>=6)
+extension FfiKeyPackageStatus: Sendable {}
+#endif
+
+
+extension FfiKeyPackageStatus: Equatable, Hashable {
+    public static func ==(lhs: FfiKeyPackageStatus, rhs: FfiKeyPackageStatus) -> Bool {
+        if lhs.lifetime != rhs.lifetime {
+            return false
+        }
+        if lhs.validationError != rhs.validationError {
+            return false
+        }
+        return true
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(lifetime)
+        hasher.combine(validationError)
+    }
+}
+
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeFfiKeyPackageStatus: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiKeyPackageStatus {
+        return
+            try FfiKeyPackageStatus(
+                lifetime: FfiConverterOptionTypeFfiLifetime.read(from: &buf), 
+                validationError: FfiConverterOptionString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: FfiKeyPackageStatus, into buf: inout [UInt8]) {
+        FfiConverterOptionTypeFfiLifetime.write(value.lifetime, into: &buf)
+        FfiConverterOptionString.write(value.validationError, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFfiKeyPackageStatus_lift(_ buf: RustBuffer) throws -> FfiKeyPackageStatus {
+    return try FfiConverterTypeFfiKeyPackageStatus.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFfiKeyPackageStatus_lower(_ value: FfiKeyPackageStatus) -> RustBuffer {
+    return FfiConverterTypeFfiKeyPackageStatus.lower(value)
+}
+
+
+public struct FfiLifetime {
+    public var notBefore: UInt64
+    public var notAfter: UInt64
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(notBefore: UInt64, notAfter: UInt64) {
+        self.notBefore = notBefore
+        self.notAfter = notAfter
+    }
+}
+
+#if compiler(>=6)
+extension FfiLifetime: Sendable {}
+#endif
+
+
+extension FfiLifetime: Equatable, Hashable {
+    public static func ==(lhs: FfiLifetime, rhs: FfiLifetime) -> Bool {
+        if lhs.notBefore != rhs.notBefore {
+            return false
+        }
+        if lhs.notAfter != rhs.notAfter {
+            return false
+        }
+        return true
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(notBefore)
+        hasher.combine(notAfter)
+    }
+}
+
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeFfiLifetime: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiLifetime {
+        return
+            try FfiLifetime(
+                notBefore: FfiConverterUInt64.read(from: &buf), 
+                notAfter: FfiConverterUInt64.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: FfiLifetime, into buf: inout [UInt8]) {
+        FfiConverterUInt64.write(value.notBefore, into: &buf)
+        FfiConverterUInt64.write(value.notAfter, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFfiLifetime_lift(_ buf: RustBuffer) throws -> FfiLifetime {
+    return try FfiConverterTypeFfiLifetime.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFfiLifetime_lower(_ value: FfiLifetime) -> RustBuffer {
+    return FfiConverterTypeFfiLifetime.lower(value)
 }
 
 
@@ -7018,6 +7202,208 @@ extension FfiIdentifierKind: Equatable, Hashable {}
 
 // Note that we don't yet support `indirect` for enums.
 // See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
+/**
+ * Enum representing log levels
+ */
+
+public enum FfiLogLevel {
+    
+    /**
+     * Error level logs only
+     */
+    case error
+    /**
+     * Warning level and above
+     */
+    case warn
+    /**
+     * Info level and above
+     */
+    case info
+    /**
+     * Debug level and above
+     */
+    case debug
+    /**
+     * Trace level and all logs
+     */
+    case trace
+}
+
+
+#if compiler(>=6)
+extension FfiLogLevel: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeFfiLogLevel: FfiConverterRustBuffer {
+    typealias SwiftType = FfiLogLevel
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiLogLevel {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .error
+        
+        case 2: return .warn
+        
+        case 3: return .info
+        
+        case 4: return .debug
+        
+        case 5: return .trace
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: FfiLogLevel, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .error:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .warn:
+            writeInt(&buf, Int32(2))
+        
+        
+        case .info:
+            writeInt(&buf, Int32(3))
+        
+        
+        case .debug:
+            writeInt(&buf, Int32(4))
+        
+        
+        case .trace:
+            writeInt(&buf, Int32(5))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFfiLogLevel_lift(_ buf: RustBuffer) throws -> FfiLogLevel {
+    return try FfiConverterTypeFfiLogLevel.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFfiLogLevel_lower(_ value: FfiLogLevel) -> RustBuffer {
+    return FfiConverterTypeFfiLogLevel.lower(value)
+}
+
+
+extension FfiLogLevel: Equatable, Hashable {}
+
+
+
+// Note that we don't yet support `indirect` for enums.
+// See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
+/**
+ * Enum representing log file rotation options
+ */
+
+public enum FfiLogRotation {
+    
+    /**
+     * Rotate log files every minute
+     */
+    case minutely
+    /**
+     * Rotate log files every hour
+     */
+    case hourly
+    /**
+     * Rotate log files every day
+     */
+    case daily
+    /**
+     * Never rotate log files
+     */
+    case never
+}
+
+
+#if compiler(>=6)
+extension FfiLogRotation: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeFfiLogRotation: FfiConverterRustBuffer {
+    typealias SwiftType = FfiLogRotation
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiLogRotation {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .minutely
+        
+        case 2: return .hourly
+        
+        case 3: return .daily
+        
+        case 4: return .never
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: FfiLogRotation, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .minutely:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .hourly:
+            writeInt(&buf, Int32(2))
+        
+        
+        case .daily:
+            writeInt(&buf, Int32(3))
+        
+        
+        case .never:
+            writeInt(&buf, Int32(4))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFfiLogRotation_lift(_ buf: RustBuffer) throws -> FfiLogRotation {
+    return try FfiConverterTypeFfiLogRotation.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFfiLogRotation_lower(_ value: FfiLogRotation) -> RustBuffer {
+    return FfiConverterTypeFfiLogRotation.lower(value)
+}
+
+
+extension FfiLogRotation: Equatable, Hashable {}
+
+
+
+// Note that we don't yet support `indirect` for enums.
+// See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
 
 public enum FfiMetadataField {
     
@@ -7693,6 +8079,12 @@ public enum GenericError {
     
     case AddressValidation(message: String)
     
+    case LogInit(message: String)
+    
+    case ReloadLog(message: String)
+    
+    case Log(message: String)
+    
 }
 
 
@@ -7793,6 +8185,18 @@ public struct FfiConverterTypeGenericError: FfiConverterRustBuffer {
             message: try FfiConverterString.read(from: &buf)
         )
         
+        case 22: return .LogInit(
+            message: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 23: return .ReloadLog(
+            message: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 24: return .Log(
+            message: try FfiConverterString.read(from: &buf)
+        )
+        
 
         default: throw UniffiInternalError.unexpectedEnumCase
         }
@@ -7846,6 +8250,12 @@ public struct FfiConverterTypeGenericError: FfiConverterRustBuffer {
             writeInt(&buf, Int32(20))
         case .AddressValidation(_ /* message is ignored*/):
             writeInt(&buf, Int32(21))
+        case .LogInit(_ /* message is ignored*/):
+            writeInt(&buf, Int32(22))
+        case .ReloadLog(_ /* message is ignored*/):
+            writeInt(&buf, Int32(23))
+        case .Log(_ /* message is ignored*/):
+            writeInt(&buf, Int32(24))
 
         
         }
@@ -8160,6 +8570,30 @@ fileprivate struct FfiConverterOptionTypeFfiSignatureRequest: FfiConverterRustBu
         switch try readInt(&buf) as Int8 {
         case 0: return nil
         case 1: return try FfiConverterTypeFfiSignatureRequest.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterOptionTypeFfiLifetime: FfiConverterRustBuffer {
+    typealias SwiftType = FfiLifetime?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeFfiLifetime.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeFfiLifetime.read(from: &buf)
         default: throw UniffiInternalError.unexpectedOptionalTag
         }
     }
@@ -8834,6 +9268,32 @@ fileprivate struct FfiConverterDictionaryStringUInt64: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterDictionaryDataTypeFfiKeyPackageStatus: FfiConverterRustBuffer {
+    public static func write(_ value: [Data: FfiKeyPackageStatus], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for (key, value) in value {
+            FfiConverterData.write(key, into: &buf)
+            FfiConverterTypeFfiKeyPackageStatus.write(value, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [Data: FfiKeyPackageStatus] {
+        let len: Int32 = try readInt(&buf)
+        var dict = [Data: FfiKeyPackageStatus]()
+        dict.reserveCapacity(Int(len))
+        for _ in 0..<len {
+            let key = try FfiConverterData.read(from: &buf)
+            let value = try FfiConverterTypeFfiKeyPackageStatus.read(from: &buf)
+            dict[key] = value
+        }
+        return dict
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterDictionaryDataSequenceTypeFfiHmacKey: FfiConverterRustBuffer {
     public static func write(_ value: [Data: [FfiHmacKey]], into buf: inout [UInt8]) {
         let len = Int32(value.count)
@@ -9005,6 +9465,46 @@ public func encodeReaction(reaction: FfiReaction)throws  -> Data  {
     )
 })
 }
+/**
+ * turns on logging to a file on-disk in the directory specified.
+ * files will be prefixed with 'libxmtp.log' and suffixed with the timestamp,
+ * i.e "libxmtp.log.2025-04-02"
+ * A maximum of 'max_files' log files are kept.
+ */
+public func enterDebugWriter(directory: String, logLevel: FfiLogLevel, rotation: FfiLogRotation, maxFiles: UInt32)throws   {try rustCallWithError(FfiConverterTypeGenericError_lift) {
+    uniffi_xmtpv3_fn_func_enter_debug_writer(
+        FfiConverterString.lower(directory),
+        FfiConverterTypeFfiLogLevel_lower(logLevel),
+        FfiConverterTypeFfiLogRotation_lower(rotation),
+        FfiConverterUInt32.lower(maxFiles),$0
+    )
+}
+}
+/**
+ * turns on logging to a file on-disk with a specified log level.
+ * files will be prefixed with 'libxmtp.log' and suffixed with the timestamp,
+ * i.e "libxmtp.log.2025-04-02"
+ * A maximum of 'max_files' log files are kept.
+ */
+public func enterDebugWriterWithLevel(directory: String, rotation: FfiLogRotation, maxFiles: UInt32, logLevel: FfiLogLevel)throws   {try rustCallWithError(FfiConverterTypeGenericError_lift) {
+    uniffi_xmtpv3_fn_func_enter_debug_writer_with_level(
+        FfiConverterString.lower(directory),
+        FfiConverterTypeFfiLogRotation_lower(rotation),
+        FfiConverterUInt32.lower(maxFiles),
+        FfiConverterTypeFfiLogLevel_lower(logLevel),$0
+    )
+}
+}
+/**
+ * Flush loglines from libxmtp log writer to the file, ensuring logs are written.
+ * This should be called before the program exits, to ensure all the logs in memory have been
+ * written. this ends the writer thread.
+ */
+public func exitDebugWriter()throws   {try rustCallWithError(FfiConverterTypeGenericError_lift) {
+    uniffi_xmtpv3_fn_func_exit_debug_writer($0
+    )
+}
+}
 public func generateInboxId(accountIdentifier: FfiIdentifier, nonce: UInt64)throws  -> String  {
     return try  FfiConverterString.lift(try rustCallWithError(FfiConverterTypeGenericError_lift) {
     uniffi_xmtpv3_fn_func_generate_inbox_id(
@@ -9065,6 +9565,15 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_xmtpv3_checksum_func_encode_reaction() != 6548) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_xmtpv3_checksum_func_enter_debug_writer() != 7266) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_xmtpv3_checksum_func_enter_debug_writer_with_level() != 7232) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_xmtpv3_checksum_func_exit_debug_writer() != 31716) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_xmtpv3_checksum_func_generate_inbox_id() != 35602) {
@@ -9367,6 +9876,9 @@ private let initializationResult: InitializationResult = {
     if (uniffi_xmtpv3_checksum_method_ffixmtpclient_can_message() != 32993) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_xmtpv3_checksum_method_ffixmtpclient_change_recovery_identifier() != 39513) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_xmtpv3_checksum_method_ffixmtpclient_conversation() != 60290) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -9383,6 +9895,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_xmtpv3_checksum_method_ffixmtpclient_get_consent_state() != 58208) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_xmtpv3_checksum_method_ffixmtpclient_get_key_package_statuses_for_installation_ids() != 60893) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_xmtpv3_checksum_method_ffixmtpclient_get_latest_inbox_state() != 3165) {
