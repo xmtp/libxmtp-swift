@@ -547,7 +547,7 @@ fileprivate struct FfiConverterData: FfiConverterRustBuffer {
 
 
 
-public protocol FfiConsentCallback: AnyObject {
+public protocol FfiConsentCallback: AnyObject, Sendable {
     
     func onConsentUpdate(consent: [FfiConsent]) 
     
@@ -568,6 +568,9 @@ open class FfiConsentCallbackImpl: FfiConsentCallback, @unchecked Sendable {
     // TODO: We'd like this to be `private` but for Swifty reasons,
     // we can't implement `FfiConverter` without making this `required` and we can't
     // make it `required` without making it `public`.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
     required public init(unsafeFromRawPointer pointer: UnsafeMutableRawPointer) {
         self.pointer = pointer
     }
@@ -756,7 +759,7 @@ public func FfiConverterTypeFfiConsentCallback_lower(_ value: FfiConsentCallback
 
 
 
-public protocol FfiConversationProtocol: AnyObject {
+public protocol FfiConversationProtocol: AnyObject, Sendable {
     
     func addAdmin(inboxId: String) async throws 
     
@@ -869,6 +872,9 @@ open class FfiConversation: FfiConversationProtocol, @unchecked Sendable {
     // TODO: We'd like this to be `private` but for Swifty reasons,
     // we can't implement `FfiConverter` without making this `required` and we can't
     // make it `required` without making it `public`.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
     required public init(unsafeFromRawPointer pointer: UnsafeMutableRawPointer) {
         self.pointer = pointer
     }
@@ -917,7 +923,7 @@ open func addAdmin(inboxId: String)async throws   {
             completeFunc: ffi_xmtpv3_rust_future_complete_void,
             freeFunc: ffi_xmtpv3_rust_future_free_void,
             liftFunc: { $0 },
-            errorHandler: FfiConverterTypeGenericError.lift
+            errorHandler: FfiConverterTypeGenericError_lift
         )
 }
     
@@ -934,7 +940,7 @@ open func addMembers(accountIdentifiers: [FfiIdentifier])async throws  -> FfiUpd
             completeFunc: ffi_xmtpv3_rust_future_complete_rust_buffer,
             freeFunc: ffi_xmtpv3_rust_future_free_rust_buffer,
             liftFunc: FfiConverterTypeFfiUpdateGroupMembershipResult_lift,
-            errorHandler: FfiConverterTypeGenericError.lift
+            errorHandler: FfiConverterTypeGenericError_lift
         )
 }
     
@@ -951,7 +957,7 @@ open func addMembersByInboxId(inboxIds: [String])async throws  -> FfiUpdateGroup
             completeFunc: ffi_xmtpv3_rust_future_complete_rust_buffer,
             freeFunc: ffi_xmtpv3_rust_future_free_rust_buffer,
             liftFunc: FfiConverterTypeFfiUpdateGroupMembershipResult_lift,
-            errorHandler: FfiConverterTypeGenericError.lift
+            errorHandler: FfiConverterTypeGenericError_lift
         )
 }
     
@@ -968,7 +974,7 @@ open func addSuperAdmin(inboxId: String)async throws   {
             completeFunc: ffi_xmtpv3_rust_future_complete_void,
             freeFunc: ffi_xmtpv3_rust_future_free_void,
             liftFunc: { $0 },
-            errorHandler: FfiConverterTypeGenericError.lift
+            errorHandler: FfiConverterTypeGenericError_lift
         )
 }
     
@@ -1013,7 +1019,7 @@ open func conversationType()async throws  -> FfiConversationType  {
             completeFunc: ffi_xmtpv3_rust_future_complete_rust_buffer,
             freeFunc: ffi_xmtpv3_rust_future_free_rust_buffer,
             liftFunc: FfiConverterTypeFfiConversationType_lift,
-            errorHandler: FfiConverterTypeGenericError.lift
+            errorHandler: FfiConverterTypeGenericError_lift
         )
 }
     
@@ -1044,7 +1050,7 @@ open func findMessages(opts: FfiListMessagesOptions)async throws  -> [FfiMessage
             completeFunc: ffi_xmtpv3_rust_future_complete_rust_buffer,
             freeFunc: ffi_xmtpv3_rust_future_free_rust_buffer,
             liftFunc: FfiConverterSequenceTypeFfiMessage.lift,
-            errorHandler: FfiConverterTypeGenericError.lift
+            errorHandler: FfiConverterTypeGenericError_lift
         )
 }
     
@@ -1061,7 +1067,7 @@ open func findMessagesWithReactions(opts: FfiListMessagesOptions)async throws  -
             completeFunc: ffi_xmtpv3_rust_future_complete_rust_buffer,
             freeFunc: ffi_xmtpv3_rust_future_free_rust_buffer,
             liftFunc: FfiConverterSequenceTypeFfiMessageWithReactions.lift,
-            errorHandler: FfiConverterTypeGenericError.lift
+            errorHandler: FfiConverterTypeGenericError_lift
         )
 }
     
@@ -1099,7 +1105,7 @@ open func groupMetadata()async throws  -> FfiConversationMetadata  {
             completeFunc: ffi_xmtpv3_rust_future_complete_pointer,
             freeFunc: ffi_xmtpv3_rust_future_free_pointer,
             liftFunc: FfiConverterTypeFfiConversationMetadata_lift,
-            errorHandler: FfiConverterTypeGenericError.lift
+            errorHandler: FfiConverterTypeGenericError_lift
         )
 }
     
@@ -1167,7 +1173,7 @@ open func listMembers()async throws  -> [FfiConversationMember]  {
             completeFunc: ffi_xmtpv3_rust_future_complete_rust_buffer,
             freeFunc: ffi_xmtpv3_rust_future_free_rust_buffer,
             liftFunc: FfiConverterSequenceTypeFfiConversationMember.lift,
-            errorHandler: FfiConverterTypeGenericError.lift
+            errorHandler: FfiConverterTypeGenericError_lift
         )
 }
     
@@ -1191,7 +1197,7 @@ open func processStreamedConversationMessage(envelopeBytes: Data)async throws  -
             completeFunc: ffi_xmtpv3_rust_future_complete_rust_buffer,
             freeFunc: ffi_xmtpv3_rust_future_free_rust_buffer,
             liftFunc: FfiConverterTypeFfiMessage_lift,
-            errorHandler: FfiConverterTypeFfiSubscribeError.lift
+            errorHandler: FfiConverterTypeFfiSubscribeError_lift
         )
 }
     
@@ -1211,7 +1217,7 @@ open func publishMessages()async throws   {
             completeFunc: ffi_xmtpv3_rust_future_complete_void,
             freeFunc: ffi_xmtpv3_rust_future_free_void,
             liftFunc: { $0 },
-            errorHandler: FfiConverterTypeGenericError.lift
+            errorHandler: FfiConverterTypeGenericError_lift
         )
 }
     
@@ -1228,7 +1234,7 @@ open func removeAdmin(inboxId: String)async throws   {
             completeFunc: ffi_xmtpv3_rust_future_complete_void,
             freeFunc: ffi_xmtpv3_rust_future_free_void,
             liftFunc: { $0 },
-            errorHandler: FfiConverterTypeGenericError.lift
+            errorHandler: FfiConverterTypeGenericError_lift
         )
 }
     
@@ -1245,7 +1251,7 @@ open func removeConversationMessageDisappearingSettings()async throws   {
             completeFunc: ffi_xmtpv3_rust_future_complete_void,
             freeFunc: ffi_xmtpv3_rust_future_free_void,
             liftFunc: { $0 },
-            errorHandler: FfiConverterTypeGenericError.lift
+            errorHandler: FfiConverterTypeGenericError_lift
         )
 }
     
@@ -1262,7 +1268,7 @@ open func removeMembers(accountIdentifiers: [FfiIdentifier])async throws   {
             completeFunc: ffi_xmtpv3_rust_future_complete_void,
             freeFunc: ffi_xmtpv3_rust_future_free_void,
             liftFunc: { $0 },
-            errorHandler: FfiConverterTypeGenericError.lift
+            errorHandler: FfiConverterTypeGenericError_lift
         )
 }
     
@@ -1279,7 +1285,7 @@ open func removeMembersByInboxId(inboxIds: [String])async throws   {
             completeFunc: ffi_xmtpv3_rust_future_complete_void,
             freeFunc: ffi_xmtpv3_rust_future_free_void,
             liftFunc: { $0 },
-            errorHandler: FfiConverterTypeGenericError.lift
+            errorHandler: FfiConverterTypeGenericError_lift
         )
 }
     
@@ -1296,7 +1302,7 @@ open func removeSuperAdmin(inboxId: String)async throws   {
             completeFunc: ffi_xmtpv3_rust_future_complete_void,
             freeFunc: ffi_xmtpv3_rust_future_free_void,
             liftFunc: { $0 },
-            errorHandler: FfiConverterTypeGenericError.lift
+            errorHandler: FfiConverterTypeGenericError_lift
         )
 }
     
@@ -1313,7 +1319,7 @@ open func send(contentBytes: Data)async throws  -> Data  {
             completeFunc: ffi_xmtpv3_rust_future_complete_rust_buffer,
             freeFunc: ffi_xmtpv3_rust_future_free_rust_buffer,
             liftFunc: FfiConverterData.lift,
-            errorHandler: FfiConverterTypeGenericError.lift
+            errorHandler: FfiConverterTypeGenericError_lift
         )
 }
     
@@ -1341,7 +1347,7 @@ open func sendText(text: String)async throws  -> Data  {
             completeFunc: ffi_xmtpv3_rust_future_complete_rust_buffer,
             freeFunc: ffi_xmtpv3_rust_future_free_rust_buffer,
             liftFunc: FfiConverterData.lift,
-            errorHandler: FfiConverterTypeGenericError.lift
+            errorHandler: FfiConverterTypeGenericError_lift
         )
 }
     
@@ -1383,7 +1389,7 @@ open func sync()async throws   {
             completeFunc: ffi_xmtpv3_rust_future_complete_void,
             freeFunc: ffi_xmtpv3_rust_future_free_void,
             liftFunc: { $0 },
-            errorHandler: FfiConverterTypeGenericError.lift
+            errorHandler: FfiConverterTypeGenericError_lift
         )
 }
     
@@ -1407,7 +1413,7 @@ open func updateConversationMessageDisappearingSettings(settings: FfiMessageDisa
             completeFunc: ffi_xmtpv3_rust_future_complete_void,
             freeFunc: ffi_xmtpv3_rust_future_free_void,
             liftFunc: { $0 },
-            errorHandler: FfiConverterTypeGenericError.lift
+            errorHandler: FfiConverterTypeGenericError_lift
         )
 }
     
@@ -1424,7 +1430,7 @@ open func updateGroupDescription(groupDescription: String)async throws   {
             completeFunc: ffi_xmtpv3_rust_future_complete_void,
             freeFunc: ffi_xmtpv3_rust_future_free_void,
             liftFunc: { $0 },
-            errorHandler: FfiConverterTypeGenericError.lift
+            errorHandler: FfiConverterTypeGenericError_lift
         )
 }
     
@@ -1441,7 +1447,7 @@ open func updateGroupImageUrlSquare(groupImageUrlSquare: String)async throws   {
             completeFunc: ffi_xmtpv3_rust_future_complete_void,
             freeFunc: ffi_xmtpv3_rust_future_free_void,
             liftFunc: { $0 },
-            errorHandler: FfiConverterTypeGenericError.lift
+            errorHandler: FfiConverterTypeGenericError_lift
         )
 }
     
@@ -1458,7 +1464,7 @@ open func updateGroupName(groupName: String)async throws   {
             completeFunc: ffi_xmtpv3_rust_future_complete_void,
             freeFunc: ffi_xmtpv3_rust_future_free_void,
             liftFunc: { $0 },
-            errorHandler: FfiConverterTypeGenericError.lift
+            errorHandler: FfiConverterTypeGenericError_lift
         )
 }
     
@@ -1475,7 +1481,7 @@ open func updatePermissionPolicy(permissionUpdateType: FfiPermissionUpdateType, 
             completeFunc: ffi_xmtpv3_rust_future_complete_void,
             freeFunc: ffi_xmtpv3_rust_future_free_void,
             liftFunc: { $0 },
-            errorHandler: FfiConverterTypeGenericError.lift
+            errorHandler: FfiConverterTypeGenericError_lift
         )
 }
     
@@ -1537,7 +1543,7 @@ public func FfiConverterTypeFfiConversation_lower(_ value: FfiConversation) -> U
 
 
 
-public protocol FfiConversationCallback: AnyObject {
+public protocol FfiConversationCallback: AnyObject, Sendable {
     
     func onConversation(conversation: FfiConversation) 
     
@@ -1558,6 +1564,9 @@ open class FfiConversationCallbackImpl: FfiConversationCallback, @unchecked Send
     // TODO: We'd like this to be `private` but for Swifty reasons,
     // we can't implement `FfiConverter` without making this `required` and we can't
     // make it `required` without making it `public`.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
     required public init(unsafeFromRawPointer pointer: UnsafeMutableRawPointer) {
         self.pointer = pointer
     }
@@ -1740,7 +1749,7 @@ public func FfiConverterTypeFfiConversationCallback_lower(_ value: FfiConversati
 
 
 
-public protocol FfiConversationListItemProtocol: AnyObject {
+public protocol FfiConversationListItemProtocol: AnyObject, Sendable {
     
     func conversation()  -> FfiConversation
     
@@ -1761,6 +1770,9 @@ open class FfiConversationListItem: FfiConversationListItemProtocol, @unchecked 
     // TODO: We'd like this to be `private` but for Swifty reasons,
     // we can't implement `FfiConverter` without making this `required` and we can't
     // make it `required` without making it `public`.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
     required public init(unsafeFromRawPointer pointer: UnsafeMutableRawPointer) {
         self.pointer = pointer
     }
@@ -1868,7 +1880,7 @@ public func FfiConverterTypeFfiConversationListItem_lower(_ value: FfiConversati
 
 
 
-public protocol FfiConversationMetadataProtocol: AnyObject {
+public protocol FfiConversationMetadataProtocol: AnyObject, Sendable {
     
     func conversationType()  -> FfiConversationType
     
@@ -1889,6 +1901,9 @@ open class FfiConversationMetadata: FfiConversationMetadataProtocol, @unchecked 
     // TODO: We'd like this to be `private` but for Swifty reasons,
     // we can't implement `FfiConverter` without making this `required` and we can't
     // make it `required` without making it `public`.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
     required public init(unsafeFromRawPointer pointer: UnsafeMutableRawPointer) {
         self.pointer = pointer
     }
@@ -1996,7 +2011,7 @@ public func FfiConverterTypeFfiConversationMetadata_lower(_ value: FfiConversati
 
 
 
-public protocol FfiConversationsProtocol: AnyObject {
+public protocol FfiConversationsProtocol: AnyObject, Sendable {
     
     func createGroup(accountIdentities: [FfiIdentifier], opts: FfiCreateGroupOptions) async throws  -> FfiConversation
     
@@ -2061,6 +2076,9 @@ open class FfiConversations: FfiConversationsProtocol, @unchecked Sendable {
     // TODO: We'd like this to be `private` but for Swifty reasons,
     // we can't implement `FfiConverter` without making this `required` and we can't
     // make it `required` without making it `public`.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
     required public init(unsafeFromRawPointer pointer: UnsafeMutableRawPointer) {
         self.pointer = pointer
     }
@@ -2109,7 +2127,7 @@ open func createGroup(accountIdentities: [FfiIdentifier], opts: FfiCreateGroupOp
             completeFunc: ffi_xmtpv3_rust_future_complete_pointer,
             freeFunc: ffi_xmtpv3_rust_future_free_pointer,
             liftFunc: FfiConverterTypeFfiConversation_lift,
-            errorHandler: FfiConverterTypeGenericError.lift
+            errorHandler: FfiConverterTypeGenericError_lift
         )
 }
     
@@ -2126,7 +2144,7 @@ open func createGroupWithInboxIds(inboxIds: [String], opts: FfiCreateGroupOption
             completeFunc: ffi_xmtpv3_rust_future_complete_pointer,
             freeFunc: ffi_xmtpv3_rust_future_free_pointer,
             liftFunc: FfiConverterTypeFfiConversation_lift,
-            errorHandler: FfiConverterTypeGenericError.lift
+            errorHandler: FfiConverterTypeGenericError_lift
         )
 }
     
@@ -2143,7 +2161,7 @@ open func findOrCreateDm(targetIdentity: FfiIdentifier, opts: FfiCreateDmOptions
             completeFunc: ffi_xmtpv3_rust_future_complete_pointer,
             freeFunc: ffi_xmtpv3_rust_future_free_pointer,
             liftFunc: FfiConverterTypeFfiConversation_lift,
-            errorHandler: FfiConverterTypeGenericError.lift
+            errorHandler: FfiConverterTypeGenericError_lift
         )
 }
     
@@ -2160,7 +2178,7 @@ open func findOrCreateDmByInboxId(inboxId: String, opts: FfiCreateDmOptions)asyn
             completeFunc: ffi_xmtpv3_rust_future_complete_pointer,
             freeFunc: ffi_xmtpv3_rust_future_free_pointer,
             liftFunc: FfiConverterTypeFfiConversation_lift,
-            errorHandler: FfiConverterTypeGenericError.lift
+            errorHandler: FfiConverterTypeGenericError_lift
         )
 }
     
@@ -2208,7 +2226,7 @@ open func processStreamedWelcomeMessage(envelopeBytes: Data)async throws  -> Ffi
             completeFunc: ffi_xmtpv3_rust_future_complete_pointer,
             freeFunc: ffi_xmtpv3_rust_future_free_pointer,
             liftFunc: FfiConverterTypeFfiConversation_lift,
-            errorHandler: FfiConverterTypeGenericError.lift
+            errorHandler: FfiConverterTypeGenericError_lift
         )
 }
     
@@ -2395,7 +2413,7 @@ open func sync()async throws   {
             completeFunc: ffi_xmtpv3_rust_future_complete_void,
             freeFunc: ffi_xmtpv3_rust_future_free_void,
             liftFunc: { $0 },
-            errorHandler: FfiConverterTypeGenericError.lift
+            errorHandler: FfiConverterTypeGenericError_lift
         )
 }
     
@@ -2412,7 +2430,7 @@ open func syncAllConversations(consentStates: [FfiConsentState]?)async throws  -
             completeFunc: ffi_xmtpv3_rust_future_complete_u32,
             freeFunc: ffi_xmtpv3_rust_future_free_u32,
             liftFunc: FfiConverterUInt32.lift,
-            errorHandler: FfiConverterTypeGenericError.lift
+            errorHandler: FfiConverterTypeGenericError_lift
         )
 }
     
@@ -2474,7 +2492,7 @@ public func FfiConverterTypeFfiConversations_lower(_ value: FfiConversations) ->
 
 
 
-public protocol FfiGroupPermissionsProtocol: AnyObject {
+public protocol FfiGroupPermissionsProtocol: AnyObject, Sendable {
     
     func policySet() throws  -> FfiPermissionPolicySet
     
@@ -2495,6 +2513,9 @@ open class FfiGroupPermissions: FfiGroupPermissionsProtocol, @unchecked Sendable
     // TODO: We'd like this to be `private` but for Swifty reasons,
     // we can't implement `FfiConverter` without making this `required` and we can't
     // make it `required` without making it `public`.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
     required public init(unsafeFromRawPointer pointer: UnsafeMutableRawPointer) {
         self.pointer = pointer
     }
@@ -2602,7 +2623,7 @@ public func FfiConverterTypeFfiGroupPermissions_lower(_ value: FfiGroupPermissio
 
 
 
-public protocol FfiInboxOwner: AnyObject {
+public protocol FfiInboxOwner: AnyObject, Sendable {
     
     func getIdentifier() throws  -> FfiIdentifier
     
@@ -2623,6 +2644,9 @@ open class FfiInboxOwnerImpl: FfiInboxOwner, @unchecked Sendable {
     // TODO: We'd like this to be `private` but for Swifty reasons,
     // we can't implement `FfiConverter` without making this `required` and we can't
     // make it `required` without making it `public`.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
     required public init(unsafeFromRawPointer pointer: UnsafeMutableRawPointer) {
         self.pointer = pointer
     }
@@ -2806,7 +2830,7 @@ public func FfiConverterTypeFfiInboxOwner_lower(_ value: FfiInboxOwner) -> Unsaf
 
 
 
-public protocol FfiMessageCallback: AnyObject {
+public protocol FfiMessageCallback: AnyObject, Sendable {
     
     func onMessage(message: FfiMessage) 
     
@@ -2827,6 +2851,9 @@ open class FfiMessageCallbackImpl: FfiMessageCallback, @unchecked Sendable {
     // TODO: We'd like this to be `private` but for Swifty reasons,
     // we can't implement `FfiConverter` without making this `required` and we can't
     // make it `required` without making it `public`.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
     required public init(unsafeFromRawPointer pointer: UnsafeMutableRawPointer) {
         self.pointer = pointer
     }
@@ -3009,7 +3036,7 @@ public func FfiConverterTypeFfiMessageCallback_lower(_ value: FfiMessageCallback
 
 
 
-public protocol FfiPreferenceCallback: AnyObject {
+public protocol FfiPreferenceCallback: AnyObject, Sendable {
     
     func onPreferenceUpdate(preference: [FfiPreferenceUpdate]) 
     
@@ -3030,6 +3057,9 @@ open class FfiPreferenceCallbackImpl: FfiPreferenceCallback, @unchecked Sendable
     // TODO: We'd like this to be `private` but for Swifty reasons,
     // we can't implement `FfiConverter` without making this `required` and we can't
     // make it `required` without making it `public`.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
     required public init(unsafeFromRawPointer pointer: UnsafeMutableRawPointer) {
         self.pointer = pointer
     }
@@ -3212,7 +3242,7 @@ public func FfiConverterTypeFfiPreferenceCallback_lower(_ value: FfiPreferenceCa
 
 
 
-public protocol FfiSignatureRequestProtocol: AnyObject {
+public protocol FfiSignatureRequestProtocol: AnyObject, Sendable {
     
     func addEcdsaSignature(signatureBytes: Data) async throws 
     
@@ -3244,6 +3274,9 @@ open class FfiSignatureRequest: FfiSignatureRequestProtocol, @unchecked Sendable
     // TODO: We'd like this to be `private` but for Swifty reasons,
     // we can't implement `FfiConverter` without making this `required` and we can't
     // make it `required` without making it `public`.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
     required public init(unsafeFromRawPointer pointer: UnsafeMutableRawPointer) {
         self.pointer = pointer
     }
@@ -3292,7 +3325,7 @@ open func addEcdsaSignature(signatureBytes: Data)async throws   {
             completeFunc: ffi_xmtpv3_rust_future_complete_void,
             freeFunc: ffi_xmtpv3_rust_future_free_void,
             liftFunc: { $0 },
-            errorHandler: FfiConverterTypeGenericError.lift
+            errorHandler: FfiConverterTypeGenericError_lift
         )
 }
     
@@ -3309,7 +3342,7 @@ open func addPasskeySignature(signature: FfiPasskeySignature)async throws   {
             completeFunc: ffi_xmtpv3_rust_future_complete_void,
             freeFunc: ffi_xmtpv3_rust_future_free_void,
             liftFunc: { $0 },
-            errorHandler: FfiConverterTypeGenericError.lift
+            errorHandler: FfiConverterTypeGenericError_lift
         )
 }
     
@@ -3326,7 +3359,7 @@ open func addScwSignature(signatureBytes: Data, address: String, chainId: UInt64
             completeFunc: ffi_xmtpv3_rust_future_complete_void,
             freeFunc: ffi_xmtpv3_rust_future_free_void,
             liftFunc: { $0 },
-            errorHandler: FfiConverterTypeGenericError.lift
+            errorHandler: FfiConverterTypeGenericError_lift
         )
 }
     
@@ -3364,7 +3397,7 @@ open func missingAddressSignatures()async throws  -> [String]  {
             completeFunc: ffi_xmtpv3_rust_future_complete_rust_buffer,
             freeFunc: ffi_xmtpv3_rust_future_free_rust_buffer,
             liftFunc: FfiConverterSequenceString.lift,
-            errorHandler: FfiConverterTypeGenericError.lift
+            errorHandler: FfiConverterTypeGenericError_lift
         )
 }
     
@@ -3381,7 +3414,7 @@ open func signatureText()async throws  -> String  {
             completeFunc: ffi_xmtpv3_rust_future_complete_rust_buffer,
             freeFunc: ffi_xmtpv3_rust_future_free_rust_buffer,
             liftFunc: FfiConverterString.lift,
-            errorHandler: FfiConverterTypeGenericError.lift
+            errorHandler: FfiConverterTypeGenericError_lift
         )
 }
     
@@ -3443,7 +3476,7 @@ public func FfiConverterTypeFfiSignatureRequest_lower(_ value: FfiSignatureReque
 
 
 
-public protocol FfiStreamCloserProtocol: AnyObject {
+public protocol FfiStreamCloserProtocol: AnyObject, Sendable {
     
     /**
      * Signal the stream to end
@@ -3475,6 +3508,9 @@ open class FfiStreamCloser: FfiStreamCloserProtocol, @unchecked Sendable {
     // TODO: We'd like this to be `private` but for Swifty reasons,
     // we can't implement `FfiConverter` without making this `required` and we can't
     // make it `required` without making it `public`.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
     required public init(unsafeFromRawPointer pointer: UnsafeMutableRawPointer) {
         self.pointer = pointer
     }
@@ -3536,7 +3572,7 @@ open func endAndWait()async throws   {
             completeFunc: ffi_xmtpv3_rust_future_complete_void,
             freeFunc: ffi_xmtpv3_rust_future_free_void,
             liftFunc: { $0 },
-            errorHandler: FfiConverterTypeGenericError.lift
+            errorHandler: FfiConverterTypeGenericError_lift
         )
 }
     
@@ -3623,7 +3659,7 @@ public func FfiConverterTypeFfiStreamCloser_lower(_ value: FfiStreamCloser) -> U
 
 
 
-public protocol FfiXmtpClientProtocol: AnyObject {
+public protocol FfiXmtpClientProtocol: AnyObject, Sendable {
     
     /**
      * Adds a wallet address to the existing client
@@ -3752,6 +3788,9 @@ open class FfiXmtpClient: FfiXmtpClientProtocol, @unchecked Sendable {
     // TODO: We'd like this to be `private` but for Swifty reasons,
     // we can't implement `FfiConverter` without making this `required` and we can't
     // make it `required` without making it `public`.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
     required public init(unsafeFromRawPointer pointer: UnsafeMutableRawPointer) {
         self.pointer = pointer
     }
@@ -3803,7 +3842,7 @@ open func addIdentity(newIdentity: FfiIdentifier)async throws  -> FfiSignatureRe
             completeFunc: ffi_xmtpv3_rust_future_complete_pointer,
             freeFunc: ffi_xmtpv3_rust_future_free_pointer,
             liftFunc: FfiConverterTypeFfiSignatureRequest_lift,
-            errorHandler: FfiConverterTypeGenericError.lift
+            errorHandler: FfiConverterTypeGenericError_lift
         )
 }
     
@@ -3826,7 +3865,7 @@ open func addressesFromInboxId(refreshFromNetwork: Bool, inboxIds: [String])asyn
             completeFunc: ffi_xmtpv3_rust_future_complete_rust_buffer,
             freeFunc: ffi_xmtpv3_rust_future_free_rust_buffer,
             liftFunc: FfiConverterSequenceTypeFfiInboxState.lift,
-            errorHandler: FfiConverterTypeGenericError.lift
+            errorHandler: FfiConverterTypeGenericError_lift
         )
 }
     
@@ -3843,7 +3882,7 @@ open func applySignatureRequest(signatureRequest: FfiSignatureRequest)async thro
             completeFunc: ffi_xmtpv3_rust_future_complete_void,
             freeFunc: ffi_xmtpv3_rust_future_free_void,
             liftFunc: { $0 },
-            errorHandler: FfiConverterTypeGenericError.lift
+            errorHandler: FfiConverterTypeGenericError_lift
         )
 }
     
@@ -3864,7 +3903,7 @@ open func backupMetadata(path: String, key: Data)async throws  -> FfiBackupMetad
             completeFunc: ffi_xmtpv3_rust_future_complete_rust_buffer,
             freeFunc: ffi_xmtpv3_rust_future_free_rust_buffer,
             liftFunc: FfiConverterTypeFfiBackupMetadata_lift,
-            errorHandler: FfiConverterTypeGenericError.lift
+            errorHandler: FfiConverterTypeGenericError_lift
         )
 }
     
@@ -3884,7 +3923,7 @@ open func backupToFile(path: String, opts: FfiBackupOptions, key: Data)async thr
             completeFunc: ffi_xmtpv3_rust_future_complete_void,
             freeFunc: ffi_xmtpv3_rust_future_free_void,
             liftFunc: { $0 },
-            errorHandler: FfiConverterTypeGenericError.lift
+            errorHandler: FfiConverterTypeGenericError_lift
         )
 }
     
@@ -3901,7 +3940,7 @@ open func canMessage(accountIdentifiers: [FfiIdentifier])async throws  -> [FfiId
             completeFunc: ffi_xmtpv3_rust_future_complete_rust_buffer,
             freeFunc: ffi_xmtpv3_rust_future_free_rust_buffer,
             liftFunc: FfiConverterDictionaryTypeFfiIdentifierBool.lift,
-            errorHandler: FfiConverterTypeGenericError.lift
+            errorHandler: FfiConverterTypeGenericError_lift
         )
 }
     
@@ -3921,7 +3960,7 @@ open func changeRecoveryIdentifier(newRecoveryIdentifier: FfiIdentifier)async th
             completeFunc: ffi_xmtpv3_rust_future_complete_pointer,
             freeFunc: ffi_xmtpv3_rust_future_free_pointer,
             liftFunc: FfiConverterTypeFfiSignatureRequest_lift,
-            errorHandler: FfiConverterTypeGenericError.lift
+            errorHandler: FfiConverterTypeGenericError_lift
         )
 }
     
@@ -3953,7 +3992,7 @@ open func dbReconnect()async throws   {
             completeFunc: ffi_xmtpv3_rust_future_complete_void,
             freeFunc: ffi_xmtpv3_rust_future_free_void,
             liftFunc: { $0 },
-            errorHandler: FfiConverterTypeGenericError.lift
+            errorHandler: FfiConverterTypeGenericError_lift
         )
 }
     
@@ -3978,7 +4017,7 @@ open func findInboxId(identifier: FfiIdentifier)async throws  -> String?  {
             completeFunc: ffi_xmtpv3_rust_future_complete_rust_buffer,
             freeFunc: ffi_xmtpv3_rust_future_free_rust_buffer,
             liftFunc: FfiConverterOptionString.lift,
-            errorHandler: FfiConverterTypeGenericError.lift
+            errorHandler: FfiConverterTypeGenericError_lift
         )
 }
     
@@ -3995,7 +4034,7 @@ open func getConsentState(entityType: FfiConsentEntityType, entity: String)async
             completeFunc: ffi_xmtpv3_rust_future_complete_rust_buffer,
             freeFunc: ffi_xmtpv3_rust_future_free_rust_buffer,
             liftFunc: FfiConverterTypeFfiConsentState_lift,
-            errorHandler: FfiConverterTypeGenericError.lift
+            errorHandler: FfiConverterTypeGenericError_lift
         )
 }
     
@@ -4012,7 +4051,7 @@ open func getKeyPackageStatusesForInstallationIds(installationIds: [Data])async 
             completeFunc: ffi_xmtpv3_rust_future_complete_rust_buffer,
             freeFunc: ffi_xmtpv3_rust_future_free_rust_buffer,
             liftFunc: FfiConverterDictionaryDataTypeFfiKeyPackageStatus.lift,
-            errorHandler: FfiConverterTypeGenericError.lift
+            errorHandler: FfiConverterTypeGenericError_lift
         )
 }
     
@@ -4029,7 +4068,7 @@ open func getLatestInboxState(inboxId: String)async throws  -> FfiInboxState  {
             completeFunc: ffi_xmtpv3_rust_future_complete_rust_buffer,
             freeFunc: ffi_xmtpv3_rust_future_free_rust_buffer,
             liftFunc: FfiConverterTypeFfiInboxState_lift,
-            errorHandler: FfiConverterTypeGenericError.lift
+            errorHandler: FfiConverterTypeGenericError_lift
         )
 }
     
@@ -4049,7 +4088,7 @@ open func importFromFile(path: String, key: Data)async throws   {
             completeFunc: ffi_xmtpv3_rust_future_complete_void,
             freeFunc: ffi_xmtpv3_rust_future_free_void,
             liftFunc: { $0 },
-            errorHandler: FfiConverterTypeGenericError.lift
+            errorHandler: FfiConverterTypeGenericError_lift
         )
 }
     
@@ -4079,7 +4118,7 @@ open func inboxState(refreshFromNetwork: Bool)async throws  -> FfiInboxState  {
             completeFunc: ffi_xmtpv3_rust_future_complete_rust_buffer,
             freeFunc: ffi_xmtpv3_rust_future_free_rust_buffer,
             liftFunc: FfiConverterTypeFfiInboxState_lift,
-            errorHandler: FfiConverterTypeGenericError.lift
+            errorHandler: FfiConverterTypeGenericError_lift
         )
 }
     
@@ -4111,7 +4150,7 @@ open func registerIdentity(signatureRequest: FfiSignatureRequest)async throws   
             completeFunc: ffi_xmtpv3_rust_future_complete_void,
             freeFunc: ffi_xmtpv3_rust_future_free_void,
             liftFunc: { $0 },
-            errorHandler: FfiConverterTypeGenericError.lift
+            errorHandler: FfiConverterTypeGenericError_lift
         )
 }
     
@@ -4137,7 +4176,7 @@ open func revokeAllOtherInstallations()async throws  -> FfiSignatureRequest  {
             completeFunc: ffi_xmtpv3_rust_future_complete_pointer,
             freeFunc: ffi_xmtpv3_rust_future_free_pointer,
             liftFunc: FfiConverterTypeFfiSignatureRequest_lift,
-            errorHandler: FfiConverterTypeGenericError.lift
+            errorHandler: FfiConverterTypeGenericError_lift
         )
 }
     
@@ -4157,7 +4196,7 @@ open func revokeIdentity(identifier: FfiIdentifier)async throws  -> FfiSignature
             completeFunc: ffi_xmtpv3_rust_future_complete_pointer,
             freeFunc: ffi_xmtpv3_rust_future_free_pointer,
             liftFunc: FfiConverterTypeFfiSignatureRequest_lift,
-            errorHandler: FfiConverterTypeGenericError.lift
+            errorHandler: FfiConverterTypeGenericError_lift
         )
 }
     
@@ -4177,7 +4216,7 @@ open func revokeInstallations(installationIds: [Data])async throws  -> FfiSignat
             completeFunc: ffi_xmtpv3_rust_future_complete_pointer,
             freeFunc: ffi_xmtpv3_rust_future_free_pointer,
             liftFunc: FfiConverterTypeFfiSignatureRequest_lift,
-            errorHandler: FfiConverterTypeGenericError.lift
+            errorHandler: FfiConverterTypeGenericError_lift
         )
 }
     
@@ -4197,7 +4236,7 @@ open func sendSyncRequest(kind: FfiDeviceSyncKind)async throws   {
             completeFunc: ffi_xmtpv3_rust_future_complete_void,
             freeFunc: ffi_xmtpv3_rust_future_free_void,
             liftFunc: { $0 },
-            errorHandler: FfiConverterTypeGenericError.lift
+            errorHandler: FfiConverterTypeGenericError_lift
         )
 }
     
@@ -4214,7 +4253,7 @@ open func setConsentStates(records: [FfiConsent])async throws   {
             completeFunc: ffi_xmtpv3_rust_future_complete_void,
             freeFunc: ffi_xmtpv3_rust_future_free_void,
             liftFunc: { $0 },
-            errorHandler: FfiConverterTypeGenericError.lift
+            errorHandler: FfiConverterTypeGenericError_lift
         )
 }
     
@@ -4318,7 +4357,7 @@ public func FfiConverterTypeFfiXmtpClient_lower(_ value: FfiXmtpClient) -> Unsaf
 
 
 
-public protocol XmtpApiClientProtocol: AnyObject {
+public protocol XmtpApiClientProtocol: AnyObject, Sendable {
     
 }
 open class XmtpApiClient: XmtpApiClientProtocol, @unchecked Sendable {
@@ -4335,6 +4374,9 @@ open class XmtpApiClient: XmtpApiClientProtocol, @unchecked Sendable {
     // TODO: We'd like this to be `private` but for Swifty reasons,
     // we can't implement `FfiConverter` without making this `required` and we can't
     // make it `required` without making it `public`.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
     required public init(unsafeFromRawPointer pointer: UnsafeMutableRawPointer) {
         self.pointer = pointer
     }
@@ -7952,7 +7994,7 @@ extension FfiReactionSchema: Equatable, Hashable {}
 
 
 
-public enum FfiSubscribeError {
+public enum FfiSubscribeError: Swift.Error {
 
     
     
@@ -8033,7 +8075,7 @@ extension FfiSubscribeError: Foundation.LocalizedError {
 
 
 
-public enum GenericError {
+public enum GenericError: Swift.Error {
 
     
     
@@ -8290,7 +8332,7 @@ extension GenericError: Foundation.LocalizedError {
 
 
 
-public enum IdentityValidationError {
+public enum IdentityValidationError: Swift.Error {
 
     
     
@@ -8363,7 +8405,7 @@ extension IdentityValidationError: Foundation.LocalizedError {
 
 
 
-public enum SigningError {
+public enum SigningError: Swift.Error {
 
     
     
@@ -9399,7 +9441,7 @@ public func connectToBackend(host: String, isSecure: Bool)async throws  -> XmtpA
             completeFunc: ffi_xmtpv3_rust_future_complete_pointer,
             freeFunc: ffi_xmtpv3_rust_future_free_pointer,
             liftFunc: FfiConverterTypeXmtpApiClient_lift,
-            errorHandler: FfiConverterTypeGenericError.lift
+            errorHandler: FfiConverterTypeGenericError_lift
         )
 }
 /**
@@ -9434,7 +9476,7 @@ public func createClient(api: XmtpApiClient, db: String?, encryptionKey: Data?, 
             completeFunc: ffi_xmtpv3_rust_future_complete_pointer,
             freeFunc: ffi_xmtpv3_rust_future_free_pointer,
             liftFunc: FfiConverterTypeFfiXmtpClient_lift,
-            errorHandler: FfiConverterTypeGenericError.lift
+            errorHandler: FfiConverterTypeGenericError_lift
         )
 }
 public func decodeMultiRemoteAttachment(bytes: Data)throws  -> FfiMultiRemoteAttachment  {
@@ -9524,7 +9566,7 @@ public func getInboxIdForIdentifier(api: XmtpApiClient, accountIdentifier: FfiId
             completeFunc: ffi_xmtpv3_rust_future_complete_rust_buffer,
             freeFunc: ffi_xmtpv3_rust_future_free_rust_buffer,
             liftFunc: FfiConverterOptionString.lift,
-            errorHandler: FfiConverterTypeGenericError.lift
+            errorHandler: FfiConverterTypeGenericError_lift
         )
 }
 public func getVersionInfo() -> String  {
