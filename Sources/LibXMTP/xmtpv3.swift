@@ -3762,6 +3762,8 @@ public protocol FfiXmtpClientProtocol: AnyObject, Sendable {
     
     func signatureRequest()  -> FfiSignatureRequest?
     
+    func syncPreferences() async throws  -> UInt32
+    
     /**
      * A utility function to easily verify that a piece of text was signed by this installation.
      */
@@ -4273,6 +4275,23 @@ open func signatureRequest() -> FfiSignatureRequest?  {
     uniffi_xmtpv3_fn_method_ffixmtpclient_signature_request(self.uniffiClonePointer(),$0
     )
 })
+}
+    
+open func syncPreferences()async throws  -> UInt32  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_xmtpv3_fn_method_ffixmtpclient_sync_preferences(
+                    self.uniffiClonePointer()
+                    
+                )
+            },
+            pollFunc: ffi_xmtpv3_rust_future_poll_u32,
+            completeFunc: ffi_xmtpv3_rust_future_complete_u32,
+            freeFunc: ffi_xmtpv3_rust_future_free_u32,
+            liftFunc: FfiConverterUInt32.lift,
+            errorHandler: FfiConverterTypeGenericError_lift
+        )
 }
     
     /**
@@ -8074,6 +8093,73 @@ extension FfiSubscribeError: Foundation.LocalizedError {
 }
 
 
+// Note that we don't yet support `indirect` for enums.
+// See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
+
+public enum FfiSyncWorkerMode {
+    
+    case enabled
+    case disabled
+}
+
+
+#if compiler(>=6)
+extension FfiSyncWorkerMode: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeFfiSyncWorkerMode: FfiConverterRustBuffer {
+    typealias SwiftType = FfiSyncWorkerMode
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiSyncWorkerMode {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .enabled
+        
+        case 2: return .disabled
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: FfiSyncWorkerMode, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .enabled:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .disabled:
+            writeInt(&buf, Int32(2))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFfiSyncWorkerMode_lift(_ buf: RustBuffer) throws -> FfiSyncWorkerMode {
+    return try FfiConverterTypeFfiSyncWorkerMode.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFfiSyncWorkerMode_lower(_ value: FfiSyncWorkerMode) -> RustBuffer {
+    return FfiConverterTypeFfiSyncWorkerMode.lower(value)
+}
+
+
+extension FfiSyncWorkerMode: Equatable, Hashable {}
+
+
+
 
 public enum GenericError: Swift.Error {
 
@@ -8836,6 +8922,30 @@ fileprivate struct FfiConverterOptionTypeFfiMetadataField: FfiConverterRustBuffe
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterOptionTypeFfiSyncWorkerMode: FfiConverterRustBuffer {
+    typealias SwiftType = FfiSyncWorkerMode?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeFfiSyncWorkerMode.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeFfiSyncWorkerMode.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterOptionSequenceTypeFfiConsentState: FfiConverterRustBuffer {
     typealias SwiftType = [FfiConsentState]?
 
@@ -9465,11 +9575,11 @@ public func connectToBackend(host: String, isSecure: Bool)async throws  -> XmtpA
  * xmtp.create_client(account_identifier, nonce, inbox_id, Option<legacy_signed_private_key_proto>)
  * ```
  */
-public func createClient(api: XmtpApiClient, db: String?, encryptionKey: Data?, inboxId: String, accountIdentifier: FfiIdentifier, nonce: UInt64, legacySignedPrivateKeyProto: Data?, historySyncUrl: String?)async throws  -> FfiXmtpClient  {
+public func createClient(api: XmtpApiClient, db: String?, encryptionKey: Data?, inboxId: String, accountIdentifier: FfiIdentifier, nonce: UInt64, legacySignedPrivateKeyProto: Data?, historySyncUrl: String?, syncWorkerMode: FfiSyncWorkerMode?)async throws  -> FfiXmtpClient  {
     return
         try  await uniffiRustCallAsync(
             rustFutureFunc: {
-                uniffi_xmtpv3_fn_func_create_client(FfiConverterTypeXmtpApiClient_lower(api),FfiConverterOptionString.lower(db),FfiConverterOptionData.lower(encryptionKey),FfiConverterString.lower(inboxId),FfiConverterTypeFfiIdentifier_lower(accountIdentifier),FfiConverterUInt64.lower(nonce),FfiConverterOptionData.lower(legacySignedPrivateKeyProto),FfiConverterOptionString.lower(historySyncUrl)
+                uniffi_xmtpv3_fn_func_create_client(FfiConverterTypeXmtpApiClient_lower(api),FfiConverterOptionString.lower(db),FfiConverterOptionData.lower(encryptionKey),FfiConverterString.lower(inboxId),FfiConverterTypeFfiIdentifier_lower(accountIdentifier),FfiConverterUInt64.lower(nonce),FfiConverterOptionData.lower(legacySignedPrivateKeyProto),FfiConverterOptionString.lower(historySyncUrl),FfiConverterOptionTypeFfiSyncWorkerMode.lower(syncWorkerMode)
                 )
             },
             pollFunc: ffi_xmtpv3_rust_future_poll_pointer,
@@ -9594,7 +9704,7 @@ private let initializationResult: InitializationResult = {
     if (uniffi_xmtpv3_checksum_func_connect_to_backend() != 26018) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_xmtpv3_checksum_func_create_client() != 43874) {
+    if (uniffi_xmtpv3_checksum_func_create_client() != 35135) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_xmtpv3_checksum_func_decode_multi_remote_attachment() != 59746) {
@@ -9985,6 +10095,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_xmtpv3_checksum_method_ffixmtpclient_signature_request() != 18270) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_xmtpv3_checksum_method_ffixmtpclient_sync_preferences() != 23343) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_xmtpv3_checksum_method_ffixmtpclient_verify_signed_with_installation_key() != 3285) {
