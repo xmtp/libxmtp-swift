@@ -3762,7 +3762,7 @@ public protocol FfiXmtpClientProtocol: AnyObject, Sendable {
     
     func signatureRequest()  -> FfiSignatureRequest?
     
-    func syncPreferences() async throws  -> UInt32
+    func syncPreferences() async throws  -> UInt64
     
     /**
      * A utility function to easily verify that a piece of text was signed by this installation.
@@ -4277,7 +4277,7 @@ open func signatureRequest() -> FfiSignatureRequest?  {
 })
 }
     
-open func syncPreferences()async throws  -> UInt32  {
+open func syncPreferences()async throws  -> UInt64  {
     return
         try  await uniffiRustCallAsync(
             rustFutureFunc: {
@@ -4286,10 +4286,10 @@ open func syncPreferences()async throws  -> UInt32  {
                     
                 )
             },
-            pollFunc: ffi_xmtpv3_rust_future_poll_u32,
-            completeFunc: ffi_xmtpv3_rust_future_complete_u32,
-            freeFunc: ffi_xmtpv3_rust_future_free_u32,
-            liftFunc: FfiConverterUInt32.lift,
+            pollFunc: ffi_xmtpv3_rust_future_poll_u64,
+            completeFunc: ffi_xmtpv3_rust_future_complete_u64,
+            freeFunc: ffi_xmtpv3_rust_future_free_u64,
+            liftFunc: FfiConverterUInt64.lift,
             errorHandler: FfiConverterTypeGenericError_lift
         )
 }
@@ -10097,7 +10097,7 @@ private let initializationResult: InitializationResult = {
     if (uniffi_xmtpv3_checksum_method_ffixmtpclient_signature_request() != 18270) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_xmtpv3_checksum_method_ffixmtpclient_sync_preferences() != 23343) {
+    if (uniffi_xmtpv3_checksum_method_ffixmtpclient_sync_preferences() != 59168) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_xmtpv3_checksum_method_ffixmtpclient_verify_signed_with_installation_key() != 3285) {
