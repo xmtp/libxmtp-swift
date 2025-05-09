@@ -8009,7 +8009,7 @@ extension FfiPermissionUpdateType: Equatable, Hashable {}
 
 public enum FfiPreferenceUpdate {
     
-    case hmac(key: Data, cycledAtNs: Int64
+    case hmac(key: Data
     )
 }
 
@@ -8028,7 +8028,7 @@ public struct FfiConverterTypeFfiPreferenceUpdate: FfiConverterRustBuffer {
         let variant: Int32 = try readInt(&buf)
         switch variant {
         
-        case 1: return .hmac(key: try FfiConverterData.read(from: &buf), cycledAtNs: try FfiConverterInt64.read(from: &buf)
+        case 1: return .hmac(key: try FfiConverterData.read(from: &buf)
         )
         
         default: throw UniffiInternalError.unexpectedEnumCase
@@ -8039,10 +8039,9 @@ public struct FfiConverterTypeFfiPreferenceUpdate: FfiConverterRustBuffer {
         switch value {
         
         
-        case let .hmac(key,cycledAtNs):
+        case let .hmac(key):
             writeInt(&buf, Int32(1))
             FfiConverterData.write(key, into: &buf)
-            FfiConverterInt64.write(cycledAtNs, into: &buf)
             
         }
     }
