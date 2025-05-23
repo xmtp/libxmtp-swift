@@ -395,7 +395,13 @@ fileprivate final class UniffiHandleMap<T>: @unchecked Sendable {
 
 
 // Public interface members begin here.
-
+// Magic number for the Rust proxy to call using the same mechanism as every other method,
+// to free the callback once it's dropped by Rust.
+private let IDX_CALLBACK_FREE: Int32 = 0
+// Callback return codes
+private let UNIFFI_CALLBACK_SUCCESS: Int32 = 0
+private let UNIFFI_CALLBACK_ERROR: Int32 = 1
+private let UNIFFI_CALLBACK_UNEXPECTED_ERROR: Int32 = 2
 
 #if swift(>=5.8)
 @_documentation(visibility: private)
@@ -622,13 +628,7 @@ open func onError(error: FfiSubscribeError)  {try! rustCall() {
     
 
 }
-// Magic number for the Rust proxy to call using the same mechanism as every other method,
-// to free the callback once it's dropped by Rust.
-private let IDX_CALLBACK_FREE: Int32 = 0
-// Callback return codes
-private let UNIFFI_CALLBACK_SUCCESS: Int32 = 0
-private let UNIFFI_CALLBACK_ERROR: Int32 = 1
-private let UNIFFI_CALLBACK_UNEXPECTED_ERROR: Int32 = 2
+
 
 // Put the implementation in a struct so we don't pollute the top-level namespace
 fileprivate struct UniffiCallbackInterfaceFfiConsentCallback {
@@ -791,7 +791,7 @@ public protocol FfiConversationProtocol: AnyObject, Sendable {
     
     func findMessagesWithReactions(opts: FfiListMessagesOptions) async throws  -> [FfiMessageWithReactions]
     
-    func getHmacKeys() throws  -> [FfiHmacKey]
+    func getHmacKeys() throws  -> [Data: [FfiHmacKey]]
     
     func groupDescription() throws  -> String
     
@@ -1109,8 +1109,8 @@ open func findMessagesWithReactions(opts: FfiListMessagesOptions)async throws  -
         )
 }
     
-open func getHmacKeys()throws  -> [FfiHmacKey]  {
-    return try  FfiConverterSequenceTypeFfiHmacKey.lift(try rustCallWithError(FfiConverterTypeGenericError_lift) {
+open func getHmacKeys()throws  -> [Data: [FfiHmacKey]]  {
+    return try  FfiConverterDictionaryDataSequenceTypeFfiHmacKey.lift(try rustCallWithError(FfiConverterTypeGenericError_lift) {
     uniffi_xmtpv3_fn_method_fficonversation_get_hmac_keys(self.uniffiClonePointer(),$0
     )
 })
@@ -2101,8 +2101,6 @@ public protocol FfiConversationsProtocol: AnyObject, Sendable {
     
     func syncAllConversations(consentStates: [FfiConsentState]?) async throws  -> UInt32
     
-    func syncDeviceSync() async throws 
-    
 }
 open class FfiConversations: FfiConversationsProtocol, @unchecked Sendable {
     fileprivate let pointer: UnsafeMutableRawPointer!
@@ -2480,23 +2478,6 @@ open func syncAllConversations(consentStates: [FfiConsentState]?)async throws  -
             completeFunc: ffi_xmtpv3_rust_future_complete_u32,
             freeFunc: ffi_xmtpv3_rust_future_free_u32,
             liftFunc: FfiConverterUInt32.lift,
-            errorHandler: FfiConverterTypeGenericError_lift
-        )
-}
-    
-open func syncDeviceSync()async throws   {
-    return
-        try  await uniffiRustCallAsync(
-            rustFutureFunc: {
-                uniffi_xmtpv3_fn_method_fficonversations_sync_device_sync(
-                    self.uniffiClonePointer()
-                    
-                )
-            },
-            pollFunc: ffi_xmtpv3_rust_future_poll_void,
-            completeFunc: ffi_xmtpv3_rust_future_complete_void,
-            freeFunc: ffi_xmtpv3_rust_future_free_void,
-            liftFunc: { $0 },
             errorHandler: FfiConverterTypeGenericError_lift
         )
 }
@@ -3873,6 +3854,12 @@ public protocol FfiXmtpClientProtocol: AnyObject, Sendable {
      */
     func addressesFromInboxId(refreshFromNetwork: Bool, inboxIds: [String]) async throws  -> [FfiInboxState]
     
+    func apiAggregateStatistics()  -> String
+    
+    func apiIdentityStatistics()  -> FfiIdentityStats
+    
+    func apiStatistics()  -> FfiApiStats
+    
     func applySignatureRequest(signatureRequest: FfiSignatureRequest) async throws 
     
     /**
@@ -3962,6 +3949,11 @@ public protocol FfiXmtpClientProtocol: AnyObject, Sendable {
     func signatureRequest()  -> FfiSignatureRequest?
     
     func syncPreferences() async throws  -> UInt64
+    
+    /**
+     * Export an encrypted debug archive to a device sync server to inspect telemetry for debugging purposes.
+     */
+    func uploadDebugArchive(serverUrl: String) async throws  -> String
     
     /**
      * A utility function to easily verify that a piece of text was signed by this installation.
@@ -4068,6 +4060,27 @@ open func addressesFromInboxId(refreshFromNetwork: Bool, inboxIds: [String])asyn
             liftFunc: FfiConverterSequenceTypeFfiInboxState.lift,
             errorHandler: FfiConverterTypeGenericError_lift
         )
+}
+    
+open func apiAggregateStatistics() -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+    uniffi_xmtpv3_fn_method_ffixmtpclient_api_aggregate_statistics(self.uniffiClonePointer(),$0
+    )
+})
+}
+    
+open func apiIdentityStatistics() -> FfiIdentityStats  {
+    return try!  FfiConverterTypeFfiIdentityStats_lift(try! rustCall() {
+    uniffi_xmtpv3_fn_method_ffixmtpclient_api_identity_statistics(self.uniffiClonePointer(),$0
+    )
+})
+}
+    
+open func apiStatistics() -> FfiApiStats  {
+    return try!  FfiConverterTypeFfiApiStats_lift(try! rustCall() {
+    uniffi_xmtpv3_fn_method_ffixmtpclient_api_statistics(self.uniffiClonePointer(),$0
+    )
+})
 }
     
 open func applySignatureRequest(signatureRequest: FfiSignatureRequest)async throws   {
@@ -4494,6 +4507,26 @@ open func syncPreferences()async throws  -> UInt64  {
 }
     
     /**
+     * Export an encrypted debug archive to a device sync server to inspect telemetry for debugging purposes.
+     */
+open func uploadDebugArchive(serverUrl: String)async throws  -> String  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_xmtpv3_fn_method_ffixmtpclient_upload_debug_archive(
+                    self.uniffiClonePointer(),
+                    FfiConverterString.lower(serverUrl)
+                )
+            },
+            pollFunc: ffi_xmtpv3_rust_future_poll_rust_buffer,
+            completeFunc: ffi_xmtpv3_rust_future_complete_rust_buffer,
+            freeFunc: ffi_xmtpv3_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterString.lift,
+            errorHandler: FfiConverterTypeGenericError_lift
+        )
+}
+    
+    /**
      * A utility function to easily verify that a piece of text was signed by this installation.
      */
 open func verifySignedWithInstallationKey(signatureText: String, signatureBytes: Data)throws   {try rustCallWithError(FfiConverterTypeGenericError_lift) {
@@ -4684,6 +4717,124 @@ public func FfiConverterTypeXmtpApiClient_lower(_ value: XmtpApiClient) -> Unsaf
 }
 
 
+
+
+public struct FfiApiStats {
+    public var uploadKeyPackage: UInt64
+    public var fetchKeyPackage: UInt64
+    public var sendGroupMessages: UInt64
+    public var sendWelcomeMessages: UInt64
+    public var queryGroupMessages: UInt64
+    public var queryWelcomeMessages: UInt64
+    public var subscribeMessages: UInt64
+    public var subscribeWelcomes: UInt64
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(uploadKeyPackage: UInt64, fetchKeyPackage: UInt64, sendGroupMessages: UInt64, sendWelcomeMessages: UInt64, queryGroupMessages: UInt64, queryWelcomeMessages: UInt64, subscribeMessages: UInt64, subscribeWelcomes: UInt64) {
+        self.uploadKeyPackage = uploadKeyPackage
+        self.fetchKeyPackage = fetchKeyPackage
+        self.sendGroupMessages = sendGroupMessages
+        self.sendWelcomeMessages = sendWelcomeMessages
+        self.queryGroupMessages = queryGroupMessages
+        self.queryWelcomeMessages = queryWelcomeMessages
+        self.subscribeMessages = subscribeMessages
+        self.subscribeWelcomes = subscribeWelcomes
+    }
+}
+
+#if compiler(>=6)
+extension FfiApiStats: Sendable {}
+#endif
+
+
+extension FfiApiStats: Equatable, Hashable {
+    public static func ==(lhs: FfiApiStats, rhs: FfiApiStats) -> Bool {
+        if lhs.uploadKeyPackage != rhs.uploadKeyPackage {
+            return false
+        }
+        if lhs.fetchKeyPackage != rhs.fetchKeyPackage {
+            return false
+        }
+        if lhs.sendGroupMessages != rhs.sendGroupMessages {
+            return false
+        }
+        if lhs.sendWelcomeMessages != rhs.sendWelcomeMessages {
+            return false
+        }
+        if lhs.queryGroupMessages != rhs.queryGroupMessages {
+            return false
+        }
+        if lhs.queryWelcomeMessages != rhs.queryWelcomeMessages {
+            return false
+        }
+        if lhs.subscribeMessages != rhs.subscribeMessages {
+            return false
+        }
+        if lhs.subscribeWelcomes != rhs.subscribeWelcomes {
+            return false
+        }
+        return true
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(uploadKeyPackage)
+        hasher.combine(fetchKeyPackage)
+        hasher.combine(sendGroupMessages)
+        hasher.combine(sendWelcomeMessages)
+        hasher.combine(queryGroupMessages)
+        hasher.combine(queryWelcomeMessages)
+        hasher.combine(subscribeMessages)
+        hasher.combine(subscribeWelcomes)
+    }
+}
+
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeFfiApiStats: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiApiStats {
+        return
+            try FfiApiStats(
+                uploadKeyPackage: FfiConverterUInt64.read(from: &buf), 
+                fetchKeyPackage: FfiConverterUInt64.read(from: &buf), 
+                sendGroupMessages: FfiConverterUInt64.read(from: &buf), 
+                sendWelcomeMessages: FfiConverterUInt64.read(from: &buf), 
+                queryGroupMessages: FfiConverterUInt64.read(from: &buf), 
+                queryWelcomeMessages: FfiConverterUInt64.read(from: &buf), 
+                subscribeMessages: FfiConverterUInt64.read(from: &buf), 
+                subscribeWelcomes: FfiConverterUInt64.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: FfiApiStats, into buf: inout [UInt8]) {
+        FfiConverterUInt64.write(value.uploadKeyPackage, into: &buf)
+        FfiConverterUInt64.write(value.fetchKeyPackage, into: &buf)
+        FfiConverterUInt64.write(value.sendGroupMessages, into: &buf)
+        FfiConverterUInt64.write(value.sendWelcomeMessages, into: &buf)
+        FfiConverterUInt64.write(value.queryGroupMessages, into: &buf)
+        FfiConverterUInt64.write(value.queryWelcomeMessages, into: &buf)
+        FfiConverterUInt64.write(value.subscribeMessages, into: &buf)
+        FfiConverterUInt64.write(value.subscribeWelcomes, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFfiApiStats_lift(_ buf: RustBuffer) throws -> FfiApiStats {
+    return try FfiConverterTypeFfiApiStats.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFfiApiStats_lower(_ value: FfiApiStats) -> RustBuffer {
+    return FfiConverterTypeFfiApiStats.lower(value)
+}
 
 
 public struct FfiArchiveOptions {
@@ -5412,6 +5563,92 @@ public func FfiConverterTypeFfiIdentifier_lower(_ value: FfiIdentifier) -> RustB
 }
 
 
+public struct FfiIdentityStats {
+    public var publishIdentityUpdate: UInt64
+    public var getIdentityUpdatesV2: UInt64
+    public var getInboxIds: UInt64
+    public var verifySmartContractWalletSignature: UInt64
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(publishIdentityUpdate: UInt64, getIdentityUpdatesV2: UInt64, getInboxIds: UInt64, verifySmartContractWalletSignature: UInt64) {
+        self.publishIdentityUpdate = publishIdentityUpdate
+        self.getIdentityUpdatesV2 = getIdentityUpdatesV2
+        self.getInboxIds = getInboxIds
+        self.verifySmartContractWalletSignature = verifySmartContractWalletSignature
+    }
+}
+
+#if compiler(>=6)
+extension FfiIdentityStats: Sendable {}
+#endif
+
+
+extension FfiIdentityStats: Equatable, Hashable {
+    public static func ==(lhs: FfiIdentityStats, rhs: FfiIdentityStats) -> Bool {
+        if lhs.publishIdentityUpdate != rhs.publishIdentityUpdate {
+            return false
+        }
+        if lhs.getIdentityUpdatesV2 != rhs.getIdentityUpdatesV2 {
+            return false
+        }
+        if lhs.getInboxIds != rhs.getInboxIds {
+            return false
+        }
+        if lhs.verifySmartContractWalletSignature != rhs.verifySmartContractWalletSignature {
+            return false
+        }
+        return true
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(publishIdentityUpdate)
+        hasher.combine(getIdentityUpdatesV2)
+        hasher.combine(getInboxIds)
+        hasher.combine(verifySmartContractWalletSignature)
+    }
+}
+
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeFfiIdentityStats: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiIdentityStats {
+        return
+            try FfiIdentityStats(
+                publishIdentityUpdate: FfiConverterUInt64.read(from: &buf), 
+                getIdentityUpdatesV2: FfiConverterUInt64.read(from: &buf), 
+                getInboxIds: FfiConverterUInt64.read(from: &buf), 
+                verifySmartContractWalletSignature: FfiConverterUInt64.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: FfiIdentityStats, into buf: inout [UInt8]) {
+        FfiConverterUInt64.write(value.publishIdentityUpdate, into: &buf)
+        FfiConverterUInt64.write(value.getIdentityUpdatesV2, into: &buf)
+        FfiConverterUInt64.write(value.getInboxIds, into: &buf)
+        FfiConverterUInt64.write(value.verifySmartContractWalletSignature, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFfiIdentityStats_lift(_ buf: RustBuffer) throws -> FfiIdentityStats {
+    return try FfiConverterTypeFfiIdentityStats.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFfiIdentityStats_lower(_ value: FfiIdentityStats) -> RustBuffer {
+    return FfiConverterTypeFfiIdentityStats.lower(value)
+}
+
+
 public struct FfiInboxState {
     public var inboxId: String
     public var recoveryIdentity: FfiIdentifier
@@ -5912,10 +6149,11 @@ public struct FfiMessage {
     public var content: Data
     public var kind: FfiConversationMessageKind
     public var deliveryStatus: FfiDeliveryStatus
+    public var sequenceId: UInt64?
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
-    public init(id: Data, sentAtNs: Int64, conversationId: Data, senderInboxId: String, content: Data, kind: FfiConversationMessageKind, deliveryStatus: FfiDeliveryStatus) {
+    public init(id: Data, sentAtNs: Int64, conversationId: Data, senderInboxId: String, content: Data, kind: FfiConversationMessageKind, deliveryStatus: FfiDeliveryStatus, sequenceId: UInt64?) {
         self.id = id
         self.sentAtNs = sentAtNs
         self.conversationId = conversationId
@@ -5923,6 +6161,7 @@ public struct FfiMessage {
         self.content = content
         self.kind = kind
         self.deliveryStatus = deliveryStatus
+        self.sequenceId = sequenceId
     }
 }
 
@@ -5954,6 +6193,9 @@ extension FfiMessage: Equatable, Hashable {
         if lhs.deliveryStatus != rhs.deliveryStatus {
             return false
         }
+        if lhs.sequenceId != rhs.sequenceId {
+            return false
+        }
         return true
     }
 
@@ -5965,6 +6207,7 @@ extension FfiMessage: Equatable, Hashable {
         hasher.combine(content)
         hasher.combine(kind)
         hasher.combine(deliveryStatus)
+        hasher.combine(sequenceId)
     }
 }
 
@@ -5983,7 +6226,8 @@ public struct FfiConverterTypeFfiMessage: FfiConverterRustBuffer {
                 senderInboxId: FfiConverterString.read(from: &buf), 
                 content: FfiConverterData.read(from: &buf), 
                 kind: FfiConverterTypeFfiConversationMessageKind.read(from: &buf), 
-                deliveryStatus: FfiConverterTypeFfiDeliveryStatus.read(from: &buf)
+                deliveryStatus: FfiConverterTypeFfiDeliveryStatus.read(from: &buf), 
+                sequenceId: FfiConverterOptionUInt64.read(from: &buf)
         )
     }
 
@@ -5995,6 +6239,7 @@ public struct FfiConverterTypeFfiMessage: FfiConverterRustBuffer {
         FfiConverterData.write(value.content, into: &buf)
         FfiConverterTypeFfiConversationMessageKind.write(value.kind, into: &buf)
         FfiConverterTypeFfiDeliveryStatus.write(value.deliveryStatus, into: &buf)
+        FfiConverterOptionUInt64.write(value.sequenceId, into: &buf)
     }
 }
 
@@ -6784,6 +7029,9 @@ extension FfiBackupElementSelection: Equatable, Hashable {}
 
 
 
+
+
+
 // Note that we don't yet support `indirect` for enums.
 // See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
 
@@ -6848,6 +7096,9 @@ public func FfiConverterTypeFfiConsentEntityType_lower(_ value: FfiConsentEntity
 
 
 extension FfiConsentEntityType: Equatable, Hashable {}
+
+
+
 
 
 
@@ -6922,6 +7173,9 @@ public func FfiConverterTypeFfiConsentState_lower(_ value: FfiConsentState) -> R
 
 
 extension FfiConsentState: Equatable, Hashable {}
+
+
+
 
 
 
@@ -7048,6 +7302,9 @@ extension FfiContentType: Equatable, Hashable {}
 
 
 
+
+
+
 // Note that we don't yet support `indirect` for enums.
 // See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
 
@@ -7112,6 +7369,9 @@ public func FfiConverterTypeFfiConversationMessageKind_lower(_ value: FfiConvers
 
 
 extension FfiConversationMessageKind: Equatable, Hashable {}
+
+
+
 
 
 
@@ -7189,6 +7449,9 @@ extension FfiConversationType: Equatable, Hashable {}
 
 
 
+
+
+
 // Note that we don't yet support `indirect` for enums.
 // See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
 
@@ -7263,6 +7526,9 @@ extension FfiDeliveryStatus: Equatable, Hashable {}
 
 
 
+
+
+
 // Note that we don't yet support `indirect` for enums.
 // See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
 
@@ -7327,6 +7593,9 @@ public func FfiConverterTypeFfiDirection_lower(_ value: FfiDirection) -> RustBuf
 
 
 extension FfiDirection: Equatable, Hashable {}
+
+
+
 
 
 
@@ -7404,6 +7673,9 @@ extension FfiGroupPermissionsOptions: Equatable, Hashable {}
 
 
 
+
+
+
 // Note that we don't yet support `indirect` for enums.
 // See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
 
@@ -7468,6 +7740,9 @@ public func FfiConverterTypeFfiIdentifierKind_lower(_ value: FfiIdentifierKind) 
 
 
 extension FfiIdentifierKind: Equatable, Hashable {}
+
+
+
 
 
 
@@ -7577,6 +7852,9 @@ extension FfiLogLevel: Equatable, Hashable {}
 
 
 
+
+
+
 // Note that we don't yet support `indirect` for enums.
 // See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
 /**
@@ -7673,6 +7951,9 @@ extension FfiLogRotation: Equatable, Hashable {}
 
 
 
+
+
+
 // Note that we don't yet support `indirect` for enums.
 // See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
 
@@ -7747,6 +8028,9 @@ extension FfiMetadataField: Equatable, Hashable {}
 
 
 
+
+
+
 // Note that we don't yet support `indirect` for enums.
 // See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
 
@@ -7818,6 +8102,9 @@ public func FfiConverterTypeFfiPermissionLevel_lower(_ value: FfiPermissionLevel
 
 
 extension FfiPermissionLevel: Equatable, Hashable {}
+
+
+
 
 
 
@@ -7916,6 +8203,9 @@ extension FfiPermissionPolicy: Equatable, Hashable {}
 
 
 
+
+
+
 // Note that we don't yet support `indirect` for enums.
 // See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
 
@@ -8004,6 +8294,9 @@ extension FfiPermissionUpdateType: Equatable, Hashable {}
 
 
 
+
+
+
 // Note that we don't yet support `indirect` for enums.
 // See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
 
@@ -8064,6 +8357,9 @@ public func FfiConverterTypeFfiPreferenceUpdate_lower(_ value: FfiPreferenceUpda
 
 
 extension FfiPreferenceUpdate: Equatable, Hashable {}
+
+
+
 
 
 
@@ -8138,6 +8434,9 @@ public func FfiConverterTypeFfiReactionAction_lower(_ value: FfiReactionAction) 
 
 
 extension FfiReactionAction: Equatable, Hashable {}
+
+
+
 
 
 
@@ -8223,6 +8522,9 @@ extension FfiReactionSchema: Equatable, Hashable {}
 
 
 
+
+
+
 public enum FfiSubscribeError: Swift.Error {
 
     
@@ -8296,11 +8598,14 @@ extension FfiSubscribeError: Equatable, Hashable {}
 
 
 
+
 extension FfiSubscribeError: Foundation.LocalizedError {
     public var errorDescription: String? {
         String(reflecting: self)
     }
 }
+
+
 
 
 // Note that we don't yet support `indirect` for enums.
@@ -8454,6 +8759,9 @@ extension FfiSyncMetric: Equatable, Hashable {}
 
 
 
+
+
+
 // Note that we don't yet support `indirect` for enums.
 // See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
 
@@ -8518,6 +8826,9 @@ public func FfiConverterTypeFfiSyncWorkerMode_lower(_ value: FfiSyncWorkerMode) 
 
 
 extension FfiSyncWorkerMode: Equatable, Hashable {}
+
+
+
 
 
 
@@ -8779,11 +9090,14 @@ extension GenericError: Equatable, Hashable {}
 
 
 
+
 extension GenericError: Foundation.LocalizedError {
     public var errorDescription: String? {
         String(reflecting: self)
     }
 }
+
+
 
 
 
@@ -8852,11 +9166,14 @@ extension IdentityValidationError: Equatable, Hashable {}
 
 
 
+
 extension IdentityValidationError: Foundation.LocalizedError {
     public var errorDescription: String? {
         String(reflecting: self)
     }
 }
+
+
 
 
 
@@ -8921,11 +9238,14 @@ extension SigningError: Equatable, Hashable {}
 
 
 
+
 extension SigningError: Foundation.LocalizedError {
     public var errorDescription: String? {
         String(reflecting: self)
     }
 }
+
+
 
 
 #if swift(>=5.8)
@@ -10182,7 +10502,7 @@ private let initializationResult: InitializationResult = {
     if (uniffi_xmtpv3_checksum_method_fficonversation_find_messages_with_reactions() != 33179) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_xmtpv3_checksum_method_fficonversation_get_hmac_keys() != 4665) {
+    if (uniffi_xmtpv3_checksum_method_fficonversation_get_hmac_keys() != 35284) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_xmtpv3_checksum_method_fficonversation_group_description() != 53570) {
@@ -10359,9 +10679,6 @@ private let initializationResult: InitializationResult = {
     if (uniffi_xmtpv3_checksum_method_fficonversations_sync_all_conversations() != 30657) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_xmtpv3_checksum_method_fficonversations_sync_device_sync() != 29077) {
-        return InitializationResult.apiChecksumMismatch
-    }
     if (uniffi_xmtpv3_checksum_method_ffigrouppermissions_policy_set() != 24928) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -10423,6 +10740,15 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_xmtpv3_checksum_method_ffixmtpclient_addresses_from_inbox_id() != 29264) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_xmtpv3_checksum_method_ffixmtpclient_api_aggregate_statistics() != 18475) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_xmtpv3_checksum_method_ffixmtpclient_api_identity_statistics() != 47055) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_xmtpv3_checksum_method_ffixmtpclient_api_statistics() != 31059) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_xmtpv3_checksum_method_ffixmtpclient_apply_signature_request() != 32172) {
@@ -10507,6 +10833,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_xmtpv3_checksum_method_ffixmtpclient_sync_preferences() != 59168) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_xmtpv3_checksum_method_ffixmtpclient_upload_debug_archive() != 21347) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_xmtpv3_checksum_method_ffixmtpclient_verify_signed_with_installation_key() != 3285) {
