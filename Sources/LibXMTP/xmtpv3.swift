@@ -10286,6 +10286,23 @@ fileprivate func uniffiFutureContinuationCallback(handle: UInt64, pollResult: In
         print("uniffiFutureContinuationCallback invalid handle")
     }
 }
+/**
+ * * Static apply a signature request
+ */
+public func applySignatureRequest(api: XmtpApiClient, signatureRequest: FfiSignatureRequest)async throws   {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_xmtpv3_fn_func_apply_signature_request(FfiConverterTypeXmtpApiClient_lower(api),FfiConverterTypeFfiSignatureRequest_lower(signatureRequest)
+                )
+            },
+            pollFunc: ffi_xmtpv3_rust_future_poll_void,
+            completeFunc: ffi_xmtpv3_rust_future_complete_void,
+            freeFunc: ffi_xmtpv3_rust_future_free_void,
+            liftFunc: { $0 },
+            errorHandler: FfiConverterTypeGenericError_lift
+        )
+}
 public func connectToBackend(host: String, isSecure: Bool)async throws  -> XmtpApiClient  {
     return
         try  await uniffiRustCallAsync(
@@ -10431,6 +10448,23 @@ public func getVersionInfo() -> String  {
     )
 })
 }
+/**
+ * * Static revoke a list of installations
+ */
+public func revokeInstallations(api: XmtpApiClient, recoveryIdentifier: FfiIdentifier, inboxId: String, installationIds: [Data])async throws  -> FfiSignatureRequest  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_xmtpv3_fn_func_revoke_installations(FfiConverterTypeXmtpApiClient_lower(api),FfiConverterTypeFfiIdentifier_lower(recoveryIdentifier),FfiConverterString.lower(inboxId),FfiConverterSequenceData.lower(installationIds)
+                )
+            },
+            pollFunc: ffi_xmtpv3_rust_future_poll_pointer,
+            completeFunc: ffi_xmtpv3_rust_future_complete_pointer,
+            freeFunc: ffi_xmtpv3_rust_future_free_pointer,
+            liftFunc: FfiConverterTypeFfiSignatureRequest_lift,
+            errorHandler: FfiConverterTypeGenericError_lift
+        )
+}
 
 private enum InitializationResult {
     case ok
@@ -10446,6 +10480,9 @@ private let initializationResult: InitializationResult = {
     let scaffolding_contract_version = ffi_xmtpv3_uniffi_contract_version()
     if bindings_contract_version != scaffolding_contract_version {
         return InitializationResult.contractVersionMismatch
+    }
+    if (uniffi_xmtpv3_checksum_func_apply_signature_request() != 65134) {
+        return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_xmtpv3_checksum_func_connect_to_backend() != 26018) {
         return InitializationResult.apiChecksumMismatch
@@ -10481,6 +10518,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_xmtpv3_checksum_func_get_version_info() != 29277) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_xmtpv3_checksum_func_revoke_installations() != 23629) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_xmtpv3_checksum_method_fficonsentcallback_on_consent_update() != 12532) {
