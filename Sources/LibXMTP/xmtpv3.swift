@@ -5099,13 +5099,17 @@ public struct FfiConversationDebugInfo {
     public var epoch: UInt64
     public var maybeForked: Bool
     public var forkDetails: String
+    public var localCommitLog: String
+    public var cursor: Int64
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
-    public init(epoch: UInt64, maybeForked: Bool, forkDetails: String) {
+    public init(epoch: UInt64, maybeForked: Bool, forkDetails: String, localCommitLog: String, cursor: Int64) {
         self.epoch = epoch
         self.maybeForked = maybeForked
         self.forkDetails = forkDetails
+        self.localCommitLog = localCommitLog
+        self.cursor = cursor
     }
 }
 
@@ -5125,6 +5129,12 @@ extension FfiConversationDebugInfo: Equatable, Hashable {
         if lhs.forkDetails != rhs.forkDetails {
             return false
         }
+        if lhs.localCommitLog != rhs.localCommitLog {
+            return false
+        }
+        if lhs.cursor != rhs.cursor {
+            return false
+        }
         return true
     }
 
@@ -5132,6 +5142,8 @@ extension FfiConversationDebugInfo: Equatable, Hashable {
         hasher.combine(epoch)
         hasher.combine(maybeForked)
         hasher.combine(forkDetails)
+        hasher.combine(localCommitLog)
+        hasher.combine(cursor)
     }
 }
 
@@ -5146,7 +5158,9 @@ public struct FfiConverterTypeFfiConversationDebugInfo: FfiConverterRustBuffer {
             try FfiConversationDebugInfo(
                 epoch: FfiConverterUInt64.read(from: &buf), 
                 maybeForked: FfiConverterBool.read(from: &buf), 
-                forkDetails: FfiConverterString.read(from: &buf)
+                forkDetails: FfiConverterString.read(from: &buf), 
+                localCommitLog: FfiConverterString.read(from: &buf), 
+                cursor: FfiConverterInt64.read(from: &buf)
         )
     }
 
@@ -5154,6 +5168,8 @@ public struct FfiConverterTypeFfiConversationDebugInfo: FfiConverterRustBuffer {
         FfiConverterUInt64.write(value.epoch, into: &buf)
         FfiConverterBool.write(value.maybeForked, into: &buf)
         FfiConverterString.write(value.forkDetails, into: &buf)
+        FfiConverterString.write(value.localCommitLog, into: &buf)
+        FfiConverterInt64.write(value.cursor, into: &buf)
     }
 }
 
