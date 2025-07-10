@@ -559,6 +559,8 @@ public protocol FfiConsentCallback: AnyObject, Sendable {
     
     func onError(error: FfiSubscribeError) 
     
+    func onClose() 
+    
 }
 open class FfiConsentCallbackImpl: FfiConsentCallback, @unchecked Sendable {
     fileprivate let pointer: UnsafeMutableRawPointer!
@@ -626,6 +628,12 @@ open func onError(error: FfiSubscribeError)  {try! rustCall() {
 }
 }
     
+open func onClose()  {try! rustCall() {
+    uniffi_xmtpv3_fn_method_fficonsentcallback_on_close(self.uniffiClonePointer(),$0
+    )
+}
+}
+    
 
 }
 
@@ -676,6 +684,28 @@ fileprivate struct UniffiCallbackInterfaceFfiConsentCallback {
                 }
                 return uniffiObj.onError(
                      error: try FfiConverterTypeFfiSubscribeError_lift(error)
+                )
+            }
+
+            
+            let writeReturn = { () }
+            uniffiTraitInterfaceCall(
+                callStatus: uniffiCallStatus,
+                makeCall: makeCall,
+                writeReturn: writeReturn
+            )
+        },
+        onClose: { (
+            uniffiHandle: UInt64,
+            uniffiOutReturn: UnsafeMutableRawPointer,
+            uniffiCallStatus: UnsafeMutablePointer<RustCallStatus>
+        ) in
+            let makeCall = {
+                () throws -> () in
+                guard let uniffiObj = try? FfiConverterTypeFfiConsentCallback.handleMap.get(handle: uniffiHandle) else {
+                    throw UniffiInternalError.unexpectedStaleHandle
+                }
+                return uniffiObj.onClose(
                 )
             }
 
@@ -1587,6 +1617,8 @@ public protocol FfiConversationCallback: AnyObject, Sendable {
     
     func onError(error: FfiSubscribeError) 
     
+    func onClose() 
+    
 }
 open class FfiConversationCallbackImpl: FfiConversationCallback, @unchecked Sendable {
     fileprivate let pointer: UnsafeMutableRawPointer!
@@ -1654,6 +1686,12 @@ open func onError(error: FfiSubscribeError)  {try! rustCall() {
 }
 }
     
+open func onClose()  {try! rustCall() {
+    uniffi_xmtpv3_fn_method_fficonversationcallback_on_close(self.uniffiClonePointer(),$0
+    )
+}
+}
+    
 
 }
 
@@ -1704,6 +1742,28 @@ fileprivate struct UniffiCallbackInterfaceFfiConversationCallback {
                 }
                 return uniffiObj.onError(
                      error: try FfiConverterTypeFfiSubscribeError_lift(error)
+                )
+            }
+
+            
+            let writeReturn = { () }
+            uniffiTraitInterfaceCall(
+                callStatus: uniffiCallStatus,
+                makeCall: makeCall,
+                writeReturn: writeReturn
+            )
+        },
+        onClose: { (
+            uniffiHandle: UInt64,
+            uniffiOutReturn: UnsafeMutableRawPointer,
+            uniffiCallStatus: UnsafeMutablePointer<RustCallStatus>
+        ) in
+            let makeCall = {
+                () throws -> () in
+                guard let uniffiObj = try? FfiConverterTypeFfiConversationCallback.handleMap.get(handle: uniffiHandle) else {
+                    throw UniffiInternalError.unexpectedStaleHandle
+                }
+                return uniffiObj.onClose(
                 )
             }
 
@@ -2884,6 +2944,8 @@ public protocol FfiMessageCallback: AnyObject, Sendable {
     
     func onError(error: FfiSubscribeError) 
     
+    func onClose() 
+    
 }
 open class FfiMessageCallbackImpl: FfiMessageCallback, @unchecked Sendable {
     fileprivate let pointer: UnsafeMutableRawPointer!
@@ -2951,6 +3013,12 @@ open func onError(error: FfiSubscribeError)  {try! rustCall() {
 }
 }
     
+open func onClose()  {try! rustCall() {
+    uniffi_xmtpv3_fn_method_ffimessagecallback_on_close(self.uniffiClonePointer(),$0
+    )
+}
+}
+    
 
 }
 
@@ -3001,6 +3069,28 @@ fileprivate struct UniffiCallbackInterfaceFfiMessageCallback {
                 }
                 return uniffiObj.onError(
                      error: try FfiConverterTypeFfiSubscribeError_lift(error)
+                )
+            }
+
+            
+            let writeReturn = { () }
+            uniffiTraitInterfaceCall(
+                callStatus: uniffiCallStatus,
+                makeCall: makeCall,
+                writeReturn: writeReturn
+            )
+        },
+        onClose: { (
+            uniffiHandle: UInt64,
+            uniffiOutReturn: UnsafeMutableRawPointer,
+            uniffiCallStatus: UnsafeMutablePointer<RustCallStatus>
+        ) in
+            let makeCall = {
+                () throws -> () in
+                guard let uniffiObj = try? FfiConverterTypeFfiMessageCallback.handleMap.get(handle: uniffiHandle) else {
+                    throw UniffiInternalError.unexpectedStaleHandle
+                }
+                return uniffiObj.onClose(
                 )
             }
 
@@ -3090,6 +3180,8 @@ public protocol FfiPreferenceCallback: AnyObject, Sendable {
     
     func onError(error: FfiSubscribeError) 
     
+    func onClose() 
+    
 }
 open class FfiPreferenceCallbackImpl: FfiPreferenceCallback, @unchecked Sendable {
     fileprivate let pointer: UnsafeMutableRawPointer!
@@ -3157,6 +3249,12 @@ open func onError(error: FfiSubscribeError)  {try! rustCall() {
 }
 }
     
+open func onClose()  {try! rustCall() {
+    uniffi_xmtpv3_fn_method_ffipreferencecallback_on_close(self.uniffiClonePointer(),$0
+    )
+}
+}
+    
 
 }
 
@@ -3207,6 +3305,28 @@ fileprivate struct UniffiCallbackInterfaceFfiPreferenceCallback {
                 }
                 return uniffiObj.onError(
                      error: try FfiConverterTypeFfiSubscribeError_lift(error)
+                )
+            }
+
+            
+            let writeReturn = { () }
+            uniffiTraitInterfaceCall(
+                callStatus: uniffiCallStatus,
+                makeCall: makeCall,
+                writeReturn: writeReturn
+            )
+        },
+        onClose: { (
+            uniffiHandle: UInt64,
+            uniffiOutReturn: UnsafeMutableRawPointer,
+            uniffiCallStatus: UnsafeMutablePointer<RustCallStatus>
+        ) in
+            let makeCall = {
+                () throws -> () in
+                guard let uniffiObj = try? FfiConverterTypeFfiPreferenceCallback.handleMap.get(handle: uniffiHandle) else {
+                    throw UniffiInternalError.unexpectedStaleHandle
+                }
+                return uniffiObj.onClose(
                 )
             }
 
@@ -10465,6 +10585,38 @@ public func getVersionInfo() -> String  {
 })
 }
 /**
+ * * Static Get the inbox state for each `inbox_id`.
+ */
+public func inboxStateFromInboxIds(api: XmtpApiClient, inboxIds: [String])async throws  -> [FfiInboxState]  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_xmtpv3_fn_func_inbox_state_from_inbox_ids(FfiConverterTypeXmtpApiClient_lower(api),FfiConverterSequenceString.lower(inboxIds)
+                )
+            },
+            pollFunc: ffi_xmtpv3_rust_future_poll_rust_buffer,
+            completeFunc: ffi_xmtpv3_rust_future_complete_rust_buffer,
+            freeFunc: ffi_xmtpv3_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterSequenceTypeFfiInboxState.lift,
+            errorHandler: FfiConverterTypeGenericError_lift
+        )
+}
+public func isConnected(api: XmtpApiClient)async  -> Bool  {
+    return
+        try!  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_xmtpv3_fn_func_is_connected(FfiConverterTypeXmtpApiClient_lower(api)
+                )
+            },
+            pollFunc: ffi_xmtpv3_rust_future_poll_i8,
+            completeFunc: ffi_xmtpv3_rust_future_complete_i8,
+            freeFunc: ffi_xmtpv3_rust_future_free_i8,
+            liftFunc: FfiConverterBool.lift,
+            errorHandler: nil
+            
+        )
+}
+/**
  * * Static revoke a list of installations
  */
 public func revokeInstallations(api: XmtpApiClient, recoveryIdentifier: FfiIdentifier, inboxId: String, installationIds: [Data])async throws  -> FfiSignatureRequest  {
@@ -10536,6 +10688,12 @@ private let initializationResult: InitializationResult = {
     if (uniffi_xmtpv3_checksum_func_get_version_info() != 29277) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_xmtpv3_checksum_func_inbox_state_from_inbox_ids() != 55434) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_xmtpv3_checksum_func_is_connected() != 17295) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_xmtpv3_checksum_func_revoke_installations() != 23629) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -10543,6 +10701,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_xmtpv3_checksum_method_fficonsentcallback_on_error() != 5882) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_xmtpv3_checksum_method_fficonsentcallback_on_close() != 18566) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_xmtpv3_checksum_method_fficonversation_add_admin() != 52417) {
@@ -10692,6 +10853,9 @@ private let initializationResult: InitializationResult = {
     if (uniffi_xmtpv3_checksum_method_fficonversationcallback_on_error() != 461) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_xmtpv3_checksum_method_fficonversationcallback_on_close() != 26905) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_xmtpv3_checksum_method_fficonversationlistitem_conversation() != 20525) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -10785,10 +10949,16 @@ private let initializationResult: InitializationResult = {
     if (uniffi_xmtpv3_checksum_method_ffimessagecallback_on_error() != 32204) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_xmtpv3_checksum_method_ffimessagecallback_on_close() != 9150) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_xmtpv3_checksum_method_ffipreferencecallback_on_preference_update() != 19900) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_xmtpv3_checksum_method_ffipreferencecallback_on_error() != 41454) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_xmtpv3_checksum_method_ffipreferencecallback_on_close() != 48198) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_xmtpv3_checksum_method_ffisignaturerequest_add_ecdsa_signature() != 8706) {
