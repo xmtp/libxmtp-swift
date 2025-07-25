@@ -809,7 +809,7 @@ public protocol FfiConversationProtocol: AnyObject, Sendable {
     
     func conversationMessageDisappearingSettings() throws  -> FfiMessageDisappearingSettings?
     
-    func conversationType() async throws  -> FfiConversationType
+    func conversationType()  -> FfiConversationType
     
     func createdAtNs()  -> Int64
     
@@ -819,7 +819,7 @@ public protocol FfiConversationProtocol: AnyObject, Sendable {
     
     func findMessages(opts: FfiListMessagesOptions) async throws  -> [FfiMessage]
     
-    func findMessagesWithReactions(opts: FfiListMessagesOptions) async throws  -> [FfiMessageWithReactions]
+    func findMessagesWithReactions(opts: FfiListMessagesOptions) throws  -> [FfiMessageWithReactions]
     
     func getHmacKeys() throws  -> [Data: [FfiHmacKey]]
     
@@ -1057,21 +1057,11 @@ open func conversationMessageDisappearingSettings()throws  -> FfiMessageDisappea
 })
 }
     
-open func conversationType()async throws  -> FfiConversationType  {
-    return
-        try  await uniffiRustCallAsync(
-            rustFutureFunc: {
-                uniffi_xmtpv3_fn_method_fficonversation_conversation_type(
-                    self.uniffiClonePointer()
-                    
-                )
-            },
-            pollFunc: ffi_xmtpv3_rust_future_poll_rust_buffer,
-            completeFunc: ffi_xmtpv3_rust_future_complete_rust_buffer,
-            freeFunc: ffi_xmtpv3_rust_future_free_rust_buffer,
-            liftFunc: FfiConverterTypeFfiConversationType_lift,
-            errorHandler: FfiConverterTypeGenericError_lift
-        )
+open func conversationType() -> FfiConversationType  {
+    return try!  FfiConverterTypeFfiConversationType_lift(try! rustCall() {
+    uniffi_xmtpv3_fn_method_fficonversation_conversation_type(self.uniffiClonePointer(),$0
+    )
+})
 }
     
 open func createdAtNs() -> Int64  {
@@ -1122,21 +1112,12 @@ open func findMessages(opts: FfiListMessagesOptions)async throws  -> [FfiMessage
         )
 }
     
-open func findMessagesWithReactions(opts: FfiListMessagesOptions)async throws  -> [FfiMessageWithReactions]  {
-    return
-        try  await uniffiRustCallAsync(
-            rustFutureFunc: {
-                uniffi_xmtpv3_fn_method_fficonversation_find_messages_with_reactions(
-                    self.uniffiClonePointer(),
-                    FfiConverterTypeFfiListMessagesOptions_lower(opts)
-                )
-            },
-            pollFunc: ffi_xmtpv3_rust_future_poll_rust_buffer,
-            completeFunc: ffi_xmtpv3_rust_future_complete_rust_buffer,
-            freeFunc: ffi_xmtpv3_rust_future_free_rust_buffer,
-            liftFunc: FfiConverterSequenceTypeFfiMessageWithReactions.lift,
-            errorHandler: FfiConverterTypeGenericError_lift
-        )
+open func findMessagesWithReactions(opts: FfiListMessagesOptions)throws  -> [FfiMessageWithReactions]  {
+    return try  FfiConverterSequenceTypeFfiMessageWithReactions.lift(try rustCallWithError(FfiConverterTypeGenericError_lift) {
+    uniffi_xmtpv3_fn_method_fficonversation_find_messages_with_reactions(self.uniffiClonePointer(),
+        FfiConverterTypeFfiListMessagesOptions_lower(opts),$0
+    )
+})
 }
     
 open func getHmacKeys()throws  -> [Data: [FfiHmacKey]]  {
@@ -10439,11 +10420,11 @@ public func applySignatureRequest(api: XmtpApiClient, signatureRequest: FfiSigna
             errorHandler: FfiConverterTypeGenericError_lift
         )
 }
-public func connectToBackend(host: String, isSecure: Bool)async throws  -> XmtpApiClient  {
+public func connectToBackend(host: String, isSecure: Bool, appVersion: String?)async throws  -> XmtpApiClient  {
     return
         try  await uniffiRustCallAsync(
             rustFutureFunc: {
-                uniffi_xmtpv3_fn_func_connect_to_backend(FfiConverterString.lower(host),FfiConverterBool.lower(isSecure)
+                uniffi_xmtpv3_fn_func_connect_to_backend(FfiConverterString.lower(host),FfiConverterBool.lower(isSecure),FfiConverterOptionString.lower(appVersion)
                 )
             },
             pollFunc: ffi_xmtpv3_rust_future_poll_pointer,
@@ -10652,7 +10633,7 @@ private let initializationResult: InitializationResult = {
     if (uniffi_xmtpv3_checksum_func_apply_signature_request() != 65134) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_xmtpv3_checksum_func_connect_to_backend() != 26018) {
+    if (uniffi_xmtpv3_checksum_func_connect_to_backend() != 56931) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_xmtpv3_checksum_func_create_client() != 36933) {
@@ -10733,7 +10714,7 @@ private let initializationResult: InitializationResult = {
     if (uniffi_xmtpv3_checksum_method_fficonversation_conversation_message_disappearing_settings() != 53380) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_xmtpv3_checksum_method_fficonversation_conversation_type() != 51396) {
+    if (uniffi_xmtpv3_checksum_method_fficonversation_conversation_type() != 43322) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_xmtpv3_checksum_method_fficonversation_created_at_ns() != 17973) {
@@ -10748,7 +10729,7 @@ private let initializationResult: InitializationResult = {
     if (uniffi_xmtpv3_checksum_method_fficonversation_find_messages() != 19931) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_xmtpv3_checksum_method_fficonversation_find_messages_with_reactions() != 33179) {
+    if (uniffi_xmtpv3_checksum_method_fficonversation_find_messages_with_reactions() != 46761) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_xmtpv3_checksum_method_fficonversation_get_hmac_keys() != 35284) {
