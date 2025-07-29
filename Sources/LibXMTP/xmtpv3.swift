@@ -10420,11 +10420,11 @@ public func applySignatureRequest(api: XmtpApiClient, signatureRequest: FfiSigna
             errorHandler: FfiConverterTypeGenericError_lift
         )
 }
-public func connectToBackend(host: String, isSecure: Bool)async throws  -> XmtpApiClient  {
+public func connectToBackend(host: String, isSecure: Bool, appVersion: String?)async throws  -> XmtpApiClient  {
     return
         try  await uniffiRustCallAsync(
             rustFutureFunc: {
-                uniffi_xmtpv3_fn_func_connect_to_backend(FfiConverterString.lower(host),FfiConverterBool.lower(isSecure)
+                uniffi_xmtpv3_fn_func_connect_to_backend(FfiConverterString.lower(host),FfiConverterBool.lower(isSecure),FfiConverterOptionString.lower(appVersion)
                 )
             },
             pollFunc: ffi_xmtpv3_rust_future_poll_pointer,
@@ -10633,7 +10633,7 @@ private let initializationResult: InitializationResult = {
     if (uniffi_xmtpv3_checksum_func_apply_signature_request() != 65134) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_xmtpv3_checksum_func_connect_to_backend() != 26018) {
+    if (uniffi_xmtpv3_checksum_func_connect_to_backend() != 56931) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_xmtpv3_checksum_func_create_client() != 36933) {
