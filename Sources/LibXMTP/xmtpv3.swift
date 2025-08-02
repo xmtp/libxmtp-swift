@@ -470,6 +470,22 @@ fileprivate struct FfiConverterInt64: FfiConverterPrimitive {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterDouble: FfiConverterPrimitive {
+    typealias FfiType = Double
+    typealias SwiftType = Double
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Double {
+        return try lift(readDouble(&buf))
+    }
+
+    public static func write(_ value: Double, into buf: inout [UInt8]) {
+        writeDouble(&buf, lower(value))
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterBool : FfiConverter {
     typealias FfiType = Int8
     typealias SwiftType = Bool
@@ -7010,6 +7026,194 @@ public func FfiConverterTypeFfiRemoteAttachmentInfo_lower(_ value: FfiRemoteAtta
 }
 
 
+public struct FfiTransactionMetadata {
+    public var transactionType: String
+    public var currency: String
+    public var amount: Double
+    public var decimals: UInt32
+    public var fromAddress: String
+    public var toAddress: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(transactionType: String, currency: String, amount: Double, decimals: UInt32, fromAddress: String, toAddress: String) {
+        self.transactionType = transactionType
+        self.currency = currency
+        self.amount = amount
+        self.decimals = decimals
+        self.fromAddress = fromAddress
+        self.toAddress = toAddress
+    }
+}
+
+#if compiler(>=6)
+extension FfiTransactionMetadata: Sendable {}
+#endif
+
+
+extension FfiTransactionMetadata: Equatable, Hashable {
+    public static func ==(lhs: FfiTransactionMetadata, rhs: FfiTransactionMetadata) -> Bool {
+        if lhs.transactionType != rhs.transactionType {
+            return false
+        }
+        if lhs.currency != rhs.currency {
+            return false
+        }
+        if lhs.amount != rhs.amount {
+            return false
+        }
+        if lhs.decimals != rhs.decimals {
+            return false
+        }
+        if lhs.fromAddress != rhs.fromAddress {
+            return false
+        }
+        if lhs.toAddress != rhs.toAddress {
+            return false
+        }
+        return true
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(transactionType)
+        hasher.combine(currency)
+        hasher.combine(amount)
+        hasher.combine(decimals)
+        hasher.combine(fromAddress)
+        hasher.combine(toAddress)
+    }
+}
+
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeFfiTransactionMetadata: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiTransactionMetadata {
+        return
+            try FfiTransactionMetadata(
+                transactionType: FfiConverterString.read(from: &buf), 
+                currency: FfiConverterString.read(from: &buf), 
+                amount: FfiConverterDouble.read(from: &buf), 
+                decimals: FfiConverterUInt32.read(from: &buf), 
+                fromAddress: FfiConverterString.read(from: &buf), 
+                toAddress: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: FfiTransactionMetadata, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.transactionType, into: &buf)
+        FfiConverterString.write(value.currency, into: &buf)
+        FfiConverterDouble.write(value.amount, into: &buf)
+        FfiConverterUInt32.write(value.decimals, into: &buf)
+        FfiConverterString.write(value.fromAddress, into: &buf)
+        FfiConverterString.write(value.toAddress, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFfiTransactionMetadata_lift(_ buf: RustBuffer) throws -> FfiTransactionMetadata {
+    return try FfiConverterTypeFfiTransactionMetadata.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFfiTransactionMetadata_lower(_ value: FfiTransactionMetadata) -> RustBuffer {
+    return FfiConverterTypeFfiTransactionMetadata.lower(value)
+}
+
+
+public struct FfiTransactionReference {
+    public var namespace: String?
+    public var networkId: String
+    public var reference: String
+    public var metadata: FfiTransactionMetadata?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(namespace: String?, networkId: String, reference: String, metadata: FfiTransactionMetadata?) {
+        self.namespace = namespace
+        self.networkId = networkId
+        self.reference = reference
+        self.metadata = metadata
+    }
+}
+
+#if compiler(>=6)
+extension FfiTransactionReference: Sendable {}
+#endif
+
+
+extension FfiTransactionReference: Equatable, Hashable {
+    public static func ==(lhs: FfiTransactionReference, rhs: FfiTransactionReference) -> Bool {
+        if lhs.namespace != rhs.namespace {
+            return false
+        }
+        if lhs.networkId != rhs.networkId {
+            return false
+        }
+        if lhs.reference != rhs.reference {
+            return false
+        }
+        if lhs.metadata != rhs.metadata {
+            return false
+        }
+        return true
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(namespace)
+        hasher.combine(networkId)
+        hasher.combine(reference)
+        hasher.combine(metadata)
+    }
+}
+
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeFfiTransactionReference: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiTransactionReference {
+        return
+            try FfiTransactionReference(
+                namespace: FfiConverterOptionString.read(from: &buf), 
+                networkId: FfiConverterString.read(from: &buf), 
+                reference: FfiConverterString.read(from: &buf), 
+                metadata: FfiConverterOptionTypeFfiTransactionMetadata.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: FfiTransactionReference, into buf: inout [UInt8]) {
+        FfiConverterOptionString.write(value.namespace, into: &buf)
+        FfiConverterString.write(value.networkId, into: &buf)
+        FfiConverterString.write(value.reference, into: &buf)
+        FfiConverterOptionTypeFfiTransactionMetadata.write(value.metadata, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFfiTransactionReference_lift(_ buf: RustBuffer) throws -> FfiTransactionReference {
+    return try FfiConverterTypeFfiTransactionReference.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFfiTransactionReference_lower(_ value: FfiTransactionReference) -> RustBuffer {
+    return FfiConverterTypeFfiTransactionReference.lower(value)
+}
+
+
 public struct FfiUpdateGroupMembershipResult {
     public var addedMembers: [String: UInt64]
     public var removedMembers: [String]
@@ -9640,6 +9844,30 @@ fileprivate struct FfiConverterOptionTypeFfiPermissionPolicySet: FfiConverterRus
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterOptionTypeFfiTransactionMetadata: FfiConverterRustBuffer {
+    typealias SwiftType = FfiTransactionMetadata?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeFfiTransactionMetadata.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeFfiTransactionMetadata.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterOptionTypeFfiConversationType: FfiConverterRustBuffer {
     typealias SwiftType = FfiConversationType?
 
@@ -10420,11 +10648,11 @@ public func applySignatureRequest(api: XmtpApiClient, signatureRequest: FfiSigna
             errorHandler: FfiConverterTypeGenericError_lift
         )
 }
-public func connectToBackend(host: String, isSecure: Bool)async throws  -> XmtpApiClient  {
+public func connectToBackend(host: String, isSecure: Bool, appVersion: String?)async throws  -> XmtpApiClient  {
     return
         try  await uniffiRustCallAsync(
             rustFutureFunc: {
-                uniffi_xmtpv3_fn_func_connect_to_backend(FfiConverterString.lower(host),FfiConverterBool.lower(isSecure)
+                uniffi_xmtpv3_fn_func_connect_to_backend(FfiConverterString.lower(host),FfiConverterBool.lower(isSecure),FfiConverterOptionString.lower(appVersion)
                 )
             },
             pollFunc: ffi_xmtpv3_rust_future_poll_pointer,
@@ -10483,6 +10711,13 @@ public func decodeReaction(bytes: Data)throws  -> FfiReaction  {
     )
 })
 }
+public func decodeTransactionReference(bytes: Data)throws  -> FfiTransactionReference  {
+    return try  FfiConverterTypeFfiTransactionReference_lift(try rustCallWithError(FfiConverterTypeGenericError_lift) {
+    uniffi_xmtpv3_fn_func_decode_transaction_reference(
+        FfiConverterData.lower(bytes),$0
+    )
+})
+}
 public func encodeMultiRemoteAttachment(ffiMultiRemoteAttachment: FfiMultiRemoteAttachment)throws  -> Data  {
     return try  FfiConverterData.lift(try rustCallWithError(FfiConverterTypeGenericError_lift) {
     uniffi_xmtpv3_fn_func_encode_multi_remote_attachment(
@@ -10494,6 +10729,13 @@ public func encodeReaction(reaction: FfiReaction)throws  -> Data  {
     return try  FfiConverterData.lift(try rustCallWithError(FfiConverterTypeGenericError_lift) {
     uniffi_xmtpv3_fn_func_encode_reaction(
         FfiConverterTypeFfiReaction_lower(reaction),$0
+    )
+})
+}
+public func encodeTransactionReference(reference: FfiTransactionReference)throws  -> Data  {
+    return try  FfiConverterData.lift(try rustCallWithError(FfiConverterTypeGenericError_lift) {
+    uniffi_xmtpv3_fn_func_encode_transaction_reference(
+        FfiConverterTypeFfiTransactionReference_lower(reference),$0
     )
 })
 }
@@ -10633,7 +10875,7 @@ private let initializationResult: InitializationResult = {
     if (uniffi_xmtpv3_checksum_func_apply_signature_request() != 65134) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_xmtpv3_checksum_func_connect_to_backend() != 26018) {
+    if (uniffi_xmtpv3_checksum_func_connect_to_backend() != 56931) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_xmtpv3_checksum_func_create_client() != 18591) {
@@ -10645,10 +10887,16 @@ private let initializationResult: InitializationResult = {
     if (uniffi_xmtpv3_checksum_func_decode_reaction() != 28885) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_xmtpv3_checksum_func_decode_transaction_reference() != 25896) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_xmtpv3_checksum_func_encode_multi_remote_attachment() != 28938) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_xmtpv3_checksum_func_encode_reaction() != 6548) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_xmtpv3_checksum_func_encode_transaction_reference() != 22144) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_xmtpv3_checksum_func_enter_debug_writer() != 7266) {
