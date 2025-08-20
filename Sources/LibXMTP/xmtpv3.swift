@@ -5227,16 +5227,18 @@ public struct FfiConversationDebugInfo {
     public var forkDetails: String
     public var isCommitLogForked: Bool?
     public var localCommitLog: String
+    public var remoteCommitLog: String
     public var cursor: Int64
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
-    public init(epoch: UInt64, maybeForked: Bool, forkDetails: String, isCommitLogForked: Bool?, localCommitLog: String, cursor: Int64) {
+    public init(epoch: UInt64, maybeForked: Bool, forkDetails: String, isCommitLogForked: Bool?, localCommitLog: String, remoteCommitLog: String, cursor: Int64) {
         self.epoch = epoch
         self.maybeForked = maybeForked
         self.forkDetails = forkDetails
         self.isCommitLogForked = isCommitLogForked
         self.localCommitLog = localCommitLog
+        self.remoteCommitLog = remoteCommitLog
         self.cursor = cursor
     }
 }
@@ -5263,6 +5265,9 @@ extension FfiConversationDebugInfo: Equatable, Hashable {
         if lhs.localCommitLog != rhs.localCommitLog {
             return false
         }
+        if lhs.remoteCommitLog != rhs.remoteCommitLog {
+            return false
+        }
         if lhs.cursor != rhs.cursor {
             return false
         }
@@ -5275,6 +5280,7 @@ extension FfiConversationDebugInfo: Equatable, Hashable {
         hasher.combine(forkDetails)
         hasher.combine(isCommitLogForked)
         hasher.combine(localCommitLog)
+        hasher.combine(remoteCommitLog)
         hasher.combine(cursor)
     }
 }
@@ -5293,6 +5299,7 @@ public struct FfiConverterTypeFfiConversationDebugInfo: FfiConverterRustBuffer {
                 forkDetails: FfiConverterString.read(from: &buf), 
                 isCommitLogForked: FfiConverterOptionBool.read(from: &buf), 
                 localCommitLog: FfiConverterString.read(from: &buf), 
+                remoteCommitLog: FfiConverterString.read(from: &buf), 
                 cursor: FfiConverterInt64.read(from: &buf)
         )
     }
@@ -5303,6 +5310,7 @@ public struct FfiConverterTypeFfiConversationDebugInfo: FfiConverterRustBuffer {
         FfiConverterString.write(value.forkDetails, into: &buf)
         FfiConverterOptionBool.write(value.isCommitLogForked, into: &buf)
         FfiConverterString.write(value.localCommitLog, into: &buf)
+        FfiConverterString.write(value.remoteCommitLog, into: &buf)
         FfiConverterInt64.write(value.cursor, into: &buf)
     }
 }
