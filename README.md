@@ -1,7 +1,7 @@
-# LibXMTP Swift
 
-> **⚠️ DEPRECATED ⚠️**
-> 
+
+> ## **⚠️ DEPRECATED ⚠️**
+> ## LibXMTP Swift
 > This repository is deprecated and is no longer actively maintained. Please do not use this package for new projects.
 
 Swift Package and Cocoapod that wraps an XCFramework emitted by the `bindings_ffi` crate in [libxmtp](https://github.com/xmtp/libxmtp)
